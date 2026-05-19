@@ -4,6 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
+import 'package:go_router/go_router.dart';
+import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 
 class ProductDetailsScreen extends ConsumerWidget {
   final Product product;
@@ -141,12 +143,61 @@ class ProductDetailsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      child: const Text('View Shop'),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sold by',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  ref.watch(shopDetailsProvider(product.shopId)).when(
+                    data: (shop) {
+                      if (shop == null) return const Text('Shop details not available');
+                      return Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[200]!),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          leading: CircleAvatar(
+                            radius: 24,
+                            backgroundImage: shop.shopLogo.isNotEmpty ? NetworkImage(shop.shopLogo) : null,
+                            child: shop.shopLogo.isEmpty ? const Icon(Icons.store) : null,
+                          ),
+                          title: Text(shop.shopName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star, size: 14, color: Colors.amber),
+                                  const SizedBox(width: 4),
+                                  Text('${shop.rating} (${shop.totalReviews} reviews)', style: const TextStyle(fontSize: 12)),
+                                ],
+                              ),
+                              if (shop.location.address.isNotEmpty || shop.location.city.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  shop.location.address.isNotEmpty ? shop.location.address : shop.location.city,
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ]
+                            ],
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => context.push('/shop_details', extra: shop),
+                        ),
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => const SizedBox(),
                   ),
                 ],
               ),

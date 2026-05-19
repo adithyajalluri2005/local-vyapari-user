@@ -11,7 +11,8 @@ import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onSearchTap;
+  const HomeScreen({super.key, this.onSearchTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,6 +48,8 @@ class HomeScreen extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 loading: () => Text(
                   'Fetching location...',
@@ -77,14 +80,19 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: SearchBar(
-                hintText: 'Search for nearby products, shops...',
-                leading: const Icon(Icons.search, color: Colors.grey),
-                elevation: MaterialStateProperty.all(0),
-                backgroundColor: MaterialStateProperty.resolveWith((states) => Theme.of(context).colorScheme.surface),
-                textStyle: MaterialStateProperty.resolveWith((states) => TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-                shape: MaterialStateProperty.all(
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: GestureDetector(
+                onTap: onSearchTap,
+                child: AbsorbPointer(
+                  child: SearchBar(
+                    hintText: 'Search for nearby products, shops...',
+                    leading: const Icon(Icons.search, color: Colors.grey),
+                    elevation: MaterialStateProperty.all(0),
+                    backgroundColor: MaterialStateProperty.resolveWith((states) => Theme.of(context).colorScheme.surface),
+                    textStyle: MaterialStateProperty.resolveWith((states) => TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                    shape: MaterialStateProperty.all(
+                      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                 ),
               ),
             ),

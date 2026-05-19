@@ -35,37 +35,20 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) {
       }
     });
 
-    if (userLocation != null && userLocation.name.isNotEmpty && userLocation.name != 'Unknown Location' && userLocation.name != 'GPS Location') {
-      final userCity = userLocation.name.trim().toLowerCase();
-      
-      // Filter shops that match the user's city/town
-      final cityShops = shops.where((shop) {
-        final shopCity = shop.location.city.trim().toLowerCase();
-        final shopAddress = shop.location.address.trim().toLowerCase();
-        return shopCity.contains(userCity) || shopAddress.contains(userCity) || userCity.contains(shopCity);
-      }).toList();
-
-      if (cityShops.isNotEmpty) {
-        final userLat = userLocation.latitude;
-        final userLng = userLocation.longitude;
-        cityShops.sort((a, b) {
-          final distA = Geolocator.distanceBetween(
-            userLat, userLng, a.location.latitude, a.location.longitude
-          );
-          final distB = Geolocator.distanceBetween(
-            userLat, userLng, b.location.latitude, b.location.longitude
-          );
-          return distA.compareTo(distB);
-        });
-        return cityShops;
-      }
-    }
-    
-    // Fallback: Sort all shops by distance if coordinates are available
     if (userLocation != null) {
       final userLat = userLocation.latitude;
       final userLng = userLocation.longitude;
-      shops.sort((a, b) {
+      
+      // Filter shops strictly within a 15km radius
+      final nearbyShops = shops.where((shop) {
+        final distanceInMeters = Geolocator.distanceBetween(
+          userLat, userLng, shop.location.latitude, shop.location.longitude
+        );
+        return distanceInMeters <= 15000; // 15 km
+      }).toList();
+
+      // Sort the strictly nearby shops by distance
+      nearbyShops.sort((a, b) {
         final distA = Geolocator.distanceBetween(
           userLat, userLng, a.location.latitude, a.location.longitude
         );
@@ -74,9 +57,12 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) {
         );
         return distA.compareTo(distB);
       });
+      
+      return nearbyShops;
     }
     
-    return shops;
+    // If location is null, return empty list to prevent showing irrelevant shops
+    return <Shop>[];
   }).handleError((error) {
     debugPrint('Error in nearbyShopsProvider stream: $error');
     return <Shop>[];

@@ -10,6 +10,8 @@ import 'package:local_vyapari_user/features/shops/presentation/screens/shop_deta
 import 'package:local_vyapari_user/features/products/presentation/screens/product_details_screen.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
+import 'package:local_vyapari_user/features/offers/presentation/screens/offer_details_screen.dart';
+import 'package:local_vyapari_user/shared/models/offer.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -47,6 +49,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final product = state.extra as Product;
           return ProductDetailsScreen(product: product);
+        },
+      ),
+      GoRoute(
+        path: '/offer_details',
+        builder: (context, state) {
+          final offer = state.extra as Offer;
+          return OfferDetailsScreen(offer: offer);
         },
       ),
     ],
