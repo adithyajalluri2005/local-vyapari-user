@@ -189,7 +189,7 @@ class OfferDetailsScreen extends ConsumerWidget {
                       );
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (_, __) => const Text('Error loading shop details'),
+                    error: (_, _) => const Text('Error loading shop details'),
                   ),
                 ],
               ),

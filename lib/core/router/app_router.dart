@@ -13,8 +13,11 @@ import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/features/offers/presentation/screens/offer_details_screen.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/',
     routes: [
       GoRoute(

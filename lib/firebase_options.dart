@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -16,6 +17,29 @@ import 'package:flutter/foundation.dart'
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
+    final envApiKey = dotenv.env['FIREBASE_API_KEY'] ?? android.apiKey;
+    final envAppId = dotenv.env['FIREBASE_APP_ID'] ?? android.appId;
+    final envMessagingSenderId = dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? android.messagingSenderId;
+    final envProjectId = dotenv.env['FIREBASE_PROJECT_ID'] ?? android.projectId;
+    final envDatabaseURL = dotenv.env['FIREBASE_DATABASE_URL'] ?? android.databaseURL;
+    final envStorageBucket = dotenv.env['FIREBASE_STORAGE_BUCKET'] ?? android.storageBucket;
+
+    final hasEnvOverride = dotenv.env['FIREBASE_API_KEY'] != null ||
+        dotenv.env['FIREBASE_APP_ID'] != null ||
+        dotenv.env['FIREBASE_PROJECT_ID'] != null ||
+        dotenv.env['FIREBASE_DATABASE_URL'] != null;
+
+    if (hasEnvOverride) {
+      return FirebaseOptions(
+        apiKey: envApiKey,
+        appId: envAppId,
+        messagingSenderId: envMessagingSenderId,
+        projectId: envProjectId,
+        databaseURL: envDatabaseURL,
+        storageBucket: envStorageBucket,
+      );
+    }
+
     if (kIsWeb) {
       return android;
     }

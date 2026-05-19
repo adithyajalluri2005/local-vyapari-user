@@ -19,8 +19,6 @@ class AppTheme {
         onSecondary: Colors.white,
         surface: Colors.white,
         onSurface: secondaryColor,
-        background: backgroundColor,
-        onBackground: secondaryColor,
         error: errorColor,
         onError: Colors.white,
       ),
@@ -64,12 +62,12 @@ class AppTheme {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
         indicatorColor: primaryColor.withOpacity(0.15),
-        iconTheme: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return const IconThemeData(color: primaryColor);
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return const IconThemeData(color: primaryColor);
           return const IconThemeData(color: secondaryColor);
         }),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12);
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12);
           return const TextStyle(color: secondaryColor, fontSize: 12, fontWeight: FontWeight.w500);
         }),
       ),
@@ -116,8 +114,6 @@ class AppTheme {
         onSecondary: Colors.black,
         surface: const Color(0xFF1E293B),
         onSurface: Colors.white,
-        background: const Color(0xFF0F172A),
-        onBackground: Colors.white,
         error: errorColor,
         onError: Colors.white,
       ),
