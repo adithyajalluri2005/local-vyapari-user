@@ -8,55 +8,61 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:local_vyapari_user/services/location/location_service.dart';
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final locationAsync = ref.watch(currentLocationProvider);
+    final locationAsync = ref.watch(activeBrowsingLocationProvider);
     final shopsAsync = ref.watch(nearbyShopsProvider);
     final productsAsync = ref.watch(nearbyProductsProvider);
     final offersAsync = ref.watch(nearbyOffersProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.location_on, color: AppTheme.primaryColor, size: 20),
-                const SizedBox(width: 4),
-                Text(
-                  'Current Location',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+        title: GestureDetector(
+          onTap: () => context.push('/location_search'),
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.location_on, color: AppTheme.primaryColor, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Current Location',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Icon(Icons.keyboard_arrow_down, size: 20),
+                ],
+              ),
+              locationAsync.when(
+                data: (loc) => Text(
+                  loc != null ? loc.name : 'Location not available',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down, size: 20),
-              ],
-            ),
-            locationAsync.when(
-              data: (loc) => Text(
-                loc != null ? '${loc.city}, ${loc.state}' : 'Location not available',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey,
+                loading: () => Text(
+                  'Fetching location...',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
+                error: (_, __) => Text(
+                  'Error fetching location',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                  ),
                 ),
               ),
-              loading: () => Text(
-                'Fetching location...',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey,
-                ),
-              ),
-              error: (_, __) => Text(
-                'Error fetching location',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -206,7 +212,10 @@ class HomeScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => _buildShimmerList(height: 180, width: 140),
-                error: (_, __) => const Center(child: Text('Failed to load shops.')),
+                error: (error, stackTrace) {
+                  debugPrint('Error loading shops on home screen: $error\n$stackTrace');
+                  return const Center(child: Text('Failed to load shops.'));
+                },
               ),
             ),
             

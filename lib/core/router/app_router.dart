@@ -5,6 +5,7 @@ import 'package:local_vyapari_user/features/auth/presentation/screens/splash_scr
 import 'package:local_vyapari_user/features/auth/presentation/screens/login_screen.dart';
 import 'package:local_vyapari_user/features/auth/presentation/screens/register_screen.dart';
 import 'package:local_vyapari_user/features/home/presentation/screens/main_navigation_screen.dart';
+import 'package:local_vyapari_user/features/location/presentation/screens/location_search_screen.dart';
 import 'package:local_vyapari_user/features/shops/presentation/screens/shop_details_screen.dart';
 import 'package:local_vyapari_user/features/products/presentation/screens/product_details_screen.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
@@ -29,6 +30,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const MainNavigationScreen(),
+      ),
+      GoRoute(
+        path: '/location_search',
+        builder: (context, state) => const LocationSearchScreen(),
       ),
       GoRoute(
         path: '/shop_details',

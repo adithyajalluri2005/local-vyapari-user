@@ -49,6 +49,52 @@ class Shop {
       location: ShopLocation.fromMap(data['location'] ?? {}),
     );
   }
+
+  factory Shop.fromRTDB(String id, Map<dynamic, dynamic> map) {
+    final String addressStr = map['address'] ?? '';
+    
+    // Attempt to extract city from address (e.g. "Venkatarayapuram, Tanuku, ...")
+    String cityStr = map['city'] ?? '';
+    if (cityStr.isEmpty && addressStr.isNotEmpty) {
+      final parts = addressStr.split(',').map((p) => p.trim()).toList();
+      if (parts.length >= 3) {
+        // usually format is: street, area, city, pincode, country
+        cityStr = parts[2];
+      } else if (parts.isNotEmpty) {
+        cityStr = parts.last;
+      }
+    }
+    if (cityStr.isEmpty) {
+      cityStr = 'Unknown City';
+    }
+
+    return Shop(
+      id: id,
+      ownerId: map['ownerId'] ?? map['id'] ?? id,
+      shopName: map['name'] ?? map['shopName'] ?? '',
+      description: map['description'] ?? '',
+      phone: map['phone'] ?? '',
+      shopLogo: map['logoUrl'] ?? map['shopLogo'] ?? '',
+      shopBanner: map['bannerUrl'] ?? map['shopBanner'] ?? '',
+      isVerified: map['isVerified'] ?? false,
+      isOpen: map['isOpen'] ?? true,
+      rating: (map['rating'] ?? 0.0).toDouble(),
+      totalReviews: map['totalReviews'] ?? 0,
+      createdAt: map['createdAt'] != null 
+          ? DateTime.tryParse(map['createdAt'].toString()) 
+          : null,
+      location: ShopLocation(
+        latitude: (map['latitude'] ?? 0.0).toDouble(),
+        longitude: (map['longitude'] ?? 0.0).toDouble(),
+        geohash: map['geohash'] ?? '',
+        address: addressStr,
+        city: cityStr,
+        state: map['state'] ?? '',
+        pincode: map['pincode'] ?? '',
+        placeId: map['placeId'] ?? '',
+      ),
+    );
+  }
 }
 
 class ShopLocation {

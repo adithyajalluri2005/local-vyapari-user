@@ -46,4 +46,21 @@ class Offer {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
+
+  factory Offer.fromRTDB(String id, String shopId, Map<dynamic, dynamic> map) {
+    return Offer(
+      id: id,
+      shopId: shopId,
+      productId: map['productId'] ?? '',
+      ownerId: map['ownerId'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      discountPercentage: (map['discountPercentage'] ?? 0.0).toDouble(),
+      startDate: map['startDate'] != null ? DateTime.tryParse(map['startDate'].toString()) : null,
+      endDate: map['endDate'] != null ? DateTime.tryParse(map['endDate'].toString()) : null,
+      isActive: map['isActive'] ?? false,
+      isFeatured: map['isFeatured'] ?? false,
+      createdAt: map['createdAt'] != null ? DateTime.tryParse(map['createdAt'].toString()) : null,
+    );
+  }
 }

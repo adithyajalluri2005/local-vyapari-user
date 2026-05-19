@@ -55,4 +55,42 @@ class Product {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
+
+  factory Product.fromRTDB(String id, String shopId, Map<dynamic, dynamic> map) {
+    List<String> parsedImages = [];
+    if (map['images'] is List) {
+      parsedImages = List<String>.from(map['images']);
+    } else if (map['images'] is Map) {
+      final mapImages = map['images'] as Map;
+      parsedImages = mapImages.values.map((v) => v.toString()).toList();
+    } else if (map['imageUrl'] != null) {
+      parsedImages = [map['imageUrl'].toString()];
+    }
+    
+    List<String> parsedKeywords = [];
+    if (map['searchKeywords'] is List) {
+      parsedKeywords = List<String>.from(map['searchKeywords']);
+    } else if (map['searchKeywords'] is Map) {
+      final mapKeywords = map['searchKeywords'] as Map;
+      parsedKeywords = mapKeywords.values.map((v) => v.toString()).toList();
+    }
+
+    return Product(
+      id: id,
+      shopId: shopId,
+      ownerId: map['ownerId'] ?? map['vendorId'] ?? '',
+      name: map['name'] ?? '',
+      description: map['description'] ?? '',
+      category: map['category'] ?? '',
+      actualPrice: (map['actualPrice'] ?? map['price'] ?? 0.0).toDouble(),
+      offerPrice: (map['offerPrice'] ?? map['price'] ?? 0.0).toDouble(),
+      stockQuantity: map['stockQuantity'] ?? 0,
+      isLowStock: map['isLowStock'] ?? false,
+      isOutOfStock: map['isOutOfStock'] ?? false,
+      isActive: map['isActive'] ?? true,
+      images: parsedImages,
+      searchKeywords: parsedKeywords,
+      createdAt: map['createdAt'] != null ? DateTime.tryParse(map['createdAt'].toString()) : null,
+    );
+  }
 }
