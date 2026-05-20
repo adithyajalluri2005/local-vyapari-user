@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
-import 'package:local_vyapari_user/features/home/providers/nearby_products_provider.dart';
-import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
+import 'package:local_vyapari_user/features/search/providers/hybrid_search_provider.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 
@@ -27,8 +26,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final shopsAsync = ref.watch(nearbyShopsProvider);
-    final productsAsync = ref.watch(nearbyProductsProvider);
+    final searchResultAsync = ref.watch(hybridSearchProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Search Nearby'), centerTitle: true),
@@ -48,6 +46,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     onPressed: () {
                       _searchController.clear();
                       setState(() => _query = '');
+                      ref.read(hybridSearchProvider.notifier).search('');
                     },
                   ),
               ],
@@ -61,14 +60,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               padding: WidgetStateProperty.all(
                 const EdgeInsets.symmetric(horizontal: 16),
               ),
-              onChanged: (value) => setState(() => _query = value.trim()),
+              onChanged: (value) {
+                setState(() => _query = value.trim());
+                ref.read(hybridSearchProvider.notifier).search(value.trim());
+              },
             ),
           ),
           const Divider(height: 1),
           Expanded(
             child: _query.isEmpty
                 ? _buildSuggestions(context)
-                : _buildResults(context, shopsAsync, productsAsync),
+                : _buildResults(context, searchResultAsync),
           ),
         ],
       ),
@@ -77,39 +79,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Widget _buildResults(
     BuildContext context,
-    AsyncValue<List<Shop>> shopsAsync,
-    AsyncValue<List<Product>> productsAsync,
+    AsyncValue<HybridSearchResult> searchResultAsync,
   ) {
-    final isLoading = shopsAsync.isLoading || productsAsync.isLoading;
-    final error = shopsAsync.error ?? productsAsync.error;
-
-    if (isLoading) {
+    if (searchResultAsync.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (error != null) {
-      return const Center(child: Text('Failed to load search results.'));
+    if (searchResultAsync.hasError) {
+      return Center(child: Text('Failed to load search results: ${searchResultAsync.error}'));
     }
 
-    final shops = shopsAsync.value ?? <Shop>[];
-    final products = productsAsync.value ?? <Product>[];
-    final matchingShops = shops
-        .where((shop) => _matchesShop(shop, _query))
-        .toList();
-    final matchingProducts = products
-        .where((product) => _matchesProduct(product, _query))
-        .toList();
-
-    if (matchingShops.isEmpty && matchingProducts.isEmpty) {
+    final result = searchResultAsync.value ?? const HybridSearchResult();
+    
+    if (result.products.isEmpty && result.shops.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Text(
-            'No results found for "$_query".',
+            'No results found for "$_query" within 15km.',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Colors.grey),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey),
           ),
         ),
       );
@@ -118,13 +107,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        if (matchingProducts.isNotEmpty) ...[
+        if (result.products.isNotEmpty) ...[
           _buildSectionTitle(context, 'Products'),
-          ...matchingProducts.map(_buildProductResult),
+          ...result.products.map(_buildProductResult),
         ],
-        if (matchingShops.isNotEmpty) ...[
+        if (result.shops.isNotEmpty) ...[
           _buildSectionTitle(context, 'Shops'),
-          ...matchingShops.map(_buildShopResult),
+          ...result.shops.map(_buildShopResult),
         ],
       ],
     );
@@ -244,30 +233,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _applyQuery(String value) {
     _searchController.text = value;
     setState(() => _query = value.trim());
-  }
-
-  bool _matchesProduct(Product product, String query) {
-    final normalizedQuery = query.toLowerCase();
-    final searchableText = [
-      product.name,
-      product.description,
-      product.category,
-      ...product.searchKeywords,
-    ].join(' ').toLowerCase();
-
-    return searchableText.contains(normalizedQuery);
-  }
-
-  bool _matchesShop(Shop shop, String query) {
-    final normalizedQuery = query.toLowerCase();
-    final searchableText = [
-      shop.shopName,
-      shop.description,
-      shop.location.city,
-      shop.location.address,
-    ].join(' ').toLowerCase();
-
-    return searchableText.contains(normalizedQuery);
+    ref.read(hybridSearchProvider.notifier).search(value.trim());
   }
 }
 

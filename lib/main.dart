@@ -6,6 +6,7 @@ import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/services/notifications/notification_service.dart';
+import 'package:local_vyapari_user/features/search/services/search_indexer_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,9 @@ class LocalVyapariApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Initialize Notification Service
     ref.watch(notificationServiceProvider);
+    
+    // Initialize Search Indexer (Sync RTDB to Firestore)
+    ref.watch(searchIndexerServiceProvider).syncShopsToFirestore();
 
     final router = ref.watch(appRouterProvider);
 
