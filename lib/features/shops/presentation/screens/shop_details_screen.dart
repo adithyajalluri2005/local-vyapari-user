@@ -8,6 +8,8 @@ import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_products_provider.dart';
 
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
+
 class ShopDetailsScreen extends ConsumerWidget {
   final Shop shop;
   const ShopDetailsScreen({super.key, required this.shop});
@@ -67,15 +69,29 @@ class ShopDetailsScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
-                          shop.shopName,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                shop.shopName,
+                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (shop.isVerified) ...[
+                              const SizedBox(width: 8),
+                              const Icon(Icons.verified, color: Colors.blue, size: 24),
+                            ],
+                          ],
                         ),
                       ),
-                      if (shop.isVerified)
-                        const Icon(Icons.verified, color: Colors.blue, size: 24),
+                      const SizedBox(width: 16),
+                      FavoriteButton(
+                        itemId: shop.id,
+                        type: FavoriteType.shop,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -84,7 +100,7 @@ class ShopDetailsScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: shop.isOpen ? AppTheme.successColor.withOpacity(0.1) : AppTheme.errorColor.withOpacity(0.1),
+                          color: shop.isOpen ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.errorColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(

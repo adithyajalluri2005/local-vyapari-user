@@ -7,6 +7,8 @@ import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
+
 class ProductDetailsScreen extends ConsumerWidget {
   final Product product;
   const ProductDetailsScreen({super.key, required this.product});
@@ -16,12 +18,6 @@ class ProductDetailsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Product Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -52,7 +48,7 @@ class ProductDetailsScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -68,7 +64,7 @@ class ProductDetailsScreen extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.errorColor.withOpacity(0.1),
+                            color: AppTheme.errorColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
@@ -83,11 +79,23 @@ class ProductDetailsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    product.name,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product.name,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      FavoriteButton(
+                        itemId: product.id,
+                        type: FavoriteType.product,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Row(
