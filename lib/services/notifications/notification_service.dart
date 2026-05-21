@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -10,6 +12,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/services/location/location_cache.dart';
@@ -17,8 +20,68 @@ import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 
 @pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling a background message: ${message.messageId}");
+  
+  // Ensure environment variables are loaded for DefaultFirebaseOptions
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Failed to load .env file in background isolate: $e");
+  }
+  
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase already initialized or failed in background: $e");
+  }
+
+  // Handle manual notification display if it's a data-only message (where OS won't show it automatically)
+  if (message.notification == null && message.data.isNotEmpty) {
+    final title = message.data['title'] ?? 'New Offer!';
+    final body = message.data['body'] ?? 'Check out the new offer nearby!';
+    
+    final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+    
+    try {
+      await localNotifications.initialize(
+        settings: initializationSettings,
+      );
+      
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'offers_channel_id',
+        'Nearby Offers',
+        channelDescription: 'Notifications for new offers in nearby shops',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+        playSound: true,
+      );
+
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+      );
+
+      final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      await localNotifications.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: platformChannelSpecifics,
+      );
+      debugPrint("Displayed background native notification for data-only message");
+    } catch (e) {
+      debugPrint("Error displaying background notification: $e");
+    }
+  }
 }
 
 final notificationServiceProvider = Provider((ref) {
@@ -92,6 +155,17 @@ class NotificationService {
               
       if (androidImplementation != null) {
         await androidImplementation.requestNotificationsPermission();
+        
+        // Create the notification channel explicitly
+        const AndroidNotificationChannel channel = AndroidNotificationChannel(
+          'offers_channel_id',
+          'Nearby Offers',
+          description: 'Notifications for new offers in nearby shops',
+          importance: Importance.max,
+          playSound: true,
+        );
+        await androidImplementation.createNotificationChannel(channel);
+        debugPrint('Explicitly created local notification channel: offers_channel_id');
       }
     } catch (e) {
       debugPrint('Error initializing local notifications: $e');
@@ -238,7 +312,7 @@ class NotificationService {
     final messaging = FirebaseMessaging.instance;
 
     // Set background message handler
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // Request permissions for iOS and Android 13+
     try {
@@ -268,11 +342,40 @@ class NotificationService {
       }
     });
 
+    // Handle message opened when app is in background (but not terminated)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('FCM message opened from background: ${message.messageId}');
+      _handleNotificationClick(message);
+    });
+
+    // Check if the app was opened from a terminated state via a notification
+    messaging.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        debugPrint('FCM message opened from terminated state: ${message.messageId}');
+        // Wait a short delay for GoRouter/Navigator to be ready
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _handleNotificationClick(message);
+        });
+      }
+    });
+
     // Listen to token refresh
     messaging.onTokenRefresh.listen((token) {
       debugPrint('FCM Token refreshed: $token');
       _syncDeviceRegistration();
     });
+  }
+
+  void _handleNotificationClick(RemoteMessage message) {
+    try {
+      final context = rootNavigatorKey.currentContext;
+      if (context != null) {
+        // Navigate to home screen where offers are displayed
+        GoRouter.of(context).go('/home');
+      }
+    } catch (e) {
+      debugPrint('Error handling FCM notification click: $e');
+    }
   }
 
   Future<void> _syncDeviceRegistration({LocationResult? location}) async {
