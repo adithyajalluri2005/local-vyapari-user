@@ -65,27 +65,23 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
       _isLocatingGPS = true;
     });
 
-    try {
-      final gpsLoc = await ref.read(locationServiceProvider).getGPSLocationResult();
-      if (gpsLoc != null) {
-        await _selectLocation(gpsLoc);
+    final success = await ref.read(activeBrowsingLocationProvider.notifier).locateAndSetGPS();
+    
+    if (mounted) {
+      setState(() {
+        _isLocatingGPS = false;
+      });
+      if (success) {
+        context.pop();
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to get GPS location. Please check permissions.'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error getting GPS location: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLocatingGPS = false;
-        });
+        final stateValue = ref.read(activeBrowsingLocationProvider);
+        final errorMessage = stateValue.error?.toString() ?? 'Failed to get GPS location. Please check permissions.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
   }

@@ -176,8 +176,29 @@ class ShopDetailsScreen extends ConsumerWidget {
                           icon: const Icon(Icons.directions),
                           label: const Text('Navigate'),
                         ),
-                      ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        context.push('/chat', extra: {
+                          'shopId': shop.id,
+                          'shopName': shop.shopName,
+                        });
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text('Chat with Vendor'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 32),
                   Text(

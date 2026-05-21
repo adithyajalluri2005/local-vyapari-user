@@ -2,23 +2,37 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
+import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 
-final nearbyProductsProvider = StreamProvider<List<Product>>((ref) {
+final nearbyProductsProvider = StreamProvider<List<Product>>((ref) async* {
+  // 1. Yield local cached products immediately for instant UI response
+  try {
+    final cached = await DataCacheService.getCachedProducts();
+    if (cached.isNotEmpty) {
+      yield cached;
+    }
+  } catch (e) {
+    debugPrint('Error yielding cached products: $e');
+  }
+
+  // 2. Watch shops changes
   final shopsAsyncValue = ref.watch(nearbyShopsProvider);
   final shops = shopsAsyncValue.value ?? [];
 
   if (shops.isEmpty) {
-    return Stream.value(<Product>[]);
+    return;
   }
 
   final shopIds = shops.map((s) => s.id).toSet();
   final dbRef = FirebaseDatabase.instance.ref('products');
 
-  return dbRef.onValue.map((event) {
+  // 3. Yield remote database values reactively
+  await for (final event in dbRef.onValue) {
     final snapshot = event.snapshot;
     if (!snapshot.exists || snapshot.value == null) {
-      return <Product>[];
+      yield <Product>[];
+      continue;
     }
 
     final Map<dynamic, dynamic> shopsProductsMap = snapshot.value as Map<dynamic, dynamic>;
@@ -44,9 +58,9 @@ final nearbyProductsProvider = StreamProvider<List<Product>>((ref) {
       }
     });
 
-    return products;
-  }).handleError((error) {
-    debugPrint('Error in nearbyProductsProvider stream: $error');
-    return <Product>[];
-  });
+    // 4. Save to local cache
+    await DataCacheService.cacheProducts(products);
+
+    yield products;
+  }
 });

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
+import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/shared/utils/input_sanitizer.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -15,46 +18,69 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
-  Future<void> _register() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match!'),
-          backgroundColor: AppTheme.errorColor,
-        ),
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _register() {
+    final email = _emailController.text;
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    final emailError = InputSanitizer.validateEmail(email);
+    if (emailError != null) {
+      CustomSnackBar.showError(
+        context: context,
+        message: emailError,
+        title: 'Validation Error',
       );
       return;
     }
 
-    setState(() => _isLoading = true);
-    try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+    final passwordError = InputSanitizer.validatePassword(password);
+    if (passwordError != null) {
+      CustomSnackBar.showError(
+        context: context,
+        message: passwordError,
+        title: 'Validation Error',
       );
-      if (mounted) {
-        context.go('/home');
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message ?? 'Registration failed'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      return;
     }
+
+    if (password != confirmPassword) {
+      CustomSnackBar.showError(
+        context: context,
+        message: 'Passwords do not match!',
+        title: 'Validation Error',
+      );
+      return;
+    }
+
+    ref.read(authProvider.notifier).register(email.trim(), password);
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next is AuthFailure) {
+        CustomSnackBar.showError(
+          context: context,
+          message: next.message,
+          title: 'Registration Failed',
+        );
+        ref.read(authProvider.notifier).resetState();
+      }
+    });
+
+    final authState = ref.watch(authProvider);
+    final isLoading = authState is AuthLoading;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Account'),
@@ -98,25 +124,45 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               const SizedBox(height: 16),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock_outline),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
-                obscureText: true,
+                obscureText: _obscurePassword,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _confirmPasswordController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Confirm Password',
-                  prefixIcon: Icon(Icons.lock_outline),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
                 ),
-                obscureText: true,
+                obscureText: _obscureConfirmPassword,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _isLoading ? null : _register,
-                child: _isLoading
+                onPressed: isLoading ? null : _register,
+                child: isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text('Sign Up'),
               ),

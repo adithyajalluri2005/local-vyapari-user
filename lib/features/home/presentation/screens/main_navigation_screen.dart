@@ -17,33 +17,27 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  Widget _getScreen(int index) {
-    switch (index) {
-      case 0:
-        return HomeScreen(
-          onSearchTap: () {
-            setState(() {
-              _currentIndex = 1;
-            });
-          },
-        );
-      case 1:
-        return const SearchScreen();
-      case 2:
-        return const OffersScreen();
-      case 3:
-        return const FavoritesScreen();
-      case 4:
-        return const ProfileScreen();
-      default:
-        return const HomeScreen();
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _getScreen(_currentIndex),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          HomeScreen(
+            onSearchTap: () {
+              setState(() {
+                _currentIndex = 1;
+              });
+            },
+          ),
+          const SearchScreen(),
+          const OffersScreen(),
+          const FavoritesScreen(),
+          const ProfileScreen(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {

@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
+import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  Future<void> _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    if (context.mounted) {
-      context.go('/login');
-    }
+  Future<void> _logout(WidgetRef ref) async {
+    await ref.read(authProvider.notifier).logout();
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = FirebaseAuth.instance.currentUser;
+    final authState = ref.watch(authProvider);
+    final user = authState is Authenticated ? authState.user : null;
     
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +83,7 @@ class ProfileScreen extends ConsumerWidget {
               title: 'Logout',
               iconColor: AppTheme.errorColor,
               textColor: AppTheme.errorColor,
-              onTap: () => _logout(context),
+              onTap: () => _logout(ref),
             ),
           ],
         ),

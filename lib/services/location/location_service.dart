@@ -46,6 +46,24 @@ class ActiveBrowsingLocationNotifier extends Notifier<AsyncValue<LocationResult?
     await ref.read(locationServiceProvider).saveActiveBrowsingLocation(location);
     state = AsyncValue.data(location);
   }
+
+  Future<bool> locateAndSetGPS() async {
+    state = const AsyncValue.loading();
+    try {
+      final gpsLoc = await ref.read(locationServiceProvider).getGPSLocationResult();
+      if (gpsLoc != null) {
+        await ref.read(locationServiceProvider).saveActiveBrowsingLocation(gpsLoc);
+        state = AsyncValue.data(gpsLoc);
+        return true;
+      } else {
+        state = AsyncValue.error('Could not retrieve GPS location. Please check your settings or permissions.', StackTrace.current);
+        return false;
+      }
+    } catch (e, stack) {
+      state = AsyncValue.error('Error fetching GPS: $e', stack);
+      return false;
+    }
+  }
 }
 
 final activeBrowsingLocationProvider = NotifierProvider<ActiveBrowsingLocationNotifier, AsyncValue<LocationResult?>>(() {

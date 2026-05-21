@@ -2,24 +2,38 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
+import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 
-final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) {
+final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) async* {
+  // 1. Yield local cached offers immediately for instant UI response
+  try {
+    final cached = await DataCacheService.getCachedOffers();
+    if (cached.isNotEmpty) {
+      yield cached;
+    }
+  } catch (e) {
+    debugPrint('Error yielding cached offers: $e');
+  }
+
+  // 2. Watch shops changes
   final shopsAsyncValue = ref.watch(nearbyShopsProvider);
   final shops = shopsAsyncValue.value ?? [];
 
   if (shops.isEmpty) {
-    return Stream.value(<Offer>[]);
+    return;
   }
 
   final shopIds = shops.map((s) => s.id).toSet();
   final now = DateTime.now();
   final dbRef = FirebaseDatabase.instance.ref('offers');
 
-  return dbRef.onValue.map((event) {
+  // 3. Yield remote database values reactively
+  await for (final event in dbRef.onValue) {
     final snapshot = event.snapshot;
     if (!snapshot.exists || snapshot.value == null) {
-      return <Offer>[];
+      yield <Offer>[];
+      continue;
     }
 
     final Map<dynamic, dynamic> shopsOffersMap = snapshot.value as Map<dynamic, dynamic>;
@@ -48,9 +62,10 @@ final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) {
     });
 
     offers.sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));
-    return offers;
-  }).handleError((error) {
-    debugPrint('Error in nearbyOffersProvider stream: $error');
-    return <Offer>[];
-  });
+
+    // 4. Save to local cache
+    await DataCacheService.cacheOffers(offers);
+
+    yield offers;
+  }
 });

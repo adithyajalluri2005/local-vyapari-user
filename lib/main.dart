@@ -7,10 +7,16 @@ import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/services/notifications/notification_service.dart';
-import 'package:local_vyapari_user/features/search/services/search_indexer_service.dart';
+import 'package:local_vyapari_user/shared/widgets/global_error_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Intercept layout and render-time errors to show a premium error screen instead of standard crash layout
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return GlobalErrorScreen(details: details);
+  };
+
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
@@ -38,8 +44,10 @@ class LocalVyapariApp extends ConsumerWidget {
     // Initialize Notification Service
     ref.watch(notificationServiceProvider);
     
-    // Initialize Search Indexer (Sync RTDB to Firestore)
-    ref.watch(searchIndexerServiceProvider).syncShopsToFirestore();
+    // NOTE: Client-side syncing of all shops to Firestore is deprecated to preserve 
+    // write security and network query limits. Production index syncing should reside 
+    // inside a Firebase Cloud Function.
+    // ref.watch(searchIndexerServiceProvider).syncShopsToFirestore();
 
     final router = ref.watch(appRouterProvider);
 

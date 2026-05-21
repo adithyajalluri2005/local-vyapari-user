@@ -160,7 +160,7 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
             
-            _buildSectionHeader(context, 'Nearby Shops', () {}),
+            _buildSectionHeader(context, 'Nearby Shops', () => context.push('/radar')),
             SizedBox(
               height: 180,
               child: shopsAsync.when(
