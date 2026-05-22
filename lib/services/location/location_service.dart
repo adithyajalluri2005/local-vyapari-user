@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_cache.dart';
+import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 
 final locationServiceProvider = Provider((ref) => LocationService());
 
@@ -115,6 +116,16 @@ class LocationService {
   // Save selected location as active browsing location
   Future<void> saveActiveBrowsingLocation(LocationResult location) async {
     try {
+      final currentLoc = await LocationCache.getActiveLocation();
+      final locationChanged = currentLoc == null ||
+          currentLoc.latitude != location.latitude ||
+          currentLoc.longitude != location.longitude;
+
+      if (locationChanged) {
+        // Clear cached shops, products, and offers because they belong to the old location
+        await DataCacheService.clearLocationCache();
+      }
+
       await LocationCache.saveActiveLocation(location);
       _activeLocationController.add(location);
 

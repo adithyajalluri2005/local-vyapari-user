@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
+import 'security_helper.dart';
 
 class DataCacheService {
   static Future<File> _getFile(String filename) async {
@@ -38,7 +39,10 @@ class DataCacheService {
         'pincode': shop.location.pincode,
         'placeId': shop.location.placeId,
       }).toList();
-      await file.writeAsString(json.encode(list));
+      
+      final jsonString = json.encode(list);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching shops: $e');
     }
@@ -50,7 +54,17 @@ class DataCacheService {
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isEmpty) return [];
-        final list = json.decode(content) as List<dynamic>;
+        
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          // If decryption fails (e.g. key changed or legacy unencrypted file)
+          await file.delete();
+          return [];
+        }
+
+        final list = json.decode(decryptedContent) as List<dynamic>;
         return list.map((item) => Shop.fromRTDB(item['id'].toString(), Map<dynamic, dynamic>.from(item))).toList();
       }
     } catch (e) {
@@ -80,7 +94,10 @@ class DataCacheService {
         'searchKeywords': p.searchKeywords,
         'createdAt': p.createdAt?.toIso8601String(),
       }).toList();
-      await file.writeAsString(json.encode(list));
+
+      final jsonString = json.encode(list);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching products: $e');
     }
@@ -92,7 +109,16 @@ class DataCacheService {
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isEmpty) return [];
-        final list = json.decode(content) as List<dynamic>;
+
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          await file.delete();
+          return [];
+        }
+
+        final list = json.decode(decryptedContent) as List<dynamic>;
         return list.map((item) => Product.fromRTDB(item['id'].toString(), item['shopId'].toString(), Map<dynamic, dynamic>.from(item))).toList();
       }
     } catch (e) {
@@ -119,7 +145,10 @@ class DataCacheService {
         'isFeatured': o.isFeatured,
         'createdAt': o.createdAt?.toIso8601String(),
       }).toList();
-      await file.writeAsString(json.encode(list));
+
+      final jsonString = json.encode(list);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching offers: $e');
     }
@@ -131,7 +160,16 @@ class DataCacheService {
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isEmpty) return [];
-        final list = json.decode(content) as List<dynamic>;
+
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          await file.delete();
+          return [];
+        }
+
+        final list = json.decode(decryptedContent) as List<dynamic>;
         return list.map((item) => Offer.fromRTDB(item['id'].toString(), item['shopId'].toString(), Map<dynamic, dynamic>.from(item))).toList();
       }
     } catch (e) {
@@ -144,7 +182,9 @@ class DataCacheService {
   static Future<void> saveSyncQueue(List<Map<String, dynamic>> queue) async {
     try {
       final file = await _getFile('sync_queue.json');
-      await file.writeAsString(json.encode(queue));
+      final jsonString = json.encode(queue);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error saving sync queue: $e');
     }
@@ -156,12 +196,51 @@ class DataCacheService {
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isEmpty) return [];
-        final list = json.decode(content) as List<dynamic>;
+
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          await file.delete();
+          return [];
+        }
+
+        final list = json.decode(decryptedContent) as List<dynamic>;
         return list.map((item) => Map<String, dynamic>.from(item)).toList();
       }
     } catch (e) {
       debugPrint('Error loading sync queue: $e');
     }
     return [];
+  }
+
+  // Clear only location-specific cached files
+  static Future<void> clearLocationCache() async {
+    try {
+      final files = ['cached_shops.json', 'cached_products.json', 'cached_offers.json'];
+      for (final filename in files) {
+        final file = await _getFile(filename);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error clearing location cache: $e');
+    }
+  }
+
+  // Clear all cached files upon secure logout
+  static Future<void> clearCache() async {
+    try {
+      final files = ['cached_shops.json', 'cached_products.json', 'cached_offers.json', 'sync_queue.json'];
+      for (final filename in files) {
+        final file = await _getFile(filename);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error clearing cache: $e');
+    }
   }
 }

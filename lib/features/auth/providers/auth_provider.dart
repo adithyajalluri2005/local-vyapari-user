@@ -4,6 +4,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 
+import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
+
 // Provider for FirebaseAuth dependency injection to facilitate unit testing
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
@@ -33,6 +35,8 @@ class AuthNotifier extends Notifier<AuthState> {
           state = const Unauthenticated();
         }
       } else {
+        // Clear sensitive cache when signing out/unauthenticated
+        await DataCacheService.clearCache();
         state = const Unauthenticated();
       }
     });

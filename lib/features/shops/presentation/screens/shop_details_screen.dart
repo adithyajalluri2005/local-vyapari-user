@@ -176,6 +176,7 @@ class ShopDetailsScreen extends ConsumerWidget {
                           icon: const Icon(Icons.directions),
                           label: const Text('Navigate'),
                         ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),

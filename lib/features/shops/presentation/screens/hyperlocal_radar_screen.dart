@@ -137,17 +137,17 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
                                 // Overlay labels for radar bounds
                                 Positioned(
                                   left: center.dx + 4,
-                                  top: center.y - (radarRadius * 0.33) - 10,
+                                  top: center.dy - (radarRadius * 0.33) - 10,
                                   child: const Text('5 km', style: TextStyle(color: Colors.white38, fontSize: 10)),
                                 ),
                                 Positioned(
                                   left: center.dx + 4,
-                                  top: center.y - (radarRadius * 0.66) - 10,
+                                  top: center.dy - (radarRadius * 0.66) - 10,
                                   child: const Text('10 km', style: TextStyle(color: Colors.white38, fontSize: 10)),
                                 ),
                                 Positioned(
                                   left: center.dx + 4,
-                                  top: center.y - radarRadius - 10,
+                                  top: center.dy - radarRadius - 10,
                                   child: const Text('15 km', style: TextStyle(color: Colors.white38, fontSize: 10)),
                                 ),
                               ],

@@ -9,22 +9,31 @@ import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 
 final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
-  // 1. Yield local cached shops immediately for instant boot
-  try {
-    final cached = await DataCacheService.getCachedShops();
-    if (cached.isNotEmpty) {
-      yield cached;
-    }
-  } catch (e) {
-    debugPrint('Error yielding cached shops: $e');
-  }
-
-  // 2. Watch active location changes
+  // 1. Watch active location changes first
   final locationAsyncValue = ref.watch(activeBrowsingLocationProvider);
   final userLocation = locationAsyncValue.value;
 
   if (userLocation == null) {
     return;
+  }
+
+  // 2. Yield local cached shops immediately if they match the active location (within 15km)
+  try {
+    final cached = await DataCacheService.getCachedShops();
+    if (cached.isNotEmpty) {
+      final firstShop = cached.first;
+      final distance = Geolocator.distanceBetween(
+        userLocation.latitude,
+        userLocation.longitude,
+        firstShop.location.latitude,
+        firstShop.location.longitude,
+      );
+      if (distance <= 15000) {
+        yield cached;
+      }
+    }
+  } catch (e) {
+    debugPrint('Error yielding cached shops: $e');
   }
 
   final center = GeoFirePoint(GeoPoint(userLocation.latitude, userLocation.longitude));

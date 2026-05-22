@@ -21,6 +21,15 @@ class HomeScreen extends ConsumerWidget {
     final productsAsync = ref.watch(nearbyProductsProvider);
     final offersAsync = ref.watch(nearbyOffersProvider);
 
+    // Invalidate nearby providers when active browsing location actually changes
+    ref.listen(activeBrowsingLocationProvider, (previous, next) {
+      if (previous?.value != next?.value) {
+        ref.invalidate(nearbyShopsProvider);
+        ref.invalidate(nearbyProductsProvider);
+        ref.invalidate(nearbyOffersProvider);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -101,6 +110,7 @@ class HomeScreen extends ConsumerWidget {
             SizedBox(
               height: 140,
               child: offersAsync.when(
+                skipLoadingOnReload: false,
                 data: (offers) {
                   if (offers.isEmpty) return const Center(child: Text('No active offers nearby.'));
                   return ListView.builder(
@@ -164,6 +174,7 @@ class HomeScreen extends ConsumerWidget {
             SizedBox(
               height: 180,
               child: shopsAsync.when(
+                skipLoadingOnReload: false,
                 data: (shops) {
                   if (shops.isEmpty) return const Center(child: Text('No shops found nearby.'));
                   return ListView.builder(
@@ -231,6 +242,7 @@ class HomeScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: productsAsync.when(
+                skipLoadingOnReload: false,
                 data: (products) {
                   if (products.isEmpty) return const Center(child: Text('No products found nearby.'));
                   return GridView.builder(

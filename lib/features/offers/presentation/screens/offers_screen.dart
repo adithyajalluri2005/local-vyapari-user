@@ -17,6 +17,7 @@ class OffersScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: offersAsync.when(
+        skipLoadingOnReload: false,
         data: (offers) {
           if (offers.isEmpty) {
             return Center(

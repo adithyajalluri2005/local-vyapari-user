@@ -6,22 +6,27 @@ import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 
 final nearbyProductsProvider = StreamProvider<List<Product>>((ref) async* {
-  // 1. Yield local cached products immediately for instant UI response
-  try {
-    final cached = await DataCacheService.getCachedProducts();
-    if (cached.isNotEmpty) {
-      yield cached;
-    }
-  } catch (e) {
-    debugPrint('Error yielding cached products: $e');
-  }
-
-  // 2. Watch shops changes
+  // 1. Watch shops changes first
   final shopsAsyncValue = ref.watch(nearbyShopsProvider);
   final shops = shopsAsyncValue.value ?? [];
 
   if (shops.isEmpty) {
+    yield <Product>[];
     return;
+  }
+
+  // 2. Yield local cached products immediately if they belong to current nearby shops
+  try {
+    final cached = await DataCacheService.getCachedProducts();
+    if (cached.isNotEmpty) {
+      final shopIds = shops.map((s) => s.id).toSet();
+      final validCached = cached.where((p) => shopIds.contains(p.shopId)).toList();
+      if (validCached.isNotEmpty) {
+        yield validCached;
+      }
+    }
+  } catch (e) {
+    debugPrint('Error yielding cached products: $e');
   }
 
   final shopIds = shops.map((s) => s.id).toSet();
