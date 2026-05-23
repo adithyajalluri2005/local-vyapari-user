@@ -21,19 +21,7 @@ class AuthNotifier extends Notifier<AuthState> {
     _authStateSubscription?.cancel();
     _authStateSubscription = auth.authStateChanges().listen((User? user) async {
       if (user != null) {
-        try {
-          final roleSnap = await FirebaseDatabase.instance.ref('users').child(user.uid).child('role').get();
-          final role = roleSnap.value as String?;
-          if (role == 'merchant') {
-            await auth.signOut();
-            state = const Unauthenticated();
-          } else {
-            state = Authenticated(user);
-          }
-        } catch (e) {
-          await auth.signOut();
-          state = const Unauthenticated();
-        }
+        state = Authenticated(user);
       } else {
         // Clear sensitive cache when signing out/unauthenticated
         await DataCacheService.clearCache();
@@ -52,23 +40,10 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthLoading();
     final auth = ref.read(firebaseAuthProvider);
     try {
-      final credential = await auth.signInWithEmailAndPassword(
+      await auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      
-      final uid = credential.user?.uid;
-      if (uid != null) {
-        final roleSnap = await FirebaseDatabase.instance.ref('users').child(uid).child('role').get();
-        final role = roleSnap.value as String?;
-        if (role == 'merchant') {
-          await auth.signOut();
-          state = const AuthFailure(
-            'Access Denied: This account is registered as a merchant. Please use the Local Vyapari Vendor app.',
-          );
-          return;
-        }
-      }
     } on FirebaseAuthException catch (e) {
       state = AuthFailure(e.message ?? 'An unknown error occurred during login.');
     } catch (e) {
