@@ -11,6 +11,7 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/dynamic_shop_rating.dart';
 
 class HyperlocalRadarScreen extends ConsumerStatefulWidget {
   const HyperlocalRadarScreen({super.key});
@@ -219,19 +220,26 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              '${_selectedShop!.rating} • ${_selectedShop!.location.city}',
-                                              style: const TextStyle(color: Colors.white70, fontSize: 12),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
+                                      DynamicShopRating(
+                                        shopId: _selectedShop!.id,
+                                        initialRating: _selectedShop!.rating,
+                                        initialTotalReviews: _selectedShop!.totalReviews,
+                                        builder: (context, rating, count) {
+                                          return Row(
+                                            children: [
+                                              const Icon(Icons.star, color: Colors.amber, size: 16),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  '${rating.toStringAsFixed(1)} • ${_selectedShop!.location.city}',
+                                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
