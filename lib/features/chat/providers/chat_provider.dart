@@ -94,22 +94,19 @@ class ChatService {
     if (messageId != null) {
       final Map<String, dynamic> updates = {
         'chats/$chatId/messages/$messageId': messageData,
-        'chats/$chatId/lastMessage': {
+        'chats/$userId/$shopId/lastMessage': {
           'text': text.trim(),
           'timestamp': timestamp,
-<<<<<<< HEAD
           'senderId': userId,
-        }
-=======
           'unread': false,
         },
         'chats/$shopId/$userId/lastMessage': {
           'text': text.trim(),
           'timestamp': timestamp,
+          'senderId': userId,
           'unread': true,
         },
         'chats/$shopId/$userId/userName': user?.email ?? 'Customer',
->>>>>>> 5d9a2e014a2907b44bd4cd1d8d56b775777733d4
       };
 
       if (shopName != null && shopName.isNotEmpty) {

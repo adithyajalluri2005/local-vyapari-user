@@ -6,11 +6,8 @@ import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
-<<<<<<< HEAD
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
-=======
 import 'package:go_router/go_router.dart';
->>>>>>> 5d9a2e014a2907b44bd4cd1d8d56b775777733d4
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});

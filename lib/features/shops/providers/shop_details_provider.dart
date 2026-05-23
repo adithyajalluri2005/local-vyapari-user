@@ -15,3 +15,14 @@ final shopDetailsProvider = FutureProvider.family<Shop?, String>((ref, shopId) a
   }
   return null;
 });
+
+final shopDetailsStreamProvider = StreamProvider.family<Shop?, String>((ref, shopId) {
+  return FirebaseDatabase.instance.ref('shop/$shopId').onValue.map((event) {
+    final snapshot = event.snapshot;
+    if (snapshot.exists && snapshot.value != null) {
+      final shopData = Map<dynamic, dynamic>.from(snapshot.value as Map<dynamic, dynamic>);
+      return Shop.fromRTDB(shopId, shopData);
+    }
+    return null;
+  });
+});

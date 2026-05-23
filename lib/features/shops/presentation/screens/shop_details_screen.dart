@@ -22,6 +22,7 @@ import 'package:local_vyapari_user/features/reviews/presentation/widgets/rating_
 import 'package:local_vyapari_user/features/reviews/presentation/widgets/rate_item_bottom_sheet.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
+import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 
 class ShopDetailsScreen extends ConsumerStatefulWidget {
   final Shop shop;
@@ -32,12 +33,14 @@ class ShopDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
-  Shop get shop => widget.shop;
+  late Shop _shop;
+  Shop get shop => _shop;
   final _analyticsService = AnalyticsService();
 
   @override
   void initState() {
     super.initState();
+    _shop = widget.shop;
     _analyticsService.trackShopView(shop.ownerId);
   }
 
@@ -67,6 +70,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _shop = ref.watch(shopDetailsStreamProvider(widget.shop.id)).value ?? widget.shop;
     Responsive.init(context);
     final productsAsync = ref.watch(shopProductsProvider(shop.id));
     final padding = AppSizes.paddingMedium(context);
