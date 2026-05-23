@@ -59,9 +59,7 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
         if (shopSnapshot.exists && shopSnapshot.value != null) {
           final shopData = shopSnapshot.value as Map<dynamic, dynamic>;
           final shop = Shop.fromRTDB(shopId, shopData);
-          if (shop.isOpen) {
-            shops.add(shop);
-          }
+          shops.add(shop);
         }
       } catch (e) {
         debugPrint('Error fetching/parsing shop $shopId: $e');

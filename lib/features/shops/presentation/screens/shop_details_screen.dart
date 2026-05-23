@@ -282,6 +282,19 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
   }
 
   Widget _buildStatusAndRatingRow(BuildContext context) {
+    String timingText = '';
+    if (shop.isOpen) {
+      timingText = 'OPEN';
+      if (shop.closingTime != null && shop.closingTime!.isNotEmpty) {
+        timingText += ' • Closes at ${shop.closingTime}';
+      }
+    } else {
+      timingText = 'CLOSED';
+      if (shop.openingTime != null && shop.openingTime!.isNotEmpty) {
+        timingText += ' • Opens at ${shop.openingTime}';
+      }
+    }
+
     return Row(
       children: [
         Container(
@@ -291,7 +304,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Text(
-            shop.isOpen ? 'OPEN' : 'CLOSED',
+            timingText,
             style: TextStyle(
               color: shop.isOpen ? AppTheme.successColor : AppTheme.errorColor,
               fontWeight: FontWeight.bold,

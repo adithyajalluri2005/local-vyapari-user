@@ -10,6 +10,8 @@ class Shop {
   final String shopBanner;
   final bool isVerified;
   final bool isOpen;
+  final String? openingTime;
+  final String? closingTime;
   final double rating;
   final int totalReviews;
   final DateTime? createdAt;
@@ -25,6 +27,8 @@ class Shop {
     required this.shopBanner,
     required this.isVerified,
     required this.isOpen,
+    this.openingTime,
+    this.closingTime,
     required this.rating,
     required this.totalReviews,
     this.createdAt,
@@ -43,6 +47,8 @@ class Shop {
       shopBanner: data['shopBanner'] ?? '',
       isVerified: data['isVerified'] ?? false,
       isOpen: data['isOpen'] ?? false,
+      openingTime: data['openingTime'],
+      closingTime: data['closingTime'],
       rating: (data['rating'] ?? 0.0).toDouble(),
       totalReviews: data['totalReviews'] ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -78,6 +84,8 @@ class Shop {
       shopBanner: map['bannerUrl'] ?? map['shopBanner'] ?? '',
       isVerified: map['isVerified'] ?? false,
       isOpen: map['isOpen'] ?? true,
+      openingTime: map['openingTime'],
+      closingTime: map['closingTime'],
       rating: (map['rating'] ?? 0.0).toDouble(),
       totalReviews: map['totalReviews'] ?? 0,
       createdAt: map['createdAt'] != null 

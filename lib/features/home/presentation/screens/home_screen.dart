@@ -259,12 +259,34 @@ class HomeScreen extends ConsumerWidget {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          DynamicShopRating(
-                                            shopId: shop.id,
-                                            initialRating: shop.rating,
-                                            initialTotalReviews: shop.totalReviews,
-                                            style: AppTextStyles.bodyMedium(context, color: Colors.grey),
-                                          ),
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: shop.isOpen ? AppTheme.successColor.withOpacity(0.1) : AppTheme.errorColor.withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    shop.isOpen ? 'OPEN' : 'CLOSED',
+                                                    style: TextStyle(
+                                                      color: shop.isOpen ? AppTheme.successColor : AppTheme.errorColor,
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                                AppSpacing.horizontalSm,
+                                                Expanded(
+                                                  child: DynamicShopRating(
+                                                    shopId: shop.id,
+                                                    initialRating: shop.rating,
+                                                    initialTotalReviews: shop.totalReviews,
+                                                    style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                         ],
                                       ),
                                     ),
