@@ -13,6 +13,7 @@ class Offer {
   final bool isActive;
   final bool isFeatured;
   final DateTime? createdAt;
+  final String shopName;
 
   Offer({
     required this.id,
@@ -27,6 +28,7 @@ class Offer {
     required this.isActive,
     required this.isFeatured,
     this.createdAt,
+    this.shopName = '',
   });
 
   factory Offer.fromFirestore(DocumentSnapshot doc) {
@@ -44,6 +46,7 @@ class Offer {
       isActive: data['isActive'] ?? false,
       isFeatured: data['isFeatured'] ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      shopName: data['shopName'] ?? '',
     );
   }
 
@@ -61,6 +64,39 @@ class Offer {
       isActive: map['isActive'] ?? false,
       isFeatured: map['isFeatured'] ?? false,
       createdAt: map['createdAt'] != null ? DateTime.tryParse(map['createdAt'].toString()) : null,
+      shopName: map['shopName'] ?? '',
+    );
+  }
+
+  Offer copyWith({
+    String? id,
+    String? shopId,
+    String? productId,
+    String? ownerId,
+    String? title,
+    String? description,
+    double? discountPercentage,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool? isActive,
+    bool? isFeatured,
+    DateTime? createdAt,
+    String? shopName,
+  }) {
+    return Offer(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      productId: productId ?? this.productId,
+      ownerId: ownerId ?? this.ownerId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      discountPercentage: discountPercentage ?? this.discountPercentage,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      isActive: isActive ?? this.isActive,
+      isFeatured: isFeatured ?? this.isFeatured,
+      createdAt: createdAt ?? this.createdAt,
+      shopName: shopName ?? this.shopName,
     );
   }
 }

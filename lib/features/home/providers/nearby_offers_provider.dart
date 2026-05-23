@@ -15,12 +15,17 @@ final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) async* {
     return;
   }
 
+  final shopIds = shops.map((s) => s.id).toSet();
+  final shopNames = {for (var s in shops) s.id: s.shopName};
+
   // 2. Yield local cached offers immediately if they belong to current nearby shops
   try {
     final cached = await DataCacheService.getCachedOffers();
     if (cached.isNotEmpty) {
-      final shopIds = shops.map((s) => s.id).toSet();
-      final validCached = cached.where((o) => shopIds.contains(o.shopId)).toList();
+      final validCached = cached
+          .where((o) => shopIds.contains(o.shopId))
+          .map((o) => o.copyWith(shopName: shopNames[o.shopId] ?? ''))
+          .toList();
       if (validCached.isNotEmpty) {
         yield validCached;
       }
@@ -29,7 +34,6 @@ final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) async* {
     debugPrint('Error yielding cached offers: $e');
   }
 
-  final shopIds = shops.map((s) => s.id).toSet();
   final now = DateTime.now();
   final dbRef = FirebaseDatabase.instance.ref('offers');
 
@@ -52,7 +56,9 @@ final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) async* {
             try {
               final offerId = offerIdKey.toString();
               final offerData = Map<dynamic, dynamic>.from(offerValue);
-              final offer = Offer.fromRTDB(offerId, shopId, offerData);
+              final offer = Offer.fromRTDB(offerId, shopId, offerData).copyWith(
+                shopName: shopNames[shopId] ?? '',
+              );
               final isTimeActive = (offer.endDate == null || offer.endDate!.isAfter(now)) &&
                   (offer.startDate == null || offer.startDate!.isBefore(now));
               if (offer.isActive && isTimeActive) {

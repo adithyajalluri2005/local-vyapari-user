@@ -144,6 +144,7 @@ class DataCacheService {
         'isActive': o.isActive,
         'isFeatured': o.isFeatured,
         'createdAt': o.createdAt?.toIso8601String(),
+        'shopName': o.shopName,
       }).toList();
 
       final jsonString = json.encode(list);

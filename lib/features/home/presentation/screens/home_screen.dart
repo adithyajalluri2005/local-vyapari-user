@@ -38,6 +38,19 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leadingWidth: 60,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0, top: 4.0, bottom: 4.0),
+          child: Image.asset(
+            'assets/images/logo.png',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => const Icon(
+              Icons.storefront,
+              color: AppTheme.primaryColor,
+              size: 28,
+            ),
+          ),
+        ),
         title: GestureDetector(
           onTap: () => context.push('/location_search'),
           behavior: HitTestBehavior.opaque,
@@ -140,7 +153,10 @@ class HomeScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                             border: Border.all(color: AppTheme.primaryColor.withOpacity(0.15)),
                           ),
-                          padding: EdgeInsets.all(AppSizes.paddingMedium(context)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.paddingMedium(context),
+                            vertical: 8.0,
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -156,6 +172,15 @@ class HomeScreen extends ConsumerWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              if (offer.shopName.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  offer.shopName,
+                                  style: AppTextStyles.bodyMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.w600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                               const SizedBox(height: 2),
                               Text(
                                 offer.description,

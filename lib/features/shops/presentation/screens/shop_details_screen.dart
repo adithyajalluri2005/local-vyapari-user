@@ -13,12 +13,28 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_products_provider.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
+import 'package:local_vyapari_user/services/analytics/analytics_service.dart';
 
-class ShopDetailsScreen extends ConsumerWidget {
+class ShopDetailsScreen extends ConsumerStatefulWidget {
   final Shop shop;
   const ShopDetailsScreen({super.key, required this.shop});
 
+  @override
+  ConsumerState<ShopDetailsScreen> createState() => _ShopDetailsScreenState();
+}
+
+class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
+  Shop get shop => widget.shop;
+  final _analyticsService = AnalyticsService();
+
+  @override
+  void initState() {
+    super.initState();
+    _analyticsService.trackShopView(shop.ownerId);
+  }
+
   Future<void> _launchMaps(BuildContext context) async {
+    _analyticsService.trackProfileClick(shop.ownerId);
     final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=${shop.location.latitude},${shop.location.longitude}');
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -30,6 +46,7 @@ class ShopDetailsScreen extends ConsumerWidget {
   }
   
   Future<void> _callShop(BuildContext context) async {
+    _analyticsService.trackProfileClick(shop.ownerId);
     final url = Uri.parse('tel:${shop.phone}');
     try {
       await launchUrl(url);
@@ -41,7 +58,7 @@ class ShopDetailsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     Responsive.init(context);
     final productsAsync = ref.watch(shopProductsProvider(shop.id));
     final padding = AppSizes.paddingMedium(context);
@@ -346,6 +363,7 @@ class ShopDetailsScreen extends ConsumerWidget {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
+              _analyticsService.trackProfileClick(shop.ownerId);
               context.push('/chat', extra: {
                 'shopId': shop.id,
                 'shopName': shop.shopName,

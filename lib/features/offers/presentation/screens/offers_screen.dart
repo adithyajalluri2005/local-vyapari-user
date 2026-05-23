@@ -170,6 +170,15 @@ class OffersScreen extends ConsumerWidget {
                             const Icon(Icons.star, color: Colors.amber, size: 20),
                         ],
                       ),
+                      if (offer.shopName.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          offer.shopName,
+                          style: AppTextStyles.bodyMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Expanded(
                         child: Text(
