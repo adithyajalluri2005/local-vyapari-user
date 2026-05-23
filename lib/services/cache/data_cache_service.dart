@@ -215,10 +215,50 @@ class DataCacheService {
     return [];
   }
 
+  // Caching Location at caching time
+  static Future<void> cacheLastLocation(double latitude, double longitude) async {
+    try {
+      final file = await _getFile('cached_location.json');
+      final data = {'latitude': latitude, 'longitude': longitude};
+      final jsonString = json.encode(data);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
+    } catch (e) {
+      debugPrint('Error caching last location: $e');
+    }
+  }
+
+  static Future<Map<String, double>?> getCachedLastLocation() async {
+    try {
+      final file = await _getFile('cached_location.json');
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        if (content.trim().isEmpty) return null;
+
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          await file.delete();
+          return null;
+        }
+
+        final map = json.decode(decryptedContent) as Map<String, dynamic>;
+        return {
+          'latitude': (map['latitude'] as num).toDouble(),
+          'longitude': (map['longitude'] as num).toDouble(),
+        };
+      }
+    } catch (e) {
+      debugPrint('Error loading cached location: $e');
+    }
+    return null;
+  }
+
   // Clear only location-specific cached files
   static Future<void> clearLocationCache() async {
     try {
-      final files = ['cached_shops.json', 'cached_products.json', 'cached_offers.json'];
+      final files = ['cached_shops.json', 'cached_products.json', 'cached_offers.json', 'cached_location.json'];
       for (final filename in files) {
         final file = await _getFile(filename);
         if (await file.exists()) {
@@ -233,7 +273,7 @@ class DataCacheService {
   // Clear all cached files upon secure logout
   static Future<void> clearCache() async {
     try {
-      final files = ['cached_shops.json', 'cached_products.json', 'cached_offers.json', 'sync_queue.json'];
+      final files = ['cached_shops.json', 'cached_products.json', 'cached_offers.json', 'sync_queue.json', 'cached_location.json'];
       for (final filename in files) {
         final file = await _getFile(filename);
         if (await file.exists()) {

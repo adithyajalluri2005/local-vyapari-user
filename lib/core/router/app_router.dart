@@ -178,6 +178,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/shop_details',
+        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
           final shop = state.extra as Shop;
           return buildPageWithTransition(
@@ -190,6 +191,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/product_details',
+        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
           final product = state.extra as Product;
           return buildPageWithTransition(
@@ -202,6 +204,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/offer_details',
+        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
           final offer = state.extra as Offer;
           return buildPageWithTransition(
@@ -223,6 +226,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/chat',
+        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
           final extras = state.extra as Map<String, String>;
           final shopId = extras['shopId']!;

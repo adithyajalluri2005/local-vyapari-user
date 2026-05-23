@@ -7,7 +7,10 @@ final chatMessagesProvider = StreamProvider.family<List<ChatMessage>, String>((r
   final userId = FirebaseAuth.instance.currentUser?.uid;
   if (userId == null) return Stream.value([]);
 
-  final dbRef = FirebaseDatabase.instance.ref('chats/$userId/$shopId/messages');
+  final parts = [userId, shopId]..sort();
+  final chatId = parts.join('_');
+
+  final dbRef = FirebaseDatabase.instance.ref('chats/$chatId/messages');
   return dbRef.onValue.map((event) {
     final snapshot = event.snapshot;
     if (!snapshot.exists || snapshot.value == null) return [];
@@ -42,22 +45,19 @@ class ChatService {
       'timestamp': timestamp,
     };
 
-    final messageRef = _rtdb.ref('chats/$userId/$shopId/messages').push();
+    final parts = [userId, shopId]..sort();
+    final chatId = parts.join('_');
+
+    final messageRef = _rtdb.ref('chats/$chatId/messages').push();
     final messageId = messageRef.key;
 
     if (messageId != null) {
       final Map<String, dynamic> updates = {
-        'chats/$userId/$shopId/messages/$messageId': messageData,
-        'chats/$shopId/$userId/messages/$messageId': messageData,
-        'chats/$userId/$shopId/lastMessage': {
+        'chats/$chatId/messages/$messageId': messageData,
+        'chats/$chatId/lastMessage': {
           'text': text.trim(),
           'timestamp': timestamp,
-          'unread': false,
-        },
-        'chats/$shopId/$userId/lastMessage': {
-          'text': text.trim(),
-          'timestamp': timestamp,
-          'unread': true,
+          'senderId': userId,
         }
       };
 

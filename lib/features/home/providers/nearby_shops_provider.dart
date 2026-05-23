@@ -20,13 +20,13 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
   // 2. Yield local cached shops immediately if they match the active location (within 15km)
   try {
     final cached = await DataCacheService.getCachedShops();
-    if (cached.isNotEmpty) {
-      final firstShop = cached.first;
+    final cachedLocation = await DataCacheService.getCachedLastLocation();
+    if (cached.isNotEmpty && cachedLocation != null) {
       final distance = Geolocator.distanceBetween(
         userLocation.latitude,
         userLocation.longitude,
-        firstShop.location.latitude,
-        firstShop.location.longitude,
+        cachedLocation['latitude']!,
+        cachedLocation['longitude']!,
       );
       if (distance <= 15000) {
         yield cached;
@@ -81,6 +81,7 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
 
     // 5. Cache the filtered, sorted list
     await DataCacheService.cacheShops(shops);
+    await DataCacheService.cacheLastLocation(userLocation.latitude, userLocation.longitude);
 
     yield shops;
   }
