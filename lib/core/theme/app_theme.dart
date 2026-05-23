@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFFE23744); // Zomato-style Red
-  static const Color primaryLight = Color(0xFFF15A65);
-  static const Color primaryDark = Color(0xFFB52A36);
-  static const Color secondaryColor = Color(0xFF1C1C1C);
-  static const Color backgroundColor = Color(0xFFF4F4F5);
+  static const Color primaryColor = Color(0xFF659A41); // Brand Green
+  static const Color primaryLight = Color(0xFF86B85E);
+  static const Color primaryDark = Color(0xFF43702A);
+  static const Color secondaryColor = Color(0xFF1B3B56); // Brand Navy Blue
+  static const Color backgroundColor = Color(0xFFF8FAFC);
   static const Color errorColor = Color(0xFFEF4444);
   static const Color successColor = Color(0xFF10B981);
 

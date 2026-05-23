@@ -17,21 +17,28 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.storefront,
-              size: 100,
-              color: Colors.white,
+            Image.asset(
+              'assets/images/logo.png',
+              height: 150,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback in case the image is not added yet
+                return Icon(
+                  Icons.storefront,
+                  size: 100,
+                  color: AppTheme.primaryColor,
+                );
+              },
             ),
             const SizedBox(height: 24),
             Text(
               'Local Vyapari',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
+                color: AppTheme.secondaryColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -39,12 +46,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             Text(
               'Discover Nearby Shops & Offers',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withOpacity(0.9),
+                color: AppTheme.secondaryColor.withOpacity(0.7),
               ),
             ),
             const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
             ),
           ],
         ),
