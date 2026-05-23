@@ -13,12 +13,43 @@ import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 
-class ProductDetailsScreen extends ConsumerWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
+import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
+import 'package:local_vyapari_user/core/theme/app_spacing.dart';
+import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/shared/models/product.dart';
+import 'package:go_router/go_router.dart';
+import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
+import 'package:local_vyapari_user/features/reviews/providers/reviews_provider.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/dynamic_product_rating.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/dynamic_shop_rating.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/review_card.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/rating_breakdown.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/rate_item_bottom_sheet.dart';
+import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
+
+class ProductDetailsScreen extends ConsumerStatefulWidget {
   final Product product;
   const ProductDetailsScreen({super.key, required this.product});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
+}
+
+class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
+  Product get product => widget.product;
+
+  @override
+  Widget build(BuildContext context) {
     Responsive.init(context);
     final padding = AppSizes.paddingLarge(context);
 
@@ -28,7 +59,7 @@ class ProductDetailsScreen extends ConsumerWidget {
       child: ProductImageGallery(images: product.images),
     );
 
-    final detailsWidget = _buildDetailsColumn(context, ref);
+    final detailsWidget = _buildDetailsColumn(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +107,7 @@ class ProductDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailsColumn(BuildContext context, WidgetRef ref) {
+  Widget _buildDetailsColumn(BuildContext context) {
     final discountPercent = product.actualPrice > 0 
         ? (((product.actualPrice - product.offerPrice) / product.actualPrice) * 100).toInt()
         : 0;
@@ -129,6 +160,27 @@ class ProductDetailsScreen extends ConsumerWidget {
               type: FavoriteType.product,
             ),
           ],
+        ),
+        DynamicProductRating(
+          productId: product.id,
+          initialRating: product.rating,
+          initialTotalReviews: product.totalReviews,
+          builder: (context, rating, count) {
+            if (count == 0) return const SizedBox();
+            return Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 20),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${rating.toStringAsFixed(1)} ($count ratings)',
+                    style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
         AppSpacing.verticalMd,
         Row(
@@ -208,15 +260,23 @@ class ProductDetailsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, size: 14, color: Colors.amber),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${shop.rating} (${shop.totalReviews} reviews)', 
-                          style: AppTextStyles.bodyMedium(context),
-                        ),
-                      ],
+                    DynamicShopRating(
+                      shopId: shop.id,
+                      initialRating: shop.rating,
+                      initialTotalReviews: shop.totalReviews,
+                      builder: (context, rating, count) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, size: 14, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${rating.toStringAsFixed(1)} ($count reviews)',
+                              style: AppTextStyles.bodyMedium(context),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     if (shop.location.address.isNotEmpty || shop.location.city.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -237,7 +297,209 @@ class ProductDetailsScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) => const SizedBox(),
         ),
+        AppSpacing.verticalLg,
+        _buildReviewsSection(context),
       ],
+    );
+  }
+
+  Widget _buildReviewsSection(BuildContext context) {
+    final reviewsAsync = ref.watch(productReviewsProvider(product.id));
+    final distribution = ref.watch(productRatingDistributionProvider(product.id));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        AppSpacing.verticalMd,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Ratings & Reviews',
+                style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: () => _handleRateProduct(context),
+              icon: const Icon(Icons.rate_review_outlined, size: 16),
+              label: const Text('Rate Product'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                foregroundColor: AppTheme.primaryColor,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
+            ),
+          ],
+        ),
+        AppSpacing.verticalMd,
+        RatingBreakdown(
+          averageRating: distribution.averageRating,
+          totalCount: distribution.totalCount,
+          distribution: distribution.distribution,
+        ),
+        AppSpacing.verticalMd,
+        reviewsAsync.when(
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No reviews yet',
+                        style: AppTextStyles.bodyLarge(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Be the first to rate this product!',
+                        style: AppTextStyles.bodyMedium(context, color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+                return ReviewCard(
+                  userName: review.userDisplayName,
+                  rating: review.rating,
+                  comment: review.comment,
+                  createdAt: review.createdAt,
+                );
+              },
+            );
+          },
+          loading: () => _buildReviewsShimmer(context),
+          error: (error, _) => Center(child: Text('Failed to load reviews: $error')),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewsShimmer(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Column(
+        children: List.generate(3, (index) => Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: BorderSide(color: Colors.grey[200]!),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 12,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: 60,
+                            height: 10,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 40,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  height: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  height: 14,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 150,
+                  height: 14,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        )),
+      ),
+    );
+  }
+
+  Future<void> _handleRateProduct(BuildContext context) async {
+    final authState = ref.read(authProvider);
+    if (authState is! Authenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to submit a review.')),
+      );
+      return;
+    }
+
+    _openRatingSheet(context);
+  }
+
+  Future<void> _openRatingSheet(BuildContext context) async {
+    final existingReview = await ref.read(userProductReviewProvider(product.id).future);
+
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) => RateItemBottomSheet(
+        productId: product.id,
+        name: product.name,
+        existingRating: existingReview?.rating,
+        existingComment: existingReview?.comment,
+      ),
     );
   }
 }

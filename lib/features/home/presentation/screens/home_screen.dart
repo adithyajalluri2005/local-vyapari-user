@@ -13,6 +13,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/dynamic_shop_rating.dart';
+import 'package:local_vyapari_user/features/reviews/presentation/widgets/dynamic_product_rating.dart';
 
 class HomeScreen extends ConsumerWidget {
   final VoidCallback? onSearchTap;
@@ -257,19 +259,11 @@ class HomeScreen extends ConsumerWidget {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.star, color: Colors.amber, size: 14),
-                                              const SizedBox(width: 4),
-                                              Expanded(
-                                                child: Text(
-                                                  '${shop.rating} (${shop.totalReviews})',
-                                                  style: AppTextStyles.bodyMedium(context, color: Colors.grey),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ],
+                                          DynamicShopRating(
+                                            shopId: shop.id,
+                                            initialRating: shop.rating,
+                                            initialTotalReviews: shop.totalReviews,
+                                            style: AppTextStyles.bodyMedium(context, color: Colors.grey),
                                           ),
                                         ],
                                       ),
@@ -352,6 +346,15 @@ class HomeScreen extends ConsumerWidget {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
+                                        const SizedBox(height: 2),
+                                        DynamicProductRating(
+                                          productId: product.id,
+                                          initialRating: product.rating,
+                                          initialTotalReviews: product.totalReviews,
+                                          style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                                          iconSize: 12,
+                                        ),
+                                        const SizedBox(height: 2),
                                         Row(
                                           children: [
                                             Text(

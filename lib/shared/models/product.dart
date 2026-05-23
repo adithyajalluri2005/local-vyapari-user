@@ -16,6 +16,8 @@ class Product {
   final List<String> images;
   final List<String> searchKeywords;
   final DateTime? createdAt;
+  final double rating;
+  final int totalReviews;
 
   Product({
     required this.id,
@@ -33,6 +35,8 @@ class Product {
     required this.images,
     required this.searchKeywords,
     this.createdAt,
+    this.rating = 0.0,
+    this.totalReviews = 0,
   });
 
   factory Product.fromFirestore(DocumentSnapshot doc) {
@@ -53,6 +57,8 @@ class Product {
       images: List<String>.from(data['images'] ?? []),
       searchKeywords: List<String>.from(data['searchKeywords'] ?? []),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+      rating: (data['avgRating'] ?? data['rating'] ?? 0.0).toDouble(),
+      totalReviews: data['totalRatings'] ?? data['totalReviews'] ?? 0,
     );
   }
 
@@ -91,6 +97,8 @@ class Product {
       images: parsedImages,
       searchKeywords: parsedKeywords,
       createdAt: map['createdAt'] != null ? DateTime.tryParse(map['createdAt'].toString()) : null,
+      rating: (map['avgRating'] ?? map['rating'] ?? 0.0).toDouble(),
+      totalReviews: map['totalRatings'] ?? map['totalReviews'] ?? 0,
     );
   }
 }
