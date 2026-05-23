@@ -66,7 +66,7 @@ class OffersScreen extends ConsumerWidget {
                         height: 140,
                         decoration: const BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            colors: [AppTheme.primaryLight, AppTheme.primaryColor],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
