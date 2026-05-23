@@ -6,7 +6,11 @@ import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+<<<<<<< HEAD
+import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+=======
 import 'package:go_router/go_router.dart';
+>>>>>>> 5d9a2e014a2907b44bd4cd1d8d56b775777733d4
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -74,21 +78,39 @@ class ProfileScreen extends ConsumerWidget {
                           context,
                           icon: Icons.location_on_outlined,
                           title: 'Saved Locations',
-                          onTap: () {},
+                          onTap: () {
+                            CustomSnackBar.showInfo(
+                              context: context,
+                              title: 'Coming Soon',
+                              message: 'Saved Locations feature will be available in the next update.',
+                            );
+                          },
                         ),
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(
                           context,
                           icon: Icons.favorite_border,
                           title: 'Favorite Products',
-                          onTap: () {},
+                          onTap: () {
+                            CustomSnackBar.showInfo(
+                              context: context,
+                              title: 'Coming Soon',
+                              message: 'Favorite Products feature will be available in the next update.',
+                            );
+                          },
                         ),
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(
                           context,
                           icon: Icons.storefront_outlined,
                           title: 'Favorite Shops',
-                          onTap: () {},
+                          onTap: () {
+                            CustomSnackBar.showInfo(
+                              context: context,
+                              title: 'Coming Soon',
+                              message: 'Favorite Shops feature will be available in the next update.',
+                            );
+                          },
                         ),
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(
@@ -102,7 +124,13 @@ class ProfileScreen extends ConsumerWidget {
                           context,
                           icon: Icons.notifications_none_outlined,
                           title: 'Notification Settings',
-                          onTap: () {},
+                          onTap: () {
+                            CustomSnackBar.showInfo(
+                              context: context,
+                              title: 'Coming Soon',
+                              message: 'Notification Settings feature will be available in the next update.',
+                            );
+                          },
                         ),
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(
