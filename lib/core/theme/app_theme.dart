@@ -11,9 +11,11 @@ class AppTheme {
   static const Color successColor = Color(0xFF10B981);
 
   static ThemeData get lightTheme {
+    final baseTheme = ThemeData.light();
     return ThemeData(
       useMaterial3: true,
       fontFamily: GoogleFonts.poppins().fontFamily,
+      textTheme: GoogleFonts.poppinsTextTheme(baseTheme.textTheme),
       colorScheme: ColorScheme.light(
         primary: primaryColor,
         onPrimary: Colors.white,
@@ -107,9 +109,11 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
+    final baseTheme = ThemeData.dark();
     return ThemeData(
       useMaterial3: true,
       fontFamily: GoogleFonts.poppins().fontFamily,
+      textTheme: GoogleFonts.poppinsTextTheme(baseTheme.textTheme),
       colorScheme: ColorScheme.dark(
         primary: primaryLight,
         onPrimary: Colors.white,

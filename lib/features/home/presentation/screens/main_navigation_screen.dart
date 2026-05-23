@@ -6,30 +6,35 @@ import 'package:local_vyapari_user/features/profile/presentation/screens/profile
 import 'package:local_vyapari_user/features/search/presentation/screens/search_screen.dart';
 import 'package:local_vyapari_user/features/offers/presentation/screens/offers_screen.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/screens/favorites_screen.dart';
+import 'package:local_vyapari_user/core/theme/app_dimensions.dart';
 
-class MainNavigationScreen extends ConsumerStatefulWidget {
+class NavigationIndexNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void setIndex(int index) {
+    state = index;
+  }
+}
+
+final navigationIndexProvider = NotifierProvider<NavigationIndexNotifier, int>(() {
+  return NavigationIndexNotifier();
+});
+
+class MainNavigationScreen extends ConsumerWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentIndex = ref.watch(navigationIndexProvider);
 
-class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
-  int _currentIndex = 0;
-
-
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
+        index: currentIndex,
         children: [
           HomeScreen(
             onSearchTap: () {
-              setState(() {
-                _currentIndex = 1;
-              });
+              ref.read(navigationIndexProvider.notifier).setIndex(1);
             },
           ),
           const SearchScreen(),
@@ -39,11 +44,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        height: AppDimensions.bottomNavBarHeight,
+        selectedIndex: currentIndex,
         onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          ref.read(navigationIndexProvider.notifier).setIndex(index);
         },
         destinations: const [
           NavigationDestination(

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
+import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 
@@ -13,79 +16,102 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    Responsive.init(context);
     final authState = ref.watch(authProvider);
     final user = authState is Authenticated ? authState.user : null;
     
+    final avatarRadius = Responsive.isTablet(context) ? 60.0 : 50.0;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(
+          'Profile',
+          style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-              child: Text(
-                user?.email?.substring(0, 1).toUpperCase() ?? 'U',
-                style: const TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor,
-                ),
+      body: SafeArea(
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSizes.paddingMedium(context), 
+                vertical: AppSizes.paddingLarge(context),
+              ),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: avatarRadius,
+                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    child: Text(
+                      user?.email?.substring(0, 1).toUpperCase() ?? 'U',
+                      style: AppTextStyles.titleLarge(context, color: AppTheme.primaryColor).copyWith(
+                        fontSize: avatarRadius * 0.8,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    user?.email ?? 'User',
+                    style: AppTextStyles.titleLarge(context, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    user?.phoneNumber ?? 'No Phone Added',
+                    style: AppTextStyles.bodyLarge(context, color: Colors.grey),
+                  ),
+                  SizedBox(height: AppSizes.paddingLarge(context)),
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusLarge)),
+                    child: ListView(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.location_on_outlined,
+                          title: 'Saved Locations',
+                          onTap: () {},
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.favorite_border,
+                          title: 'Favorite Products',
+                          onTap: () {},
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.storefront_outlined,
+                          title: 'Favorite Shops',
+                          onTap: () {},
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.notifications_none_outlined,
+                          title: 'Notification Settings',
+                          onTap: () {},
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.logout,
+                          title: 'Logout',
+                          iconColor: AppTheme.errorColor,
+                          textColor: AppTheme.errorColor,
+                          onTap: () => _logout(ref),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              user?.email ?? 'User',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              user?.phoneNumber ?? 'No Phone Added',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 32),
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.location_on_outlined,
-              title: 'Saved Locations',
-              onTap: () {},
-            ),
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.favorite_border,
-              title: 'Favorite Products',
-              onTap: () {},
-            ),
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.storefront_outlined,
-              title: 'Favorite Shops',
-              onTap: () {},
-            ),
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.notifications_none_outlined,
-              title: 'Notification Settings',
-              onTap: () {},
-            ),
-            const Divider(height: 32),
-            _buildProfileMenuItem(
-              context,
-              icon: Icons.logout,
-              title: 'Logout',
-              iconColor: AppTheme.errorColor,
-              textColor: AppTheme.errorColor,
-              onTap: () => _logout(ref),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -103,7 +129,8 @@ class ProfileScreen extends ConsumerWidget {
       leading: Icon(icon, color: iconColor ?? AppTheme.primaryColor),
       title: Text(
         title,
-        style: TextStyle(
+        style: AppTextStyles.bodyLarge(
+          context, 
           color: textColor ?? Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.w500,
         ),
