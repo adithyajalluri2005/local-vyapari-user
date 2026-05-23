@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFF7C3AED); // Modern Violet
-  static const Color primaryLight = Color(0xFF8B5CF6);
-  static const Color primaryDark = Color(0xFF5B21B6);
-  static const Color secondaryColor = Color(0xFF1E293B);
-  static const Color backgroundColor = Color(0xFFF8FAFC);
+  static const Color primaryColor = Color(0xFFE23744); // Zomato-style Red
+  static const Color primaryLight = Color(0xFFF15A65);
+  static const Color primaryDark = Color(0xFFB52A36);
+  static const Color secondaryColor = Color(0xFF1C1C1C);
+  static const Color backgroundColor = Color(0xFFF4F4F5);
   static const Color errorColor = Color(0xFFEF4444);
   static const Color successColor = Color(0xFF10B981);
 
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: GoogleFonts.poppins().fontFamily,
       colorScheme: ColorScheme.light(
         primary: primaryColor,
         onPrimary: Colors.white,
@@ -107,6 +109,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: GoogleFonts.poppins().fontFamily,
       colorScheme: ColorScheme.dark(
         primary: primaryLight,
         onPrimary: Colors.white,
