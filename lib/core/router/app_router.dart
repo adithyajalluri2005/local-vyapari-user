@@ -16,6 +16,7 @@ import 'package:local_vyapari_user/features/offers/presentation/screens/offer_de
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/features/shops/presentation/screens/hyperlocal_radar_screen.dart';
 import 'package:local_vyapari_user/features/chat/presentation/screens/chat_screen.dart';
+import 'package:local_vyapari_user/features/chat/presentation/screens/chats_list_screen.dart';
 
 enum TransitionType { slide, fade, scale, slideUp }
 
@@ -231,13 +232,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final extras = state.extra as Map<String, String>;
           final shopId = extras['shopId']!;
           final shopName = extras['shopName']!;
+          final shopLogo = extras['shopLogo'] ?? '';
           return buildPageWithTransition(
             context: context,
             state: state,
-            child: ChatScreen(shopId: shopId, shopName: shopName),
+            child: ChatScreen(
+              shopId: shopId,
+              shopName: shopName,
+              shopLogo: shopLogo,
+            ),
             transitionType: TransitionType.slide,
           );
         },
+      ),
+      GoRoute(
+        path: '/chats',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const ChatsListScreen(),
+          transitionType: TransitionType.slide,
+        ),
       ),
     ],
   );
