@@ -6,6 +6,7 @@ import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:go_router/go_router.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -88,6 +89,13 @@ class ProfileScreen extends ConsumerWidget {
                           icon: Icons.storefront_outlined,
                           title: 'Favorite Shops',
                           onTap: () {},
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.chat_outlined,
+                          title: 'My Chats',
+                          onTap: () => context.push('/chats'),
                         ),
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(

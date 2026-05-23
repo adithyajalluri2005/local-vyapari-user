@@ -8,11 +8,13 @@ import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 class ChatScreen extends ConsumerStatefulWidget {
   final String shopId;
   final String shopName;
+  final String shopLogo;
 
   const ChatScreen({
     super.key,
     required this.shopId,
     required this.shopName,
+    this.shopLogo = '',
   });
 
   @override
@@ -34,7 +36,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    ref.read(chatServiceProvider).sendMessage(widget.shopId, text);
+    ref.read(chatServiceProvider).sendMessage(
+      shopId: widget.shopId,
+      text: text,
+      shopName: widget.shopName,
+      shopLogo: widget.shopLogo,
+    );
     _messageController.clear();
     
     // Animate to bottom
@@ -50,9 +57,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chatServiceProvider).markAsRead(widget.shopId);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    ref.listen(chatMessagesProvider(widget.shopId), (previous, next) {
+      if (next.hasValue && next.value!.isNotEmpty) {
+        ref.read(chatServiceProvider).markAsRead(widget.shopId);
+      }
+    });
+
     final messagesAsync = ref.watch(chatMessagesProvider(widget.shopId));
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final currentUserId = ref.watch(userIdProvider);
 
     return Scaffold(
       appBar: AppBar(

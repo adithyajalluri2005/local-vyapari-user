@@ -367,6 +367,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               context.push('/chat', extra: {
                 'shopId': shop.id,
                 'shopName': shop.shopName,
+                'shopLogo': shop.shopLogo,
               });
             },
             icon: const Icon(Icons.chat_bubble_outline),
