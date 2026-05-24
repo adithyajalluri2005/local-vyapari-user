@@ -46,7 +46,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             Text(
               'Discover Nearby Shops & Offers',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.secondaryColor.withOpacity(0.7),
+                color: AppTheme.secondaryColor.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 48),

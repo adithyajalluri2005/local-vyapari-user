@@ -304,7 +304,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: shop.isOpen ? AppTheme.successColor.withOpacity(0.1) : AppTheme.errorColor.withOpacity(0.1),
+            color: shop.isOpen ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.errorColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           child: Text(
@@ -520,7 +520,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               icon: const Icon(Icons.rate_review_outlined, size: 18),
               label: const Text('Rate Shop'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                 foregroundColor: AppTheme.primaryColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(

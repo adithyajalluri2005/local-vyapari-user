@@ -48,7 +48,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0.0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -105,19 +105,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 }
 
-                // Autoscroll to bottom on new messages
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_scrollController.hasClients) {
-                    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-                  }
-                });
-
                 return ListView.builder(
+                  reverse: true,
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index];
+                    final message = messages[messages.length - 1 - index];
                     final isMe = message.senderId == currentUserId;
 
                     return Align(
@@ -176,7 +170,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                        color: Theme.of(context).colorScheme.surfaceVariant.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16),

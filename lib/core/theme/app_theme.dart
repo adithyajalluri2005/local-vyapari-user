@@ -9,6 +9,10 @@ class AppTheme {
   static const Color backgroundColor = Color(0xFFF8FAFC);
   static const Color errorColor = Color(0xFFEF4444);
   static const Color successColor = Color(0xFF10B981);
+  static const Color warningColor = Color(0xFFF59E0B);
+  static const Color infoColor = Color(0xFF3B82F6);
+  static const Color discountColor = Color(0xFF4CAF50);
+  static const Color stockBadgeColor = Color(0xFFFF9800);
 
   static ThemeData get lightTheme {
     final baseTheme = ThemeData.light();
@@ -65,7 +69,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: primaryColor.withOpacity(0.15),
+        indicatorColor: primaryColor.withValues(alpha: 0.15),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return const IconThemeData(color: primaryColor);
           return const IconThemeData(color: secondaryColor);
@@ -99,7 +103,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.05),
+        shadowColor: Colors.black.withValues(alpha: 0.05),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -181,7 +185,7 @@ class AppTheme {
       cardTheme: CardThemeData(
         color: const Color(0xFF1E293B),
         elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.3),
+        shadowColor: Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),

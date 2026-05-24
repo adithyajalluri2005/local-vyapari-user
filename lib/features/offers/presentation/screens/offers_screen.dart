@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,7 +119,7 @@ class _ShopOffersCardState extends ConsumerState<ShopOffersCard> {
 
     return Card(
       elevation: 2,
-      shadowColor: AppTheme.primaryColor.withOpacity(0.05),
+      shadowColor: AppTheme.primaryColor.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.lg),
         side: BorderSide(color: Colors.grey.shade100),
@@ -140,8 +141,8 @@ class _ShopOffersCardState extends ConsumerState<ShopOffersCard> {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                        backgroundImage: shop.shopLogo.isNotEmpty ? NetworkImage(shop.shopLogo) : null,
+                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        backgroundImage: shop.shopLogo.isNotEmpty ? CachedNetworkImageProvider(shop.shopLogo) : null,
                         child: shop.shopLogo.isEmpty
                             ? const Icon(Icons.store, color: AppTheme.primaryColor, size: 20)
                             : null,
@@ -248,7 +249,7 @@ class _ShopOffersCardState extends ConsumerState<ShopOffersCard> {
           border: Border.all(color: Colors.grey.shade100),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -339,8 +340,8 @@ class _ShopOffersCardState extends ConsumerState<ShopOffersCard> {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
                                 color: daysLeft <= 2
-                                    ? AppTheme.errorColor.withOpacity(0.1)
-                                    : Colors.orange.withOpacity(0.1),
+                                    ? AppTheme.errorColor.withValues(alpha: 0.1)
+                                    : Colors.orange.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -511,7 +512,7 @@ class DottedLinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.grey.withOpacity(0.4)
+      ..color = Colors.grey.withValues(alpha: 0.4)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
       

@@ -11,14 +11,21 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
+class AuthLoadingNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+  void setLoading(bool val) => state = val;
+}
+final authLoadingProvider = NotifierProvider<AuthLoadingNotifier, bool>(AuthLoadingNotifier.new);
+
 class AuthNotifier extends Notifier<AuthState> {
   StreamSubscription<User?>? _authStateSubscription;
 
   @override
   AuthState build() {
+    _authStateSubscription?.cancel();
     final auth = ref.watch(firebaseAuthProvider);
     
-    _authStateSubscription?.cancel();
     _authStateSubscription = auth.authStateChanges().listen((User? user) async {
       if (user != null) {
         state = Authenticated(user);
@@ -37,7 +44,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> login(String email, String password) async {
-    state = const AuthLoading();
+    ref.read(authLoadingProvider.notifier).setLoading(true);
     final auth = ref.read(firebaseAuthProvider);
     try {
       await auth.signInWithEmailAndPassword(
@@ -48,11 +55,13 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthFailure(e.message ?? 'An unknown error occurred during login.');
     } catch (e) {
       state = AuthFailure(e.toString());
+    } finally {
+      ref.read(authLoadingProvider.notifier).setLoading(false);
     }
   }
 
   Future<void> register(String email, String password) async {
-    state = const AuthLoading();
+    ref.read(authLoadingProvider.notifier).setLoading(true);
     final auth = ref.read(firebaseAuthProvider);
     try {
       final credential = await auth.createUserWithEmailAndPassword(
@@ -71,16 +80,20 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthFailure(e.message ?? 'An unknown error occurred during registration.');
     } catch (e) {
       state = AuthFailure(e.toString());
+    } finally {
+      ref.read(authLoadingProvider.notifier).setLoading(false);
     }
   }
 
   Future<void> logout() async {
-    state = const AuthLoading();
+    ref.read(authLoadingProvider.notifier).setLoading(true);
     final auth = ref.read(firebaseAuthProvider);
     try {
       await auth.signOut();
     } catch (e) {
       state = AuthFailure(e.toString());
+    } finally {
+      ref.read(authLoadingProvider.notifier).setLoading(false);
     }
   }
 

@@ -45,7 +45,7 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: avatarRadius,
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                    backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                     child: Text(
                       user?.email?.substring(0, 1).toUpperCase() ?? 'U',
                       style: AppTextStyles.titleLarge(context, color: AppTheme.primaryColor).copyWith(

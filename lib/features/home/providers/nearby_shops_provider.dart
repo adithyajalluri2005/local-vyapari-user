@@ -8,23 +8,49 @@ import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 
-final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
-  // 1. Watch active location changes first
-  final locationAsyncValue = ref.watch(activeBrowsingLocationProvider);
-  final userLocation = locationAsyncValue.value;
+class LastQueryCenterNotifier extends Notifier<GeoPoint?> {
+  @override
+  GeoPoint? build() => null;
+  void setCenter(GeoPoint? center) => state = center;
+}
+final lastQueryCenterProvider = NotifierProvider<LastQueryCenterNotifier, GeoPoint?>(LastQueryCenterNotifier.new);
 
-  if (userLocation == null) {
-    return;
+final queryCenterProvider = Provider<GeoPoint?>((ref) {
+  final loc = ref.watch(activeBrowsingLocationProvider).value;
+  if (loc == null) return null;
+  
+  final lastCenter = ref.read(lastQueryCenterProvider);
+  if (lastCenter != null) {
+    final dist = Geolocator.distanceBetween(
+      loc.latitude, loc.longitude, 
+      lastCenter.latitude, lastCenter.longitude
+    );
+    if (dist <= 300) {
+      return lastCenter; // Return same instance to prevent dependent rebuilds
+    }
   }
+  
+  final newCenter = GeoPoint(loc.latitude, loc.longitude);
+  Future.microtask(() => ref.read(lastQueryCenterProvider.notifier).setCenter(newCenter));
+  return newCenter;
+});
 
-  // 2. Yield local cached shops immediately if they match the active location (within 15km)
+final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
+  final centerPoint = ref.watch(queryCenterProvider);
+  if (centerPoint == null) return;
+
+  final userLocation = ref.read(activeBrowsingLocationProvider).value;
+  final sortingLat = userLocation?.latitude ?? centerPoint.latitude;
+  final sortingLng = userLocation?.longitude ?? centerPoint.longitude;
+
+  // 2. Yield local cached shops immediately
   try {
     final cached = await DataCacheService.getCachedShops();
     final cachedLocation = await DataCacheService.getCachedLastLocation();
     if (cached.isNotEmpty && cachedLocation != null) {
       final distance = Geolocator.distanceBetween(
-        userLocation.latitude,
-        userLocation.longitude,
+        sortingLat,
+        sortingLng,
         cachedLocation['latitude']!,
         cachedLocation['longitude']!,
       );
@@ -36,9 +62,9 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
     debugPrint('Error yielding cached shops: $e');
   }
 
-  final center = GeoFirePoint(GeoPoint(userLocation.latitude, userLocation.longitude));
+  final center = GeoFirePoint(centerPoint);
 
-  // 3. Subscribe to Firestore geohash bounding box stream (only queries/listens within 15km)
+  // 3. Subscribe to Firestore geohash bounding box stream
   final collectionRef = FirebaseFirestore.instance.collection('searchable_shops');
   final geoStream = GeoCollectionReference(collectionRef).subscribeWithin(
     center: center,
@@ -50,37 +76,60 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
 
   // 4. Yield queried values and resolve detailed RTDB models
   await for (final List<DocumentSnapshot<Map<String, dynamic>>> docs in geoStream) {
-    final List<Shop> shops = [];
+    final List<Shop> partialShops = [];
+    final List<Future<Shop?>> fetchFutures = [];
     
     for (final doc in docs) {
       final shopId = doc.id;
-      try {
-        final shopSnapshot = await FirebaseDatabase.instance.ref().child('shop/$shopId').get();
+      final data = doc.data();
+
+      // Check if Firestore document has sufficient display data for a fast partial result
+      if (data != null && (data.containsKey('shopName') || data.containsKey('name')) && (data.containsKey('shopLogo') || data.containsKey('logoUrl'))) {
+        try {
+          partialShops.add(Shop.fromFirestore(doc));
+        } catch (e) {
+          debugPrint('Failed to parse partial shop data: $e');
+        }
+      }
+
+      // Parallelize full RTDB fetch
+      fetchFutures.add(FirebaseDatabase.instance.ref().child('shop/$shopId').get().then((shopSnapshot) {
         if (shopSnapshot.exists && shopSnapshot.value != null) {
           final shopData = shopSnapshot.value as Map<dynamic, dynamic>;
-          final shop = Shop.fromRTDB(shopId, shopData);
-          shops.add(shop);
+          return Shop.fromRTDB(shopId, shopData);
         }
-      } catch (e) {
+        return null;
+      }).catchError((e) {
         debugPrint('Error fetching/parsing shop $shopId: $e');
-      }
+        return null;
+      }));
     }
 
+    // Yield partial results immediately if available
+    if (partialShops.isNotEmpty) {
+      partialShops.sort((a, b) {
+        final distA = Geolocator.distanceBetween(sortingLat, sortingLng, a.location.latitude, a.location.longitude);
+        final distB = Geolocator.distanceBetween(sortingLat, sortingLng, b.location.latitude, b.location.longitude);
+        return distA.compareTo(distB);
+      });
+      yield partialShops;
+    }
+
+    // Wait for all full RTDB details
+    final results = await Future.wait(fetchFutures);
+    final List<Shop> fullShops = results.whereType<Shop>().toList();
+
     // Sort by exact distance
-    shops.sort((a, b) {
-      final distA = Geolocator.distanceBetween(
-        userLocation.latitude, userLocation.longitude, a.location.latitude, a.location.longitude
-      );
-      final distB = Geolocator.distanceBetween(
-        userLocation.latitude, userLocation.longitude, b.location.latitude, b.location.longitude
-      );
+    fullShops.sort((a, b) {
+      final distA = Geolocator.distanceBetween(sortingLat, sortingLng, a.location.latitude, a.location.longitude);
+      final distB = Geolocator.distanceBetween(sortingLat, sortingLng, b.location.latitude, b.location.longitude);
       return distA.compareTo(distB);
     });
 
     // 5. Cache the filtered, sorted list
-    await DataCacheService.cacheShops(shops);
-    await DataCacheService.cacheLastLocation(userLocation.latitude, userLocation.longitude);
+    await DataCacheService.cacheShops(fullShops);
+    await DataCacheService.cacheLastLocation(sortingLat, sortingLng);
 
-    yield shops;
+    yield fullShops;
   }
 });

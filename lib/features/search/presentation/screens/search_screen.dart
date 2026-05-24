@@ -9,6 +9,7 @@ import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/search/providers/hybrid_search_provider.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
+import 'package:geolocator/geolocator.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -107,6 +108,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
 
     if (searchResultAsync.hasError) {
+      final error = searchResultAsync.error;
+      if (error is LocationUnavailableException) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_off, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text('Enable location to search nearby shops', style: AppTextStyles.bodyLarge(context)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Geolocator.openLocationSettings(),
+                child: const Text('Open Settings'),
+              )
+            ],
+          ),
+        );
+      } else if (error is NetworkOfflineException) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.wifi_off, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text("You're offline. Connect to search.", style: AppTextStyles.bodyLarge(context)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.read(hybridSearchProvider.notifier).search(_query),
+                child: const Text('Retry'),
+              )
+            ],
+          ),
+        );
+      }
+
       return Center(
         child: Text(
           'Failed to load search results',
@@ -121,10 +157,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Text(
-            'No results found for "$_query" within 15km.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyLarge(context, color: Colors.grey),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.search_off, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                'No shops or products found for "$_query" within 15km.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyLarge(context, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Try broader terms or different categories.',
+                style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+              ),
+            ],
           ),
         ),
       );
@@ -133,6 +181,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
+        if (result.isCapped)
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Search is limited to your nearest 10 shops.',
+                    style: AppTextStyles.bodyMedium(context, color: Colors.orange),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (result.products.isNotEmpty) ...[
           _buildSectionTitle(context, 'Products'),
           ...result.products.map(_buildProductResult),
@@ -191,7 +260,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               category,
               style: AppTextStyles.bodyMedium(context),
             ),
-            backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
             side: BorderSide.none,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSmall)),
             onPressed: () => _applyQuery(category),

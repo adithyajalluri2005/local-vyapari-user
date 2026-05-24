@@ -41,7 +41,6 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
 
   @override
   Widget build(BuildContext context) {
-    Responsive.init(context);
     final locationAsync = ref.watch(activeBrowsingLocationProvider);
     final shopsAsync = ref.watch(nearbyShopsProvider);
 
@@ -124,24 +123,50 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
                               },
                               child: Stack(
                                 children: [
-                                  // Radar Drawing Layer
+                                  // Static Background Layer
+                                  Positioned.fill(
+                                    child: RepaintBoundary(
+                                      child: CustomPaint(
+                                        painter: RadarBackgroundPainter(
+                                          center: center,
+                                          radius: radarRadius,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Animated Sweep Layer
                                   Positioned.fill(
                                     child: AnimatedBuilder(
                                       animation: _sweepController,
                                       builder: (context, child) {
-                                        return CustomPaint(
-                                          painter: RadarPainter(
-                                            sweepAngle: _sweepController.value * 2 * math.pi,
-                                            shopPoints: shopPoints,
-                                            selectedShop: _selectedShop,
-                                            center: center,
-                                            radius: radarRadius,
+                                        return RepaintBoundary(
+                                          child: CustomPaint(
+                                            painter: RadarSweepPainter(
+                                              sweepAngle: _sweepController.value * 2 * math.pi,
+                                              center: center,
+                                              radius: radarRadius,
+                                            ),
                                           ),
                                         );
                                       },
                                     ),
                                   ),
+                                  // Shop Dots Layer
+                                  Positioned.fill(
+                                    child: RepaintBoundary(
+                                      child: CustomPaint(
+                                        painter: RadarDotsPainter(
+                                          shopPoints: shopPoints,
+                                          selectedShop: _selectedShop,
+                                          center: center,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                   // Overlay labels for radar bounds
+                                  RepaintBoundary(
+                                    child: Stack(
+                                      children: [
                                   Positioned(
                                     left: center.dx + 4,
                                     top: center.dy - (radarRadius * 0.33) - 10,
@@ -157,6 +182,9 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
                                     top: center.dy - radarRadius - 10,
                                     child: const Text('15 km', style: TextStyle(color: Colors.white38, fontSize: 10)),
                                   ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
@@ -171,15 +199,16 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
                         left: 0,
                         right: 0,
                         bottom: 16,
-                        child: Center(
+                        child: RepaintBoundary(
+                          child: Center(
                           child: Container(
                             constraints: const BoxConstraints(maxWidth: 500),
                             margin: const EdgeInsets.symmetric(horizontal: 16),
                             padding: EdgeInsets.all(AppSizes.paddingSmall(context)),
                             decoration: BoxDecoration(
-                              color: Colors.grey[900]?.withOpacity(0.95),
+                              color: Colors.grey[900]?.withValues(alpha: 0.95),
                               borderRadius: BorderRadius.circular(AppRadius.lg),
-                              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.4)),
+                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
                             ),
                             child: Row(
                               children: [
@@ -263,6 +292,7 @@ class _HyperlocalRadarScreenState extends ConsumerState<HyperlocalRadarScreen> w
                           ),
                         ),
                       ),
+                    ),
                   ],
                 );
               },
@@ -304,25 +334,16 @@ class RadarShopPoint {
   });
 }
 
-class RadarPainter extends CustomPainter {
-  final double sweepAngle;
-  final List<RadarShopPoint> shopPoints;
-  final Shop? selectedShop;
+class RadarBackgroundPainter extends CustomPainter {
   final Offset center;
   final double radius;
 
-  RadarPainter({
-    required this.sweepAngle,
-    required this.shopPoints,
-    required this.selectedShop,
-    required this.center,
-    required this.radius,
-  });
+  RadarBackgroundPainter({required this.center, required this.radius});
 
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint = Paint()
-      ..color = Colors.green.withOpacity(0.15)
+      ..color = Colors.green.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -332,14 +353,28 @@ class RadarPainter extends CustomPainter {
 
     canvas.drawLine(Offset(center.dx - radius, center.dy), Offset(center.dx + radius, center.dy), gridPaint);
     canvas.drawLine(Offset(center.dx, center.dy - radius), Offset(center.dx, center.dy + radius), gridPaint);
+  }
 
+  @override
+  bool shouldRepaint(covariant RadarBackgroundPainter oldDelegate) => false;
+}
+
+class RadarSweepPainter extends CustomPainter {
+  final double sweepAngle;
+  final Offset center;
+  final double radius;
+
+  RadarSweepPainter({required this.sweepAngle, required this.center, required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
     final sweepPaint = Paint()
       ..shader = SweepGradient(
         colors: [
           Colors.transparent,
-          Colors.green.withOpacity(0.01),
-          Colors.green.withOpacity(0.15),
-          Colors.green.withOpacity(0.4),
+          Colors.green.withValues(alpha: 0.01),
+          Colors.green.withValues(alpha: 0.15),
+          Colors.green.withValues(alpha: 0.4),
         ],
         stops: const [0.0, 0.5, 0.75, 1.0],
         transform: GradientRotation(sweepAngle),
@@ -347,7 +382,21 @@ class RadarPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(center, radius, sweepPaint);
+  }
 
+  @override
+  bool shouldRepaint(covariant RadarSweepPainter oldDelegate) => oldDelegate.sweepAngle != sweepAngle;
+}
+
+class RadarDotsPainter extends CustomPainter {
+  final List<RadarShopPoint> shopPoints;
+  final Shop? selectedShop;
+  final Offset center;
+
+  RadarDotsPainter({required this.shopPoints, required this.selectedShop, required this.center});
+
+  @override
+  void paint(Canvas canvas, Size size) {
     final userPaint = Paint()
       ..color = Colors.blue
       ..style = PaintingStyle.fill;
@@ -355,7 +404,7 @@ class RadarPainter extends CustomPainter {
     canvas.drawCircle(center, 6.0, userPaint);
     
     final userRingPaint = Paint()
-      ..color = Colors.blue.withOpacity(0.3)
+      ..color = Colors.blue.withValues(alpha: 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawCircle(center, 12.0, userRingPaint);
@@ -368,12 +417,12 @@ class RadarPainter extends CustomPainter {
 
       if (isSelected) {
         dotPaint.color = Colors.redAccent;
-        haloPaint.color = Colors.redAccent.withOpacity(0.3);
+        haloPaint.color = Colors.redAccent.withValues(alpha: 0.3);
         canvas.drawCircle(point.position, 12.0, haloPaint);
         canvas.drawCircle(point.position, 6.0, dotPaint);
       } else {
         dotPaint.color = Colors.greenAccent;
-        haloPaint.color = Colors.greenAccent.withOpacity(0.2);
+        haloPaint.color = Colors.greenAccent.withValues(alpha: 0.2);
         canvas.drawCircle(point.position, 8.0, haloPaint);
         canvas.drawCircle(point.position, 4.0, dotPaint);
       }
@@ -381,9 +430,8 @@ class RadarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant RadarPainter oldDelegate) {
-    return oldDelegate.sweepAngle != sweepAngle ||
-        oldDelegate.selectedShop?.id != selectedShop?.id ||
+  bool shouldRepaint(covariant RadarDotsPainter oldDelegate) {
+    return oldDelegate.selectedShop?.id != selectedShop?.id ||
         oldDelegate.shopPoints.length != shopPoints.length;
   }
 }

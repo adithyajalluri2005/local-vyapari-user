@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -96,7 +97,7 @@ class OfferDetailsScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -160,8 +161,8 @@ class OfferDetailsScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                        backgroundImage: shop.shopLogo.isNotEmpty ? NetworkImage(shop.shopLogo) : null,
+                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        backgroundImage: shop.shopLogo.isNotEmpty ? CachedNetworkImageProvider(shop.shopLogo) : null,
                         child: shop.shopLogo.isEmpty ? const Icon(Icons.store, color: AppTheme.primaryColor, size: 30) : null,
                       ),
                       const SizedBox(width: 16),

@@ -13,9 +13,13 @@ import 'package:local_vyapari_user/services/location/location_service.dart';
 class HybridSearchResult {
   final List<Product> products;
   final List<Shop> shops;
+  final bool isCapped;
 
-  const HybridSearchResult({this.products = const [], this.shops = const []});
+  const HybridSearchResult({this.products = const [], this.shops = const [], this.isCapped = false});
 }
+
+class LocationUnavailableException implements Exception {}
+class NetworkOfflineException implements Exception {}
 
 class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
   Timer? _debounceTimer;
@@ -46,7 +50,7 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
       try {
         final locationResult = ref.read(activeBrowsingLocationProvider).value;
         if (locationResult == null) {
-          state = AsyncValue.error('Location not available. Please enable location.', StackTrace.current);
+          state = AsyncValue.error(LocationUnavailableException(), StackTrace.current);
           return;
         }
 
@@ -76,14 +80,12 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
               final data = doc.data();
               if (data != null) {
                 final shopId = doc.id;
-                // Fetch full shop data from RTDB since Firestore is just an index
-                final shopSnapshot = await FirebaseDatabase.instance.ref().child('shop/$shopId').get();
+                final shopSnapshot = await FirebaseDatabase.instance.ref().child('shop/').get();
                 if (shopSnapshot.exists && shopSnapshot.value != null) {
                   final shopData = shopSnapshot.value as Map<dynamic, dynamic>;
                   final shop = Shop.fromRTDB(shopId, shopData);
                   nearbyShops.add(shop);
 
-                  // Calculate exact distance for ranking
                   final distance = Geolocator.distanceBetween(
                     center.latitude, center.longitude,
                     shop.location.latitude, shop.location.longitude,
@@ -93,10 +95,16 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
               }
             }
 
+            // Rank shops by distance
+            nearbyShops.sort((a, b) => shopDistances[a.id]!.compareTo(shopDistances[b.id]!));
+
+            final bool isCapped = nearbyShops.length > 10;
+            final closestShops = nearbyShops.take(10).toList();
+
             // 2. Fetch products for these nearby shops
             final List<Product> nearbyProducts = [];
-            for (var shop in nearbyShops) {
-              final productsSnapshot = await FirebaseDatabase.instance.ref().child('products/${shop.id}').get();
+            for (var shop in closestShops) {
+              final productsSnapshot = await FirebaseDatabase.instance.ref().child('products/').limitToFirst(50).get();
               if (productsSnapshot.exists && productsSnapshot.value != null) {
                 final productsMap = productsSnapshot.value as Map<dynamic, dynamic>;
                 productsMap.forEach((key, value) {
@@ -110,28 +118,19 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
             // 3. Fuzzy Search Filtering
             final normalizedQuery = query.toLowerCase().trim();
             
-            // Filter Shops
             final filteredShops = nearbyShops.where((shop) {
-              final searchableText = '${shop.shopName} ${shop.description}'.toLowerCase();
+              final searchableText = ' '.toLowerCase();
               return searchableText.contains(normalizedQuery) || 
                      searchableText.similarityTo(normalizedQuery) > 0.4 || 
                      normalizedQuery.similarityTo(shop.shopName.toLowerCase()) > 0.3;
-            }).toList();
+            }).take(15).toList();
 
-            // Filter Products
             final filteredProducts = nearbyProducts.where((product) {
-              final searchableText = '${product.name} ${product.description} ${product.category} ${product.searchKeywords.join(" ")}'.toLowerCase();
+              final searchableText = '   '.toLowerCase();
               return searchableText.contains(normalizedQuery) || 
                      searchableText.similarityTo(normalizedQuery) > 0.4 ||
                      normalizedQuery.similarityTo(product.name.toLowerCase()) > 0.3;
             }).toList();
-
-            // 4. Ranking (Strictly by distance)
-            filteredShops.sort((a, b) {
-              final distA = shopDistances[a.id] ?? double.infinity;
-              final distB = shopDistances[b.id] ?? double.infinity;
-              return distA.compareTo(distB);
-            });
 
             filteredProducts.sort((a, b) {
               final distA = shopDistances[a.shopId] ?? double.infinity;
@@ -140,11 +139,16 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
             });
 
             state = AsyncValue.data(HybridSearchResult(
-              products: filteredProducts,
+              products: filteredProducts.take(30).toList(),
               shops: filteredShops,
+              isCapped: isCapped,
             ));
           } catch (e, st) {
-            state = AsyncValue.error(e, st);
+            if (e.toString().contains('unavailable') || e.toString().contains('SocketException')) {
+               state = AsyncValue.error(NetworkOfflineException(), st);
+            } else {
+               state = AsyncValue.error(e, st);
+            }
           }
         }, onError: (e, st) {
           state = AsyncValue.error(e, st);

@@ -47,7 +47,7 @@ class _ReviewCardState extends State<ReviewCard> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 CircleAvatar(
-                  backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
+                  backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                   child: Text(
                     widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U',
                     style: TextStyle(
@@ -78,7 +78,7 @@ class _ReviewCardState extends State<ReviewCard> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getRatingColor(widget.rating).withOpacity(0.1),
+                    color: _getRatingColor(widget.rating).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: Row(

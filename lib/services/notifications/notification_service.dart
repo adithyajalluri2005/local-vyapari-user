@@ -593,7 +593,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -604,7 +604,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -631,7 +631,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                         Text(
                           widget.body,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 13,
                           ),
                           maxLines: 2,

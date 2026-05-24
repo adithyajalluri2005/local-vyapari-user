@@ -2,21 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
-import 'package:local_vyapari_user/core/theme/responsive.dart';
-import 'package:local_vyapari_user/core/theme/app_sizes.dart';
-import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
-import 'package:local_vyapari_user/core/theme/app_spacing.dart';
-import 'package:local_vyapari_user/core/theme/app_radius.dart';
-import 'package:local_vyapari_user/shared/models/product.dart';
-import 'package:go_router/go_router.dart';
-import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
-import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
@@ -36,6 +21,7 @@ import 'package:local_vyapari_user/features/reviews/presentation/widgets/rating_
 import 'package:local_vyapari_user/features/reviews/presentation/widgets/rate_item_bottom_sheet.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailsScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -50,7 +36,6 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Responsive.init(context);
     final padding = AppSizes.paddingLarge(context);
 
     final galleryWidget = Container(
@@ -68,6 +53,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
         ),
       ),
+      bottomNavigationBar: _buildBottomActionBar(context),
       body: SafeArea(
         child: Responsive.isTablet(context)
             ? Row(
@@ -107,6 +93,77 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     );
   }
 
+  Widget _buildBottomActionBar(BuildContext context) {
+    return ref.watch(shopDetailsProvider(product.shopId)).when(
+      data: (shop) {
+        if (shop == null) return const SizedBox.shrink();
+        return Container(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final lat = shop.location.latitude;
+                    final lng = shop.location.longitude;
+                    final url = Uri.parse('geo:$lat,$lng?q=$lat,$lng(${Uri.encodeComponent(shop.shopName)})');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Could not open Maps')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.directions),
+                  label: const Text('Get Directions'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    context.push('/chat', extra: {
+                      'shopId': shop.id,
+                      'shopName': shop.shopName,
+                      'shopLogo': shop.shopLogo,
+                    });
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text('Chat with Shop'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
   Widget _buildDetailsColumn(BuildContext context) {
     final discountPercent = product.actualPrice > 0 
         ? (((product.actualPrice - product.offerPrice) / product.actualPrice) * 100).toInt()
@@ -121,7 +178,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.xs),
               ),
               child: Text(
@@ -133,7 +190,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
+                  color: AppTheme.errorColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppRadius.xs),
                 ),
                 child: Text(
@@ -201,7 +258,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: AppTheme.discountColor,
                   borderRadius: BorderRadius.circular(AppRadius.xs),
                 ),
                 child: Text(
@@ -247,10 +304,24 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               ),
               child: ListTile(
                 contentPadding: EdgeInsets.all(AppSizes.paddingMedium(context)),
-                leading: CircleAvatar(
-                  radius: 24,
-                  backgroundImage: shop.shopLogo.isNotEmpty ? NetworkImage(shop.shopLogo) : null,
-                  child: shop.shopLogo.isEmpty ? const Icon(Icons.store) : null,
+                leading: ClipOval(
+                  child: shop.shopLogo.isNotEmpty 
+                    ? CachedNetworkImage(
+                        imageUrl: shop.shopLogo,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Shimmer.fromColors(
+                          baseColor: Colors.grey[300]!,
+                          highlightColor: Colors.grey[100]!,
+                          child: Container(color: Colors.white),
+                        ),
+                        errorWidget: (context, url, error) => const Icon(Icons.store),
+                      )
+                    : const CircleAvatar(
+                        radius: 24,
+                        child: Icon(Icons.store),
+                      ),
                 ),
                 title: Text(
                   shop.shopName, 
@@ -304,10 +375,15 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   }
 
   Widget _buildReviewsSection(BuildContext context) {
-    final reviewsAsync = ref.watch(productReviewsProvider(product.id));
-    final distribution = ref.watch(productRatingDistributionProvider(product.id));
+    final reviewsNotifier = ref.watch(productReviewsProvider(product.id));
 
-    return Column(
+    return ListenableBuilder(
+      listenable: reviewsNotifier,
+      builder: (context, child) {
+        final reviewsState = reviewsNotifier.state;
+        final distribution = ref.watch(productRatingDistributionProvider(product.id));
+
+        return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(),
@@ -323,19 +399,32 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            ElevatedButton.icon(
-              onPressed: () => _handleRateProduct(context),
-              icon: const Icon(Icons.rate_review_outlined, size: 16),
-              label: const Text('Rate Product'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                backgroundColor: AppTheme.primaryColor.withOpacity(0.1),
-                foregroundColor: AppTheme.primaryColor,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-              ),
+            Consumer(
+              builder: (context, ref, child) {
+                final authState = ref.watch(authProvider);
+                final isAuthenticated = authState is Authenticated;
+                
+                return ElevatedButton.icon(
+                  onPressed: () {
+                    if (isAuthenticated) {
+                      _handleRateProduct(context);
+                    } else {
+                      context.push('/login');
+                    }
+                  },
+                  icon: Icon(Icons.rate_review_outlined, size: 16, color: isAuthenticated ? AppTheme.primaryColor : Colors.grey),
+                  label: Text(isAuthenticated ? 'Rate Product' : 'Login to Rate', style: TextStyle(color: isAuthenticated ? AppTheme.primaryColor : Colors.grey)),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    backgroundColor: isAuthenticated ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                    foregroundColor: isAuthenticated ? AppTheme.primaryColor : Colors.grey,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                  ),
+                );
+              }
             ),
           ],
         ),
@@ -346,51 +435,69 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           distribution: distribution.distribution,
         ),
         AppSpacing.verticalMd,
-        reviewsAsync.when(
-          data: (reviews) {
-            if (reviews.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24.0),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No reviews yet',
-                        style: AppTextStyles.bodyLarge(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Be the first to rate this product!',
-                        style: AppTextStyles.bodyMedium(context, color: Colors.grey[400]),
-                      ),
-                    ],
+        if (reviewsState.isLoading && reviewsState.reviews.isEmpty)
+          _buildReviewsShimmer(context)
+        else if (reviewsState.error != null && reviewsState.reviews.isEmpty)
+          Center(child: Text('Failed to load reviews: ${reviewsState.error}'))
+        else if (reviewsState.reviews.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No reviews yet',
+                    style: AppTextStyles.bodyLarge(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Be the first to rate this product!',
+                    style: AppTextStyles.bodyMedium(context, color: Colors.grey[400]),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Column(
+            children: [
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: reviewsState.reviews.length,
+                itemBuilder: (context, index) {
+                  final review = reviewsState.reviews[index];
+                  return ReviewCard(
+                    userName: review.userDisplayName,
+                    rating: review.rating,
+                    comment: review.comment,
+                    createdAt: review.createdAt,
+                  );
+                },
+              ),
+              if (reviewsState.hasMore)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: reviewsState.isLoading
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                        : OutlinedButton(
+                            onPressed: () => ref.read(productReviewsProvider(product.id)).loadMore(),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                            ),
+                            child: const Text('Load More'),
+                          ),
                   ),
                 ),
-              );
-            }
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: EdgeInsets.zero,
-              itemCount: reviews.length,
-              itemBuilder: (context, index) {
-                final review = reviews[index];
-                return ReviewCard(
-                  userName: review.userDisplayName,
-                  rating: review.rating,
-                  comment: review.comment,
-                  createdAt: review.createdAt,
-                );
-              },
-            );
-          },
-          loading: () => _buildReviewsShimmer(context),
-          error: (error, _) => Center(child: Text('Failed to load reviews: $error')),
-        ),
-      ],
-    );
+            ],
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildReviewsShimmer(BuildContext context) {
@@ -562,14 +669,10 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
   }
 
   void _openFullscreen(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => FullscreenImageGallery(
-          images: widget.images,
-          initialIndex: _currentIndex,
-        ),
-      ),
-    );
+    context.push('/product_image_fullscreen', extra: {
+      'images': widget.images,
+      'initialIndex': _currentIndex,
+    });
   }
 
   @override
@@ -626,7 +729,7 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                   ),
                   child: Text(
@@ -670,7 +773,7 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                  color: AppTheme.primaryColor.withOpacity(0.3),
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
                                   blurRadius: 4,
                                   spreadRadius: 1,
                                 )
@@ -763,10 +866,10 @@ class _FullscreenImageGalleryState extends State<FullscreenImageGallery> {
             top: MediaQuery.of(context).padding.top + 16,
             left: 16,
             child: CircleAvatar(
-              backgroundColor: Colors.black.withOpacity(0.5),
+              backgroundColor: Colors.black.withValues(alpha: 0.5),
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => context.pop(),
               ),
             ),
           ),
@@ -778,7 +881,7 @@ class _FullscreenImageGalleryState extends State<FullscreenImageGallery> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

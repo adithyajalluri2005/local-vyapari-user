@@ -146,14 +146,14 @@ class HomeScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                AppTheme.primaryColor.withOpacity(0.12),
-                                AppTheme.primaryColor.withOpacity(0.02),
+                                AppTheme.primaryColor.withValues(alpha: 0.12),
+                                AppTheme.primaryColor.withValues(alpha: 0.02),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppTheme.primaryColor.withOpacity(0.15)),
+                            border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15)),
                           ),
                           padding: EdgeInsets.symmetric(
                             horizontal: AppSizes.paddingMedium(context),
@@ -264,7 +264,7 @@ class HomeScreen extends ConsumerWidget {
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                                   decoration: BoxDecoration(
-                                                    color: shop.isOpen ? AppTheme.successColor.withOpacity(0.1) : AppTheme.errorColor.withOpacity(0.1),
+                                                    color: shop.isOpen ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.errorColor.withValues(alpha: 0.1),
                                                     borderRadius: BorderRadius.circular(4),
                                                   ),
                                                   child: Text(
