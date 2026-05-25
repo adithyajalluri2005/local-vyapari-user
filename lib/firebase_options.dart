@@ -76,11 +76,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDb3Q1Lu-T4kSoaCHAlWxQ_e1FDHC0QD_A',
-    appId: '1:511392842596:android:cc8204ef03879055c87071',
-    messagingSenderId: '511392842596',
-    projectId: 'local-vyapari-838cd',
-    databaseURL: 'https://local-vyapari-838cd-default-rtdb.firebaseio.com',
-    storageBucket: 'local-vyapari-838cd.firebasestorage.app',
+    apiKey: 'AIzaSyBDA2THdnROYJyQZ7kH4YjHU9GM6omQpKQ',
+    appId: '1:185569988747:android:24c5f0ddbc6c2fde21848e',
+    messagingSenderId: '185569988747',
+    projectId: 'local-vyapari-437e0',
+    databaseURL: 'https://local-vyapari-437e0-default-rtdb.firebaseio.com',
+    storageBucket: 'local-vyapari-437e0.firebasestorage.app',
   );
 }
