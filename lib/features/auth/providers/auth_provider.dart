@@ -20,6 +20,31 @@ final firebaseFunctionsProvider = Provider<FirebaseFunctions>((ref) {
   return FirebaseFunctions.instance;
 });
 
+final roleServiceProvider = Provider<RoleService>((ref) {
+  return RoleService.instance;
+});
+
+final sessionValidationProvider = Provider<Future<bool> Function(User, String)>((ref) {
+  return (user, targetRole) async {
+    try {
+      final result = await ref.read(firebaseFunctionsProvider).httpsCallable('validateSession').call({
+        'targetRole': targetRole,
+        'deviceInfo': {
+          'platform': 'flutter-client',
+        }
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      if (data['success'] == true) {
+        await user.getIdToken(true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  };
+});
+
 class AuthLoadingNotifier extends Notifier<bool> {
   @override
   bool build() => false;
@@ -68,20 +93,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<bool> isCustomerUser(User user) async {
-    final roles = await RoleService.instance.getRoles(forceRefresh: true);
-    if (roles['customer'] == true || roles['merchant'] == true) {
-      return true;
-    }
-    
-    // Poll a few times for the Cloud Function to finish writing roles on signup
-    for (int i = 0; i < 5; i++) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      final refreshedRoles = await RoleService.instance.getRoles(forceRefresh: true);
-      if (refreshedRoles['customer'] == true || refreshedRoles['merchant'] == true) {
-        return true;
-      }
-    }
-    return false;
+    return ref.read(sessionValidationProvider)(user, 'customer');
   }
 
   Future<bool> isPhoneRegistered(String phone) async {
@@ -306,7 +318,7 @@ class AuthNotifier extends Notifier<AuthState> {
           updates['phone'] = phone.trim();
           updates['verified'] = true;
         }
-        await _rtdb.ref('users').child(uid).set(updates);
+        await _rtdb.ref('users').child(uid).update(updates);
         if (phone != null && phone.isNotEmpty) {
           await _rtdb.ref('phones').child(phone.trim()).set(uid);
         }
@@ -341,7 +353,7 @@ class AuthNotifier extends Notifier<AuthState> {
       
       final uid = credential.user?.uid;
       if (uid != null) {
-        await _rtdb.ref('users').child(uid).set({
+        await _rtdb.ref('users').child(uid).update({
           'email': email,
           'phone': formattedPhone,
           'createdAt': ServerValue.timestamp,
@@ -419,7 +431,7 @@ class AuthNotifier extends Notifier<AuthState> {
           final phoneNum = phone ?? user.phoneNumber ?? '';
           final email = '${phoneNum.replaceAll('+', '')}@localvyapari.com';
 
-          await _rtdb.ref('users').child(user.uid).set({
+          await _rtdb.ref('users').child(user.uid).update({
             'email': email,
             'phone': phoneNum,
             'createdAt': ServerValue.timestamp,
@@ -618,7 +630,7 @@ class AuthNotifier extends Notifier<AuthState> {
         'verified': true,
         'createdAt': ServerValue.timestamp,
       };
-      await _rtdb.ref('users').child(uid).set(updates);
+      await _rtdb.ref('users').child(uid).update(updates);
       await _rtdb.ref('phones').child(phone.trim()).set(uid);
       
       return true;

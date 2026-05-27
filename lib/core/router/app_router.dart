@@ -87,6 +87,10 @@ class RouterNotifier extends ChangeNotifier {
       authProvider,
       (_, __) => notifyListeners(),
     );
+    _ref.listen(
+      userProfileProvider,
+      (_, __) => notifyListeners(),
+    );
   }
 }
 
@@ -103,6 +107,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: routerNotifier,
     redirect: (context, state) {
       final authState = ref.read(authProvider);
+      final profileState = ref.read(userProfileProvider);
+
+      // Check account status (gating for banned/suspended accounts)
+      if (profileState.hasValue && profileState.value != null) {
+        final status = profileState.value!['status']?.toString();
+        if (status == 'suspended' || status == 'banned') {
+          // Immediately log out suspended/banned user
+          ref.read(authProvider.notifier).logout();
+          return '/login';
+        }
+      }
 
       final isGoingToLogin = state.matchedLocation == '/login';
       final isGoingToRegister = state.matchedLocation == '/register';

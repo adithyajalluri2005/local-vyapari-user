@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/services/role_service.dart';
 
 // Fake implementations for testing without Firebase SDK dependency
 class FakeUser implements User {
@@ -145,6 +146,19 @@ class FakeFirebaseDatabase implements FirebaseDatabase {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakeRoleService implements RoleService {
+  final Map<String, bool> mockRoles;
+  FakeRoleService(this.mockRoles);
+
+  @override
+  Future<Map<String, bool>> getRoles({bool forceRefresh = false}) async {
+    return mockRoles;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -155,13 +169,18 @@ void main() {
   setUp(() {
     fakeAuth = FakeFirebaseAuth();
     fakeDatabase = FakeFirebaseDatabase({
-      'users/test_uid/role': 'customer',
-      'users/active_user/role': 'customer',
+      'users/test_uid/roles': {'customer': true},
+      'users/active_user/roles': {'customer': true},
     });
+    final fakeRoleService = FakeRoleService({'customer': true});
     container = ProviderContainer(
       overrides: [
         firebaseAuthProvider.overrideWithValue(fakeAuth),
         firebaseDatabaseProvider.overrideWithValue(fakeDatabase),
+        roleServiceProvider.overrideWithValue(fakeRoleService),
+        sessionValidationProvider.overrideWithValue((user, targetRole) async {
+          return targetRole == 'customer';
+        }),
       ],
     );
   });

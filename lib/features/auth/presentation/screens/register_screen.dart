@@ -133,7 +133,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   actions: [
                     TextButton(
-                      onPressed: isVerifying ? null : () => Navigator.pop(dialogContext, false),
+                      onPressed: isVerifying ? null : () => Navigator.pop(dialogContext, null),
                       child: const Text('Cancel'),
                     ),
                     ElevatedButton(
@@ -166,16 +166,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             );
           },
         ).then((verified) {
-          if (verified != true) {
-            final error = ref.read(authProvider);
-            String errorMsg = 'Verification canceled or failed';
-            if (error is AuthFailure) {
-              errorMsg = error.message;
-            }
+          if (verified == null) {
             CustomSnackBar.showError(
               context: context,
-              message: errorMsg,
-              title: 'Verification Failed',
+              message: 'Verification canceled',
+              title: 'Canceled',
             );
           }
         });
