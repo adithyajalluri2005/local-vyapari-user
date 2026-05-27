@@ -22,7 +22,7 @@ class RateItemBottomSheet extends ConsumerStatefulWidget {
     required this.name,
     this.existingRating,
     this.existingComment,
-  }) : assert(shopId != null || productId != null, 'Either shopId or productId must be provided');
+  }) : assert(shopId != null, 'shopId must be provided');
 
   @override
   ConsumerState<RateItemBottomSheet> createState() => _RateItemBottomSheetState();
@@ -81,6 +81,7 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
       } else if (widget.productId != null) {
         await reviewsService.submitProductReview(
           productId: widget.productId!,
+          shopId: widget.shopId!,
           userId: userId,
           userDisplayName: userDisplayName,
           rating: _rating,

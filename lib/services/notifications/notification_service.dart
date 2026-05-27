@@ -386,7 +386,7 @@ class NotificationService {
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;
 
-      final dbRef = FirebaseDatabase.instance.ref('users_devices/${user.uid}');
+      final dbRef = FirebaseDatabase.instance.ref('users_devices/${user.uid}/customer');
 
       // If location is null, attempt to read from cache
       LocationResult? activeLoc = location;
@@ -407,7 +407,7 @@ class NotificationService {
       }
 
       await dbRef.update(data);
-      debugPrint('Device registration synced to RTDB for user: ${user.uid}');
+      debugPrint('Device registration synced to RTDB for user: ${user.uid} (customer)');
     } catch (e) {
       debugPrint('Error syncing device registration: $e');
     }

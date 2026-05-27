@@ -59,6 +59,7 @@ class ReviewsService {
   // Submits or updates a product review using a deterministic ID to prevent duplicates
   Future<void> submitProductReview({
     required String productId,
+    required String shopId,
     required String userId,
     required String userDisplayName,
     required double rating,
@@ -71,6 +72,7 @@ class ReviewsService {
       'userId': userId,
       'userDisplayName': userDisplayName,
       'productId': productId,
+      'shopId': shopId,
       'rating': rating,
       'comment': comment,
       'createdAt': FieldValue.serverTimestamp(),

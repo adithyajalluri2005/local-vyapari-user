@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/services/role_service.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -132,6 +136,45 @@ class ProfileScreen extends ConsumerWidget {
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(
                           context,
+                          icon: Icons.share_outlined,
+                          title: 'Share App',
+                          onTap: () => _showShareAppSheet(context),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
+                          icon: Icons.storefront_outlined,
+                          title: 'Switch to Vendor App',
+                          onTap: () async {
+                            try {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+
+                              await RoleService.instance.switchRoleAndLaunchApp('merchant');
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                CustomSnackBar.showError(
+                                  context: context,
+                                  title: 'Switch Failed',
+                                  message: e.toString().replaceFirst('Exception: ', ''),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
                           icon: Icons.logout,
                           title: 'Logout',
                           iconColor: AppTheme.errorColor,
@@ -170,6 +213,72 @@ class ProfileScreen extends ConsumerWidget {
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
+    );
+  }
+
+  void _showShareAppSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Share Local Vyapari',
+                style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.copy_outlined, color: AppTheme.primaryColor),
+                title: const Text('Copy download link'),
+                onTap: () async {
+                  await Clipboard.setData(const ClipboardData(
+                    text: 'Check out Local Vyapari App! Discover nearby retail shops and get exclusive local offers: https://localvyapari.com/download'
+                  ));
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    CustomSnackBar.showSuccess(
+                      context: context,
+                      title: 'Link Copied',
+                      message: 'App link copied to your clipboard.',
+                    );
+                  }
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.share_outlined, color: Colors.green),
+                title: const Text('Share via WhatsApp'),
+                onTap: () async {
+                  final message = Uri.encodeComponent(
+                    'Check out Local Vyapari App! Discover nearby retail shops and get exclusive local offers: https://localvyapari.com/download'
+                  );
+                  final url = Uri.parse('https://wa.me/?text=$message');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (context.mounted) {
+                      CustomSnackBar.showError(
+                        context: context,
+                        title: 'Error',
+                        message: 'Could not open WhatsApp.',
+                      );
+                    }
+                  }
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

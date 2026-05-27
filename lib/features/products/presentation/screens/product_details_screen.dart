@@ -603,6 +603,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
       ),
       builder: (context) => RateItemBottomSheet(
         productId: product.id,
+        shopId: product.shopId,
         name: product.name,
         existingRating: existingReview?.rating,
         existingComment: existingReview?.comment,

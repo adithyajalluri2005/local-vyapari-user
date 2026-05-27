@@ -5,6 +5,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
+import 'package:local_vyapari_user/services/role_service.dart';
 
 // Providers for Firebase dependencies to facilitate testing overrides
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -66,46 +67,21 @@ class AuthNotifier extends Notifier<AuthState> {
     return const AuthInitial();
   }
 
-  Future<String?> getUserRole(String uid) async {
-    final snapshot = await _rtdb.ref('users').child(uid).child('role').get();
-    return snapshot.value?.toString();
-  }
-
-  Future<String?> waitForUserRole(
-    String uid, {
-    int attempts = 5,
-    Duration delay = const Duration(milliseconds: 500),
-  }) async {
-    for (int i = 0; i < attempts; i++) {
-      final role = await getUserRole(uid);
-      if (role != null && role.isNotEmpty) {
-        return role;
-      }
-      if (i < attempts - 1) {
-        await Future.delayed(delay);
-      }
-    }
-    return null;
-  }
-
   Future<bool> isCustomerUser(User user) async {
-    final role = await waitForUserRole(user.uid);
-    if (role == 'customer' || role == 'merchant') {
+    final roles = await RoleService.instance.getRoles(forceRefresh: true);
+    if (roles['customer'] == true || roles['merchant'] == true) {
       return true;
     }
-    if (role == null || role.isEmpty) {
-      try {
-        await _rtdb.ref('users').child(user.uid).update({
-          'email': user.email ?? '',
-          'role': 'customer',
-          'createdAt': ServerValue.timestamp,
-        });
-        return true;
-      } catch (_) {
+    
+    // Poll a few times for the Cloud Function to finish writing roles on signup
+    for (int i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      final refreshedRoles = await RoleService.instance.getRoles(forceRefresh: true);
+      if (refreshedRoles['customer'] == true || refreshedRoles['merchant'] == true) {
         return true;
       }
     }
-    return true;
+    return false;
   }
 
   Future<bool> isPhoneRegistered(String phone) async {
@@ -324,7 +300,6 @@ class AuthNotifier extends Notifier<AuthState> {
       if (uid != null) {
         final updates = {
           'email': email.trim(),
-          'role': 'customer',
           'createdAt': ServerValue.timestamp,
         };
         if (phone != null && phone.isNotEmpty) {
@@ -369,7 +344,6 @@ class AuthNotifier extends Notifier<AuthState> {
         await _rtdb.ref('users').child(uid).set({
           'email': email,
           'phone': formattedPhone,
-          'role': 'customer',
           'createdAt': ServerValue.timestamp,
           'verified': true,
         });
@@ -448,7 +422,6 @@ class AuthNotifier extends Notifier<AuthState> {
           await _rtdb.ref('users').child(user.uid).set({
             'email': email,
             'phone': phoneNum,
-            'role': 'customer',
             'createdAt': ServerValue.timestamp,
             'verified': true,
           });
@@ -641,7 +614,6 @@ class AuthNotifier extends Notifier<AuthState> {
       final uid = user.uid;
       final updates = {
         'email': email.trim(),
-        'role': 'customer',
         'phone': phone.trim(),
         'verified': true,
         'createdAt': ServerValue.timestamp,
