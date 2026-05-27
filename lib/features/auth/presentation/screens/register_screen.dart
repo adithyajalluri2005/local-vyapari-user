@@ -179,11 +179,36 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         // Dismiss requesting dialog
         Navigator.pop(context);
 
-        CustomSnackBar.showError(
-          context: context,
-          message: error,
-          title: 'OTP Request Failed',
-        );
+        if (error.contains('already registered')) {
+          showDialog(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Account Already Exists'),
+              content: const Text(
+                'This phone number is already registered. If you registered this number for your merchant account, you can log in directly using your password.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext); // Close dialog
+                    context.pop(); // Go back to Login screen
+                  },
+                  child: const Text('Log In'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          CustomSnackBar.showError(
+            context: context,
+            message: error,
+            title: 'OTP Request Failed',
+          );
+        }
       },
     );
   }
