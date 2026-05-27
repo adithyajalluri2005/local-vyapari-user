@@ -16,6 +16,9 @@ class MockChatService implements ChatService {
     String? shopName,
     String? shopLogo,
   }) async {}
+
+  @override
+  Future<void> deleteChat(String shopId) async {}
 }
 
 void main() {

@@ -244,10 +244,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/chat',
         redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
-          final extras = state.extra as Map<String, String>;
-          final shopId = extras['shopId']!;
-          final shopName = extras['shopName']!;
-          final shopLogo = extras['shopLogo'] ?? '';
+          final extras = state.extra as Map<dynamic, dynamic>;
+          final shopId = extras['shopId']?.toString() ?? '';
+          final shopName = extras['shopName']?.toString() ?? '';
+          final shopLogo = extras['shopLogo']?.toString() ?? '';
           return buildPageWithTransition(
             context: context,
             state: state,

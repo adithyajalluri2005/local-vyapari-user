@@ -70,7 +70,52 @@ class ChatsListScreen extends ConsumerWidget {
               endIndent: 16,
             ),
             itemBuilder: (context, index) {
-              return _ChatSessionTile(session: chats[index]);
+              final chat = chats[index];
+              return Dismissible(
+                key: Key(chat.shopId),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  color: AppTheme.errorColor,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  return await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Chat'),
+                      content: Text('Are you sure you want to delete this conversation with ${chat.shopName.isNotEmpty ? chat.shopName : "this shop"}? This will remove it from your chats list.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                onDismissed: (direction) async {
+                  await ref.read(chatServiceProvider).deleteChat(chat.shopId);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Conversation with ${chat.shopName.isNotEmpty ? chat.shopName : "shop"} deleted'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                child: _ChatSessionTile(session: chat),
+              );
             },
           );
         },

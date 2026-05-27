@@ -124,5 +124,15 @@ class ChatService {
       // Handle or ignore write exceptions on read marking
     }
   }
+
+  Future<void> deleteChat(String shopId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+    try {
+      await _rtdb.ref('chats/$userId/$shopId').remove();
+    } catch (e) {
+      // Handle or ignore write exceptions on deletion
+    }
+  }
 }
 
