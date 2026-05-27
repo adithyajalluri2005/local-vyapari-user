@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 
@@ -84,15 +85,83 @@ class FakeFirebaseAuth implements FirebaseAuth {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakeDatabaseReference implements DatabaseReference {
+  final Map<String, dynamic> data;
+  final String path;
+  
+  FakeDatabaseReference(this.data, {this.path = ''});
+
+  @override
+  DatabaseReference child(String path) {
+    return FakeDatabaseReference(data, path: this.path.isEmpty ? path : '${this.path}/$path');
+  }
+
+  @override
+  Future<DataSnapshot> get() async {
+    final val = data[path];
+    return FakeDataSnapshot(val);
+  }
+
+  @override
+  Future<void> set(dynamic value) async {
+    data[path] = value;
+  }
+
+  @override
+  Future<void> update(Map<String, dynamic> value) async {
+    value.forEach((key, val) {
+      data[path.isEmpty ? key : '$path/$key'] = val;
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeDataSnapshot implements DataSnapshot {
+  @override
+  final dynamic value;
+
+  FakeDataSnapshot(this.value);
+
+  @override
+  bool get exists => value != null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeFirebaseDatabase implements FirebaseDatabase {
+  final Map<String, dynamic> data;
+
+  FakeFirebaseDatabase(this.data);
+
+  @override
+  DatabaseReference ref([String? path]) {
+    return FakeDatabaseReference(data, path: path ?? '');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakeFirebaseAuth fakeAuth;
+  late FakeFirebaseDatabase fakeDatabase;
   late ProviderContainer container;
 
   setUp(() {
     fakeAuth = FakeFirebaseAuth();
+    fakeDatabase = FakeFirebaseDatabase({
+      'users/test_uid/role': 'customer',
+      'users/active_user/role': 'customer',
+    });
     container = ProviderContainer(
       overrides: [
         firebaseAuthProvider.overrideWithValue(fakeAuth),
+        firebaseDatabaseProvider.overrideWithValue(fakeDatabase),
       ],
     );
   });
@@ -111,7 +180,7 @@ void main() {
 
     // Emit null state to indicate no user is logged in
     fakeAuth.emitUserState(null);
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     expect(stateList.last, isA<Unauthenticated>());
   });
@@ -125,7 +194,7 @@ void main() {
     }, fireImmediately: true);
 
     fakeAuth.emitUserState(null);
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     final loginFuture = container.read(authProvider.notifier).login('test@example.com', 'password123');
     
@@ -133,7 +202,7 @@ void main() {
     expect(stateList.any((s) => s is AuthLoading), isTrue);
 
     await loginFuture;
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     // Final state should be Authenticated
     expect(container.read(authProvider), isA<Authenticated>());
@@ -149,13 +218,13 @@ void main() {
     }, fireImmediately: true);
 
     fakeAuth.emitUserState(null);
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     fakeAuth.shouldThrowException = true;
     fakeAuth.exceptionMessage = 'Invalid credentials';
 
     await container.read(authProvider.notifier).login('bad@example.com', 'wrongpassword');
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     expect(container.read(authProvider), isA<AuthFailure>());
     final failureState = container.read(authProvider) as AuthFailure;
@@ -164,10 +233,10 @@ void main() {
 
   test('Successful registration transitions to Authenticated', () async {
     fakeAuth.emitUserState(null);
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     await container.read(authProvider.notifier).register('new@example.com', 'securepass');
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     expect(container.read(authProvider), isA<Authenticated>());
     final authenticatedState = container.read(authProvider) as Authenticated;
@@ -175,13 +244,16 @@ void main() {
   });
 
   test('Logout transitions state to Unauthenticated', () async {
+    // Read provider to initialize it and start the stream subscription
+    container.read(authProvider);
+
     fakeAuth.emitUserState(FakeUser(uid: 'active_user', email: 'user@example.com'));
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     expect(container.read(authProvider), isA<Authenticated>());
 
     await container.read(authProvider.notifier).logout();
-    await Future.delayed(Duration.zero);
+    await Future.delayed(const Duration(milliseconds: 50));
 
     expect(container.read(authProvider), isA<Unauthenticated>());
   });

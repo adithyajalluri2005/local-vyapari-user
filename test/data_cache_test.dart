@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -18,8 +19,26 @@ class MockPathProviderPlatform extends PathProviderPlatform
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  final Map<String, String> secureStorageValues = {};
+
   setUp(() {
     PathProviderPlatform.instance = MockPathProviderPlatform();
+    secureStorageValues.clear();
+    
+    const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      if (methodCall.method == 'read') {
+        return secureStorageValues[methodCall.arguments['key']];
+      } else if (methodCall.method == 'write') {
+        secureStorageValues[methodCall.arguments['key']] = methodCall.arguments['value'] as String;
+        return true;
+      } else if (methodCall.method == 'delete') {
+        secureStorageValues.remove(methodCall.arguments['key']);
+        return true;
+      }
+      return null;
+    });
   });
 
   group('DataCacheService Tests', () {

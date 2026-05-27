@@ -5,12 +5,27 @@ import 'package:local_vyapari_user/features/chat/presentation/screens/chat_scree
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 import 'package:local_vyapari_user/shared/models/chat_message.dart';
 
+class MockChatService implements ChatService {
+  @override
+  Future<void> markAsRead(String shopId) async {}
+
+  @override
+  Future<void> sendMessage({
+    required String shopId,
+    required String text,
+    String? shopName,
+    String? shopLogo,
+  }) async {}
+}
+
 void main() {
   testWidgets('ChatScreen shows placeholder when message list is empty', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          chatMessagesProvider('shop_123').overrideWith((ref) => const AsyncValue.data([])),
+          chatMessagesProvider('shop_123').overrideWith((ref) => Stream.value([])),
+          userIdProvider.overrideWith((ref) => 'user_xyz'),
+          chatServiceProvider.overrideWith((ref) => MockChatService()),
         ],
         child: const MaterialApp(
           home: ChatScreen(shopId: 'shop_123', shopName: 'Super Mart'),
@@ -44,7 +59,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          chatMessagesProvider('shop_123').overrideWith((ref) => AsyncValue.data(mockMessages)),
+          chatMessagesProvider('shop_123').overrideWith((ref) => Stream.value(mockMessages)),
+          userIdProvider.overrideWith((ref) => 'user_xyz'),
+          chatServiceProvider.overrideWith((ref) => MockChatService()),
         ],
         child: const MaterialApp(
           home: ChatScreen(shopId: 'shop_123', shopName: 'Super Mart'),

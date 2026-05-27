@@ -37,13 +37,16 @@ final queryCenterProvider = Provider<GeoPoint?>((ref) {
 
 final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
   final centerPoint = ref.watch(queryCenterProvider);
-  if (centerPoint == null) return;
+  if (centerPoint == null) {
+    yield <Shop>[];
+    return;
+  }
 
   final userLocation = ref.read(activeBrowsingLocationProvider).value;
   final sortingLat = userLocation?.latitude ?? centerPoint.latitude;
   final sortingLng = userLocation?.longitude ?? centerPoint.longitude;
 
-  // 2. Yield local cached shops immediately
+  // 1. Yield local cached shops immediately
   try {
     final cached = await DataCacheService.getCachedShops();
     final cachedLocation = await DataCacheService.getCachedLastLocation();
@@ -62,74 +65,52 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
     debugPrint('Error yielding cached shops: $e');
   }
 
-  final center = GeoFirePoint(centerPoint);
+  // 2. Stream from Firebase Realtime Database
+  final shopRef = FirebaseDatabase.instance.ref('shop');
+  
+  await for (final event in shopRef.onValue) {
+    final snapshot = event.snapshot;
+    final List<Shop> shops = [];
+    if (snapshot.exists && snapshot.value != null) {
+      try {
+        final data = snapshot.value as Map<dynamic, dynamic>;
+        data.forEach((key, value) {
+          try {
+            final shopId = key.toString();
+            final shopData = Map<dynamic, dynamic>.from(value as Map);
+            final shop = Shop.fromRTDB(shopId, shopData);
+            
+            // Calculate distance in km
+            final distance = Geolocator.distanceBetween(
+              sortingLat,
+              sortingLng,
+              shop.location.latitude,
+              shop.location.longitude,
+            ) / 1000.0;
+            
+            // Filter within 15 km
+            if (distance <= 15.0) {
+              shops.add(shop);
+            }
+          } catch (e) {
+            debugPrint('Error parsing shop item: $e');
+          }
+        });
+        
+        // Sort by distance
+        shops.sort((a, b) {
+          final distA = Geolocator.distanceBetween(sortingLat, sortingLng, a.location.latitude, a.location.longitude);
+          final distB = Geolocator.distanceBetween(sortingLat, sortingLng, b.location.latitude, b.location.longitude);
+          return distA.compareTo(distB);
+        });
 
-  // 3. Subscribe to Firestore geohash bounding box stream
-  final collectionRef = FirebaseFirestore.instance.collection('searchable_shops');
-  final geoStream = GeoCollectionReference(collectionRef).subscribeWithin(
-    center: center,
-    radiusInKm: 15.0,
-    field: 'geo',
-    geopointFrom: (data) => (data['geo']['geopoint'] as GeoPoint),
-    strictMode: true,
-  );
-
-  // 4. Yield queried values and resolve detailed RTDB models
-  await for (final List<DocumentSnapshot<Map<String, dynamic>>> docs in geoStream) {
-    final List<Shop> partialShops = [];
-    final List<Future<Shop?>> fetchFutures = [];
-    
-    for (final doc in docs) {
-      final shopId = doc.id;
-      final data = doc.data();
-
-      // Check if Firestore document has sufficient display data for a fast partial result
-      if (data != null && (data.containsKey('shopName') || data.containsKey('name')) && (data.containsKey('shopLogo') || data.containsKey('logoUrl'))) {
-        try {
-          partialShops.add(Shop.fromFirestore(doc));
-        } catch (e) {
-          debugPrint('Failed to parse partial shop data: $e');
-        }
+        // Cache the results
+        await DataCacheService.cacheShops(shops);
+        await DataCacheService.cacheLastLocation(sortingLat, sortingLng);
+      } catch (e) {
+        debugPrint('Error parsing shops: $e');
       }
-
-      // Parallelize full RTDB fetch
-      fetchFutures.add(FirebaseDatabase.instance.ref().child('shop/$shopId').get().then((shopSnapshot) {
-        if (shopSnapshot.exists && shopSnapshot.value != null) {
-          final shopData = shopSnapshot.value as Map<dynamic, dynamic>;
-          return Shop.fromRTDB(shopId, shopData);
-        }
-        return null;
-      }).catchError((e) {
-        debugPrint('Error fetching/parsing shop $shopId: $e');
-        return null;
-      }));
     }
-
-    // Yield partial results immediately if available
-    if (partialShops.isNotEmpty) {
-      partialShops.sort((a, b) {
-        final distA = Geolocator.distanceBetween(sortingLat, sortingLng, a.location.latitude, a.location.longitude);
-        final distB = Geolocator.distanceBetween(sortingLat, sortingLng, b.location.latitude, b.location.longitude);
-        return distA.compareTo(distB);
-      });
-      yield partialShops;
-    }
-
-    // Wait for all full RTDB details
-    final results = await Future.wait(fetchFutures);
-    final List<Shop> fullShops = results.whereType<Shop>().toList();
-
-    // Sort by exact distance
-    fullShops.sort((a, b) {
-      final distA = Geolocator.distanceBetween(sortingLat, sortingLng, a.location.latitude, a.location.longitude);
-      final distB = Geolocator.distanceBetween(sortingLat, sortingLng, b.location.latitude, b.location.longitude);
-      return distA.compareTo(distB);
-    });
-
-    // 5. Cache the filtered, sorted list
-    await DataCacheService.cacheShops(fullShops);
-    await DataCacheService.cacheLastLocation(sortingLat, sortingLng);
-
-    yield fullShops;
+    yield shops;
   }
 });
