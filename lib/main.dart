@@ -55,7 +55,7 @@ class LocalVyapariApp extends ConsumerWidget {
       title: 'Local Vyapari',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
