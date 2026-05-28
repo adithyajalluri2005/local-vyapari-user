@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,9 @@ import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'security_helper.dart';
 
 class DataCacheService {
+  static Timer? _shopCacheTimer;
+  static Timer? _productCacheTimer;
+
   static Future<File> _getFile(String filename) async {
     final dir = await getApplicationDocumentsDirectory();
     return File('${dir.path}/$filename');
@@ -15,37 +19,40 @@ class DataCacheService {
 
   // Caching Shops
   static Future<void> cacheShops(List<Shop> shops) async {
-    try {
-      final file = await _getFile('cached_shops.json');
-      final list = shops.map((shop) => {
-        'id': shop.id,
-        'ownerId': shop.ownerId,
-        'name': shop.shopName,
-        'description': shop.description,
-        'phone': shop.phone,
-        'logoUrl': shop.shopLogo,
-        'bannerUrl': shop.shopBanner,
-        'isVerified': shop.isVerified,
-        'isOpen': shop.isOpen,
-        'rating': shop.rating,
-        'totalReviews': shop.totalReviews,
-        'createdAt': shop.createdAt?.toIso8601String(),
-        'latitude': shop.location.latitude,
-        'longitude': shop.location.longitude,
-        'geohash': shop.location.geohash,
-        'address': shop.location.address,
-        'city': shop.location.city,
-        'state': shop.location.state,
-        'pincode': shop.location.pincode,
-        'placeId': shop.location.placeId,
-      }).toList();
-      
-      final jsonString = json.encode(list);
-      final encryptedString = await SecurityHelper.encryptData(jsonString);
-      await file.writeAsString(encryptedString);
-    } catch (e) {
-      debugPrint('Error caching shops: $e');
-    }
+    _shopCacheTimer?.cancel();
+    _shopCacheTimer = Timer(const Duration(seconds: 2), () async {
+      try {
+        final file = await _getFile('cached_shops.json');
+        final list = shops.map((shop) => {
+          'id': shop.id,
+          'ownerId': shop.ownerId,
+          'name': shop.shopName,
+          'description': shop.description,
+          'phone': shop.phone,
+          'logoUrl': shop.shopLogo,
+          'bannerUrl': shop.shopBanner,
+          'isVerified': shop.isVerified,
+          'isOpen': shop.isOpen,
+          'rating': shop.rating,
+          'totalReviews': shop.totalReviews,
+          'createdAt': shop.createdAt?.toIso8601String(),
+          'latitude': shop.location.latitude,
+          'longitude': shop.location.longitude,
+          'geohash': shop.location.geohash,
+          'address': shop.location.address,
+          'city': shop.location.city,
+          'state': shop.location.state,
+          'pincode': shop.location.pincode,
+          'placeId': shop.location.placeId,
+        }).toList();
+        
+        final jsonString = json.encode(list);
+        final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+        await file.writeAsString(encryptedString);
+      } catch (e) {
+        debugPrint('Error caching shops: $e');
+      }
+    });
   }
 
   static Future<List<Shop>> getCachedShops() async {
@@ -57,7 +64,7 @@ class DataCacheService {
         
         String decryptedContent;
         try {
-          decryptedContent = await SecurityHelper.decryptData(content);
+          decryptedContent = await compute(SecurityHelper.decryptData, content);
         } catch (e) {
           // If decryption fails (e.g. key changed or legacy unencrypted file)
           await file.delete();
@@ -75,32 +82,35 @@ class DataCacheService {
 
   // Caching Products
   static Future<void> cacheProducts(List<Product> products) async {
-    try {
-      final file = await _getFile('cached_products.json');
-      final list = products.map((p) => {
-        'id': p.id,
-        'shopId': p.shopId,
-        'ownerId': p.ownerId,
-        'name': p.name,
-        'description': p.description,
-        'category': p.category,
-        'actualPrice': p.actualPrice,
-        'offerPrice': p.offerPrice,
-        'stockQuantity': p.stockQuantity,
-        'isLowStock': p.isLowStock,
-        'isOutOfStock': p.isOutOfStock,
-        'isActive': p.isActive,
-        'images': p.images,
-        'searchKeywords': p.searchKeywords,
-        'createdAt': p.createdAt?.toIso8601String(),
-      }).toList();
+    _productCacheTimer?.cancel();
+    _productCacheTimer = Timer(const Duration(seconds: 2), () async {
+      try {
+        final file = await _getFile('cached_products.json');
+        final list = products.map((p) => {
+          'id': p.id,
+          'shopId': p.shopId,
+          'ownerId': p.ownerId,
+          'name': p.name,
+          'description': p.description,
+          'category': p.category,
+          'actualPrice': p.actualPrice,
+          'offerPrice': p.offerPrice,
+          'stockQuantity': p.stockQuantity,
+          'isLowStock': p.isLowStock,
+          'isOutOfStock': p.isOutOfStock,
+          'isActive': p.isActive,
+          'images': p.images,
+          'searchKeywords': p.searchKeywords,
+          'createdAt': p.createdAt?.toIso8601String(),
+        }).toList();
 
-      final jsonString = json.encode(list);
-      final encryptedString = await SecurityHelper.encryptData(jsonString);
-      await file.writeAsString(encryptedString);
-    } catch (e) {
-      debugPrint('Error caching products: $e');
-    }
+        final jsonString = json.encode(list);
+        final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+        await file.writeAsString(encryptedString);
+      } catch (e) {
+        debugPrint('Error caching products: $e');
+      }
+    });
   }
 
   static Future<List<Product>> getCachedProducts() async {
@@ -112,7 +122,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await SecurityHelper.decryptData(content);
+          decryptedContent = await compute(SecurityHelper.decryptData, content);
         } catch (e) {
           await file.delete();
           return [];
@@ -148,7 +158,7 @@ class DataCacheService {
       }).toList();
 
       final jsonString = json.encode(list);
-      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
       await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching offers: $e');
@@ -164,7 +174,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await SecurityHelper.decryptData(content);
+          decryptedContent = await compute(SecurityHelper.decryptData, content);
         } catch (e) {
           await file.delete();
           return [];
@@ -184,7 +194,7 @@ class DataCacheService {
     try {
       final file = await _getFile('sync_queue.json');
       final jsonString = json.encode(queue);
-      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
       await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error saving sync queue: $e');
@@ -200,7 +210,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await SecurityHelper.decryptData(content);
+          decryptedContent = await compute(SecurityHelper.decryptData, content);
         } catch (e) {
           await file.delete();
           return [];
@@ -221,7 +231,7 @@ class DataCacheService {
       final file = await _getFile('cached_location.json');
       final data = {'latitude': latitude, 'longitude': longitude};
       final jsonString = json.encode(data);
-      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
       await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching last location: $e');
@@ -237,7 +247,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await SecurityHelper.decryptData(content);
+          decryptedContent = await compute(SecurityHelper.decryptData, content);
         } catch (e) {
           await file.delete();
           return null;
