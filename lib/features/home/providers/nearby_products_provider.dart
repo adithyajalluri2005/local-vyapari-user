@@ -1,4 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
@@ -30,42 +31,49 @@ final nearbyProductsProvider = StreamProvider<List<Product>>((ref) async* {
   }
 
   final shopIds = shops.map((s) => s.id).toSet();
-  final dbRef = FirebaseDatabase.instance.ref('products');
 
-  // 3. Yield remote database values reactively
-  await for (final event in dbRef.onValue) {
+  if (shopIds.isEmpty) {
+    yield <Product>[];
+    return;
+  }
+
+  // Create one stream per nearby shop
+  final streams = shopIds.map((shopId) =>
+    FirebaseDatabase.instance.ref('products/$shopId').onValue
+      .map((event) => (shopId, event))
+  ).toList();
+
+  final merged = StreamGroup.merge(streams);
+
+  // Maintain a mutable map of products per shop so each stream event
+  // only updates its own shop's products
+  final Map<String, List<Product>> productsByShop = {};
+
+  await for (final (shopId, event) in merged) {
     final snapshot = event.snapshot;
-    if (!snapshot.exists || snapshot.value == null) {
-      yield <Product>[];
-      continue;
-    }
+    final List<Product> shopProducts = [];
 
-    final Map<dynamic, dynamic> shopsProductsMap = snapshot.value as Map<dynamic, dynamic>;
-    final List<Product> products = [];
-
-    shopsProductsMap.forEach((shopIdKey, productsValue) {
-      final shopId = shopIdKey.toString();
-      if (shopIds.contains(shopId) && productsValue is Map) {
-        productsValue.forEach((productIdKey, productValue) {
-          if (productValue is Map) {
-            try {
-              final productId = productIdKey.toString();
-              final productData = Map<dynamic, dynamic>.from(productValue);
-              final product = Product.fromRTDB(productId, shopId, productData);
-              if (product.isActive && !product.isOutOfStock) {
-                products.add(product);
-              }
-            } catch (e) {
-              debugPrint('Error parsing product $productIdKey: $e');
+    if (snapshot.exists && snapshot.value != null) {
+      final productsMap = snapshot.value as Map<dynamic, dynamic>;
+      productsMap.forEach((productIdKey, productValue) {
+        if (productValue is Map) {
+          try {
+            final product = Product.fromRTDB(
+              productIdKey.toString(), shopId,
+              Map<dynamic, dynamic>.from(productValue));
+            if (product.isActive && !product.isOutOfStock) {
+              shopProducts.add(product);
             }
+          } catch (e) {
+            debugPrint('Error parsing product $productIdKey: $e');
           }
-        });
-      }
-    });
+        }
+      });
+    }
+    productsByShop[shopId] = shopProducts;
 
-    // 4. Save to local cache
-    await DataCacheService.cacheProducts(products);
-
-    yield products;
+    final allProducts = productsByShop.values.expand((p) => p).toList();
+    await DataCacheService.cacheProducts(allProducts);
+    yield allProducts;
   }
 });
