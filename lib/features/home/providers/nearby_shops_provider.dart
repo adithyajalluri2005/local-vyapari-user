@@ -71,6 +71,7 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
   await for (final event in shopRef.onValue) {
     final snapshot = event.snapshot;
     final List<Shop> shops = [];
+    List<Shop> sortedShops = [];
     if (snapshot.exists && snapshot.value != null) {
       try {
         final data = snapshot.value as Map<dynamic, dynamic>;
@@ -97,20 +98,23 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
           }
         });
         
-        // Sort by distance
-        shops.sort((a, b) {
-          final distA = Geolocator.distanceBetween(sortingLat, sortingLng, a.location.latitude, a.location.longitude);
-          final distB = Geolocator.distanceBetween(sortingLat, sortingLng, b.location.latitude, b.location.longitude);
-          return distA.compareTo(distB);
-        });
+        final withDist = shops.map((shop) {
+          final dist = Geolocator.distanceBetween(
+            sortingLat, sortingLng,
+            shop.location.latitude, shop.location.longitude,
+          );
+          return (shop: shop, dist: dist);
+        }).toList();
+        withDist.sort((a, b) => a.dist.compareTo(b.dist));
+        sortedShops = withDist.map((e) => e.shop).toList();
 
         // Cache the results
-        await DataCacheService.cacheShops(shops);
+        await DataCacheService.cacheShops(sortedShops);
         await DataCacheService.cacheLastLocation(sortingLat, sortingLng);
       } catch (e) {
         debugPrint('Error parsing shops: $e');
       }
     }
-    yield shops;
+    yield sortedShops;
   }
 });
