@@ -42,7 +42,7 @@ class LocalVyapariApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Initialize Notification Service
-    ref.watch(notificationServiceProvider);
+    
     
     // NOTE: Client-side syncing of all shops to Firestore is deprecated to preserve 
     // write security and network query limits. Production index syncing should reside 
