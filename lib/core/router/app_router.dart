@@ -99,7 +99,7 @@ final routerNotifierProvider = Provider((ref) => RouterNotifier(ref));
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final routerNotifier = ref.watch(routerNotifierProvider);
+  final routerNotifier = ref.read(routerNotifierProvider);
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
