@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/theme/theme_provider.dart';
 import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/services/notifications/notification_service.dart';
 import 'package:local_vyapari_user/shared/widgets/global_error_screen.dart';
@@ -50,12 +51,13 @@ class LocalVyapariApp extends ConsumerWidget {
     // ref.watch(searchIndexerServiceProvider).syncShopsToFirestore();
 
     final router = ref.watch(appRouterProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Local Vyapari',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
       builder: (context, child) {

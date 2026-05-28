@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/theme_provider.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
@@ -27,6 +28,24 @@ class ProfileScreen extends ConsumerWidget {
     final user = authState is Authenticated ? authState.user : null;
     
     final avatarRadius = Responsive.isTablet(context) ? 60.0 : 50.0;
+    
+    final themeMode = ref.watch(themeModeProvider);
+    final String themeModeText;
+    final IconData themeIcon;
+    switch (themeMode) {
+      case ThemeMode.system:
+        themeModeText = 'System Default';
+        themeIcon = Icons.brightness_auto_outlined;
+        break;
+      case ThemeMode.light:
+        themeModeText = 'Light Theme';
+        themeIcon = Icons.light_mode_outlined;
+        break;
+      case ThemeMode.dark:
+        themeModeText = 'Dark Theme';
+        themeIcon = Icons.dark_mode_outlined;
+        break;
+    }
     
     return Scaffold(
       appBar: AppBar(
@@ -143,6 +162,24 @@ class ProfileScreen extends ConsumerWidget {
                         const Divider(height: 1, indent: 16, endIndent: 16),
                         _buildProfileMenuItem(
                           context,
+                          icon: themeIcon,
+                          title: 'App Theme',
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                themeModeText,
+                                style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.chevron_right, color: Colors.grey),
+                            ],
+                          ),
+                          onTap: () => _showThemePickerSheet(context, ref),
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        _buildProfileMenuItem(
+                          context,
                           icon: Icons.storefront_outlined,
                           title: 'Switch to Vendor App',
                           onTap: () async {
@@ -200,6 +237,7 @@ class ProfileScreen extends ConsumerWidget {
     required VoidCallback onTap,
     Color? iconColor,
     Color? textColor,
+    Widget? trailing,
   }) {
     return ListTile(
       leading: Icon(icon, color: iconColor ?? AppTheme.primaryColor),
@@ -211,8 +249,62 @@ class ProfileScreen extends ConsumerWidget {
           fontWeight: FontWeight.w500,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+      trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,
+    );
+  }
+
+  void _showThemePickerSheet(BuildContext context, WidgetRef ref) {
+    final currentThemeMode = ref.read(themeModeProvider);
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Choose App Theme',
+                style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.brightness_auto_outlined, color: AppTheme.primaryColor),
+                title: const Text('System Default'),
+                trailing: currentThemeMode == ThemeMode.system ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.system);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.light_mode_outlined, color: AppTheme.primaryColor),
+                title: const Text('Light Theme'),
+                trailing: currentThemeMode == ThemeMode.light ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.dark_mode_outlined, color: AppTheme.primaryColor),
+                title: const Text('Dark Theme'),
+                trailing: currentThemeMode == ThemeMode.dark ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+                onTap: () {
+                  ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
