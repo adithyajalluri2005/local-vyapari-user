@@ -10,6 +10,7 @@ import 'package:string_similarity/string_similarity.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
+import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
 
 class HybridSearchResult {
   final List<Product> products;
@@ -59,36 +60,21 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
         final double centerLng = locationResult.longitude;
 
         // 1. Fetch nearby shops from RTDB
-        final shopsSnapshot = await FirebaseDatabase.instance.ref().child('shop').get();
-        final List<Shop> nearbyShops = [];
-        final Map<String, double> shopDistances = {};
-
-        if (shopsSnapshot.exists && shopsSnapshot.value != null) {
-          final shopsMap = shopsSnapshot.value as Map<dynamic, dynamic>;
-          shopsMap.forEach((key, value) {
-            try {
-              final shopId = key.toString();
-              final shopData = Map<dynamic, dynamic>.from(value as Map);
-              final shop = Shop.fromRTDB(shopId, shopData);
-              
-              final distance = Geolocator.distanceBetween(
-                centerLat, centerLng,
-                shop.location.latitude, shop.location.longitude,
-              );
-              
-              // Filter within 15 km (15000 meters)
-              if (distance <= 15000.0) {
-                nearbyShops.add(shop);
-                shopDistances[shop.id] = distance;
-              }
-            } catch (e) {
-              debugPrint('Error parsing shop in search: $e');
-            }
-          });
+        final nearbyShops = ref.read(nearbyShopsProvider).value ?? [];
+        if (nearbyShops.isEmpty) {
+          state = const AsyncValue.data(HybridSearchResult());
+          return;
         }
 
-        // Rank shops by distance
-        nearbyShops.sort((a, b) => shopDistances[a.id]!.compareTo(shopDistances[b.id]!));
+        final Map<String, double> shopDistances = {};
+        for (final shop in nearbyShops) {
+          shopDistances[shop.id] = Geolocator.distanceBetween(
+            centerLat,
+            centerLng,
+            shop.location.latitude,
+            shop.location.longitude,
+          );
+        }
 
         final bool isCapped = nearbyShops.length > 10;
         final closestShops = nearbyShops.take(10).toList();
