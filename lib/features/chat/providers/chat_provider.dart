@@ -50,7 +50,13 @@ final userChatsStreamProvider = StreamProvider.autoDispose<List<ChatSession>>((r
     final map = snapshot.value as Map<dynamic, dynamic>;
     map.forEach((key, value) {
       if (value is Map) {
-        sessions.add(ChatSession.fromRTDB(key.toString(), value));
+        final session = ChatSession.fromRTDB(key.toString(), value);
+        // Only show chat session if the logged-in user is the customer
+        final customerId = value['customerId']?.toString() ?? value['lastMessage']?['customerId']?.toString();
+        if (customerId != null && customerId != userId) {
+          return;
+        }
+        sessions.add(session);
       }
     });
 
@@ -78,6 +84,10 @@ class ChatService {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final messageData = {
       'senderId': userId,
+      'receiverId': shopId,
+      'vendorId': shopId,
+      'customerId': userId,
+      'shopId': shopId,
       'text': text.trim(),
       'timestamp': timestamp,
     };
@@ -87,18 +97,30 @@ class ChatService {
 
     if (messageId != null) {
       final Map<String, dynamic> updates = {
+        'chats/$userId/$shopId/vendorId': shopId,
+        'chats/$userId/$shopId/customerId': userId,
+        'chats/$userId/$shopId/shopId': shopId,
         'chats/$userId/$shopId/messages/$messageId': messageData,
-        'chats/$shopId/$userId/messages/$messageId': messageData,
         'chats/$userId/$shopId/lastMessage': {
           'text': text.trim(),
           'timestamp': timestamp,
           'senderId': userId,
+          'vendorId': shopId,
+          'customerId': userId,
+          'shopId': shopId,
           'unread': false,
         },
+        'chats/$shopId/$userId/vendorId': shopId,
+        'chats/$shopId/$userId/customerId': userId,
+        'chats/$shopId/$userId/shopId': shopId,
+        'chats/$shopId/$userId/messages/$messageId': messageData,
         'chats/$shopId/$userId/lastMessage': {
           'text': text.trim(),
           'timestamp': timestamp,
           'senderId': userId,
+          'vendorId': shopId,
+          'customerId': userId,
+          'shopId': shopId,
           'unread': true,
         },
         'chats/$shopId/$userId/userName': user?.email ?? 'Customer',
