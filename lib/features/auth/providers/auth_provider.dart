@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/services/role_service.dart';
+import 'package:local_vyapari_user/services/notifications/notification_service.dart';
 
 // Providers for Firebase dependencies to facilitate testing overrides
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -70,6 +71,8 @@ class AuthNotifier extends Notifier<AuthState> {
           final isCustomer = await isCustomerUser(user);
           if (isCustomer) {
             state = Authenticated(user);
+            // Lazily initialise notifications now that the user is authenticated
+            ref.read(notificationServiceProvider);
           } else {
             await auth.signOut();
             state = const AuthFailure('Access Denied: Unauthorized role.');
