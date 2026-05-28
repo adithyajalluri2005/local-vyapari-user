@@ -81,14 +81,21 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
 
         // 2. Fetch products for these nearby shops
         final List<Product> nearbyProducts = [];
-        for (var shop in closestShops) {
-          final productsSnapshot = await FirebaseDatabase.instance.ref().child('products').child(shop.id).get();
+        final futures = closestShops.map((shop) =>
+          FirebaseDatabase.instance.ref('products/${shop.id}').get()
+        );
+        final snapshots = await Future.wait(futures);
+
+        for (int i = 0; i < snapshots.length; i++) {
+          final productsSnapshot = snapshots[i];
+          final shopId = closestShops[i].id;
           if (productsSnapshot.exists && productsSnapshot.value != null) {
             final productsMap = productsSnapshot.value as Map<dynamic, dynamic>;
             productsMap.forEach((key, value) {
               if (value is Map) {
                 try {
-                  nearbyProducts.add(Product.fromRTDB(key.toString(), shop.id, Map<dynamic, dynamic>.from(value)));
+                  nearbyProducts.add(Product.fromRTDB(
+                    key.toString(), shopId, Map<dynamic, dynamic>.from(value)));
                 } catch (e) {
                   debugPrint('Error parsing product in search: $e');
                 }
