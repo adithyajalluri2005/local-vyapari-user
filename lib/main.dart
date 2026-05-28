@@ -63,8 +63,8 @@ class LocalVyapariApp extends ConsumerWidget {
         return MediaQuery(
           data: mediaQueryData.copyWith(
             textScaler: mediaQueryData.textScaler.clamp(
-              minScaleFactor: 0.85,
-              maxScaleFactor: 1.15,
+              minScaleFactor: 0.9,
+              maxScaleFactor: 1.4,
             ),
           ),
           child: child!,
