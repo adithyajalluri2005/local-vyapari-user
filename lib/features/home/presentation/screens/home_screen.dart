@@ -24,9 +24,6 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     Responsive.init(context);
     final locationAsync = ref.watch(activeBrowsingLocationProvider);
-    final shopsAsync = ref.watch(nearbyShopsProvider);
-    final productsAsync = ref.watch(nearbyProductsProvider);
-    final offersAsync = ref.watch(nearbyOffersProvider);
 
     ref.listen(activeBrowsingLocationProvider, (previous, next) {
       if (previous?.value != next?.value) {
@@ -127,290 +124,13 @@ class HomeScreen extends ConsumerWidget {
               ),
               
               _buildSectionHeader(context, 'Trending Offers Nearby', () {}),
-              SizedBox(
-                height: AppSizes.offerCardHeight(context),
-                child: offersAsync.when(
-                  skipLoadingOnReload: false,
-                  data: (offers) {
-                    if (offers.isEmpty) return const Center(child: Text('No active offers nearby.'));
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: EdgeInsets.symmetric(horizontal: screenPadding),
-                      itemCount: offers.length,
-                      itemBuilder: (context, index) {
-                        final offer = offers[index];
-                        return Container(
-                          width: AppSizes.offerCardWidth(context),
-                          margin: EdgeInsets.only(right: screenPadding),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                AppTheme.primaryColor.withValues(alpha: 0.12),
-                                AppTheme.primaryColor.withValues(alpha: 0.02),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15)),
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.paddingMedium(context),
-                            vertical: 8.0,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '${offer.discountPercentage.toInt()}% OFF',
-                                style: AppTextStyles.titleMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-                              ),
-                              AppSpacing.verticalXs,
-                              Text(
-                                offer.title,
-                                style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (offer.shopName.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  offer.shopName,
-                                  style: AppTextStyles.bodyMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.w600),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                              const SizedBox(height: 2),
-                              Text(
-                                offer.description,
-                                style: AppTextStyles.bodyMedium(context, color: Colors.grey[700]),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () => _buildShimmerList(
-                    height: AppSizes.offerCardHeight(context), 
-                    width: AppSizes.offerCardWidth(context),
-                    context: context,
-                  ),
-                  error: (_, __) => const Center(child: Text('Failed to load offers.')),
-                ),
-              ),
+              _OffersSection(screenPadding: screenPadding),
               
               _buildSectionHeader(context, 'Nearby Shops', () => context.push('/radar')),
-              SizedBox(
-                height: AppSizes.shopCardHeight(context),
-                child: shopsAsync.when(
-                  skipLoadingOnReload: false,
-                  data: (shops) {
-                    if (shops.isEmpty) return const Center(child: Text('No shops found nearby.'));
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
-                      padding: EdgeInsets.symmetric(horizontal: screenPadding),
-                      itemCount: shops.length,
-                      itemBuilder: (context, index) {
-                        final shop = shops[index];
-                        final cardWidth = AppSizes.shopCardWidth(context);
-                        return GestureDetector(
-                          onTap: () => context.push('/shop_details', extra: shop),
-                          child: Container(
-                            width: cardWidth,
-                            margin: EdgeInsets.only(right: screenPadding),
-                            child: Card(
-                              elevation: 2,
-                              shadowColor: Colors.black12,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                              clipBehavior: Clip.antiAlias,
-                              margin: EdgeInsets.zero,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CachedNetworkImage(
-                                    imageUrl: shop.shopLogo.isNotEmpty ? shop.shopLogo : 'https://via.placeholder.com/150',
-                                    width: cardWidth,
-                                    height: AppSizes.shopImageHeight(context),
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Shimmer.fromColors(
-                                      baseColor: Colors.grey[300]!,
-                                      highlightColor: Colors.grey[100]!,
-                                      child: Container(color: Colors.white),
-                                    ),
-                                    errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.store)),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            shop.shopName,
-                                            style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: shop.isOpen ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.errorColor.withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: Text(
-                                                    shop.isOpen ? 'OPEN' : 'CLOSED',
-                                                    style: TextStyle(
-                                                      color: shop.isOpen ? AppTheme.successColor : AppTheme.errorColor,
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                                AppSpacing.horizontalSm,
-                                                Expanded(
-                                                  child: DynamicShopRating(
-                                                    shopId: shop.id,
-                                                    initialRating: shop.rating,
-                                                    initialTotalReviews: shop.totalReviews,
-                                                    style: AppTextStyles.bodyMedium(context, color: Colors.grey),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () => _buildShimmerList(
-                    height: AppSizes.shopCardHeight(context), 
-                    width: AppSizes.shopCardWidth(context),
-                    context: context,
-                  ),
-                  error: (error, stackTrace) {
-                    debugPrint('Error loading shops on home screen: $error\n$stackTrace');
-                    return const Center(child: Text('Failed to load shops.'));
-                  },
-                ),
-              ),
+              _ShopsSection(screenPadding: screenPadding),
               
               _buildSectionHeader(context, 'Recommended Products', () {}),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: screenPadding),
-                child: productsAsync.when(
-                  skipLoadingOnReload: false,
-                  data: (products) {
-                    if (products.isEmpty) return const Center(child: Text('No products found nearby.'));
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: AppSizes.productGridColumnCount(context),
-                        crossAxisSpacing: screenPadding,
-                        mainAxisSpacing: screenPadding,
-                        childAspectRatio: AppSizes.productGridAspectRatio(context),
-                      ),
-                      itemCount: products.length,
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        return GestureDetector(
-                          onTap: () => context.push('/product_details', extra: product),
-                          child: Card(
-                            elevation: 2,
-                            shadowColor: Colors.black12,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                            clipBehavior: Clip.antiAlias,
-                            margin: EdgeInsets.zero,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AspectRatio(
-                                  aspectRatio: 1.33,
-                                  child: CachedNetworkImage(
-                                    imageUrl: product.images.isNotEmpty ? product.images.first : 'https://via.placeholder.com/150',
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Shimmer.fromColors(
-                                      baseColor: Colors.grey[300]!,
-                                      highlightColor: Colors.grey[100]!,
-                                      child: Container(color: Colors.white),
-                                    ),
-                                    errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image)),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          product.name,
-                                          style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        DynamicProductRating(
-                                          productId: product.id,
-                                          initialRating: product.rating,
-                                          initialTotalReviews: product.totalReviews,
-                                          style: AppTextStyles.bodyMedium(context, color: Colors.grey),
-                                          iconSize: 12,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              '₹${product.offerPrice}',
-                                              style: AppTextStyles.bodyLarge(context, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-                                            ),
-                                            AppSpacing.horizontalSm,
-                                            Flexible(
-                                              child: Text(
-                                                '₹${product.actualPrice}',
-                                                style: AppTextStyles.bodyMedium(context, color: Colors.grey).copyWith(
-                                                  decoration: TextDecoration.lineThrough,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => const Center(child: Text('Failed to load products.')),
-                ),
-              ),
+              _ProductsSection(screenPadding: screenPadding),
               AppSpacing.verticalLg,
             ],
           ),
@@ -452,31 +172,6 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildShimmerList({required double height, required double width, required BuildContext context}) {
-    final screenPadding = AppSizes.paddingMedium(context);
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      clipBehavior: Clip.none,
-      padding: EdgeInsets.symmetric(horizontal: screenPadding),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
-          child: Container(
-            width: width,
-            height: height,
-            margin: EdgeInsets.only(right: screenPadding),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -535,4 +230,339 @@ class HomeScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+class _OffersSection extends ConsumerWidget {
+  final double screenPadding;
+  const _OffersSection({required this.screenPadding});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final offersAsync = ref.watch(nearbyOffersProvider);
+    return SizedBox(
+      height: AppSizes.offerCardHeight(context),
+      child: offersAsync.when(
+        skipLoadingOnReload: false,
+        data: (offers) {
+          if (offers.isEmpty) return const Center(child: Text('No active offers nearby.'));
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            padding: EdgeInsets.symmetric(horizontal: screenPadding),
+            itemCount: offers.length,
+            itemBuilder: (context, index) {
+              final offer = offers[index];
+              return Container(
+                width: AppSizes.offerCardWidth(context),
+                margin: EdgeInsets.only(right: screenPadding),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryColor.withValues(alpha: 0.12),
+                      AppTheme.primaryColor.withValues(alpha: 0.02),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.15)),
+                ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.paddingMedium(context),
+                  vertical: 8.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${offer.discountPercentage.toInt()}% OFF',
+                      style: AppTextStyles.titleMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                    ),
+                    AppSpacing.verticalXs,
+                    Text(
+                      offer.title,
+                      style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (offer.shopName.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        offer.shopName,
+                        style: AppTextStyles.bodyMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 2),
+                    Text(
+                      offer.description,
+                      style: AppTextStyles.bodyMedium(context, color: Colors.grey[700]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+        loading: () => _buildShimmerList(
+          height: AppSizes.offerCardHeight(context), 
+          width: AppSizes.offerCardWidth(context),
+          context: context,
+        ),
+        error: (_, __) => const Center(child: Text('Failed to load offers.')),
+      ),
+    );
+  }
+}
+
+class _ShopsSection extends ConsumerWidget {
+  final double screenPadding;
+  const _ShopsSection({required this.screenPadding});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shopsAsync = ref.watch(nearbyShopsProvider);
+    return SizedBox(
+      height: AppSizes.shopCardHeight(context),
+      child: shopsAsync.when(
+        skipLoadingOnReload: false,
+        data: (shops) {
+          if (shops.isEmpty) return const Center(child: Text('No shops found nearby.'));
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            padding: EdgeInsets.symmetric(horizontal: screenPadding),
+            itemCount: shops.length,
+            itemBuilder: (context, index) {
+              final shop = shops[index];
+              final cardWidth = AppSizes.shopCardWidth(context);
+              return GestureDetector(
+                onTap: () => context.push('/shop_details', extra: shop),
+                child: Container(
+                  width: cardWidth,
+                  margin: EdgeInsets.only(right: screenPadding),
+                  child: Card(
+                    elevation: 2,
+                    shadowColor: Colors.black12,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    clipBehavior: Clip.antiAlias,
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CachedNetworkImage(
+                          imageUrl: shop.shopLogo.isNotEmpty ? shop.shopLogo : 'https://via.placeholder.com/150',
+                          width: cardWidth,
+                          height: AppSizes.shopImageHeight(context),
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: Container(color: Colors.white),
+                          ),
+                          errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.store)),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  shop.shopName,
+                                  style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: shop.isOpen ? AppTheme.successColor.withValues(alpha: 0.1) : AppTheme.errorColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        shop.isOpen ? 'OPEN' : 'CLOSED',
+                                        style: TextStyle(
+                                          color: shop.isOpen ? AppTheme.successColor : AppTheme.errorColor,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    AppSpacing.horizontalSm,
+                                    Expanded(
+                                      child: DynamicShopRating(
+                                        shopId: shop.id,
+                                        initialRating: shop.rating,
+                                        initialTotalReviews: shop.totalReviews,
+                                        style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        loading: () => _buildShimmerList(
+          height: AppSizes.shopCardHeight(context), 
+          width: AppSizes.shopCardWidth(context),
+          context: context,
+        ),
+        error: (error, stackTrace) {
+          debugPrint('Error loading shops on home screen: $error\n$stackTrace');
+          return const Center(child: Text('Failed to load shops.'));
+        },
+      ),
+    );
+  }
+}
+
+class _ProductsSection extends ConsumerWidget {
+  final double screenPadding;
+  const _ProductsSection({required this.screenPadding});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final productsAsync = ref.watch(nearbyProductsProvider);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenPadding),
+      child: productsAsync.when(
+        skipLoadingOnReload: false,
+        data: (products) {
+          if (products.isEmpty) return const Center(child: Text('No products found nearby.'));
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: AppSizes.productGridColumnCount(context),
+              crossAxisSpacing: screenPadding,
+              mainAxisSpacing: screenPadding,
+              childAspectRatio: AppSizes.productGridAspectRatio(context),
+            ),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              final product = products[index];
+              return GestureDetector(
+                onTap: () => context.push('/product_details', extra: product),
+                child: Card(
+                  elevation: 2,
+                  shadowColor: Colors.black12,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  clipBehavior: Clip.antiAlias,
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 1.33,
+                        child: CachedNetworkImage(
+                          imageUrl: product.images.isNotEmpty ? product.images.first : 'https://via.placeholder.com/150',
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: Container(color: Colors.white),
+                          ),
+                          errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image)),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                product.name,
+                                style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              DynamicProductRating(
+                                productId: product.id,
+                                initialRating: product.rating,
+                                initialTotalReviews: product.totalReviews,
+                                style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                                iconSize: 12,
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Text(
+                                    '₹${product.offerPrice}',
+                                    style: AppTextStyles.bodyLarge(context, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                                  ),
+                                  AppSpacing.horizontalSm,
+                                  Flexible(
+                                    child: Text(
+                                      '₹${product.actualPrice}',
+                                      style: AppTextStyles.bodyMedium(context, color: Colors.grey).copyWith(
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => const Center(child: Text('Failed to load products.')),
+      ),
+    );
+  }
+}
+
+Widget _buildShimmerList({required double height, required double width, required BuildContext context}) {
+  final screenPadding = AppSizes.paddingMedium(context);
+  return ListView.builder(
+    scrollDirection: Axis.horizontal,
+    clipBehavior: Clip.none,
+    padding: EdgeInsets.symmetric(horizontal: screenPadding),
+    itemCount: 3,
+    itemBuilder: (context, index) {
+      return Shimmer.fromColors(
+        baseColor: Colors.grey[300]!,
+        highlightColor: Colors.grey[100]!,
+        child: Container(
+          width: width,
+          height: height,
+          margin: EdgeInsets.only(right: screenPadding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      );
+    },
+  );
 }
