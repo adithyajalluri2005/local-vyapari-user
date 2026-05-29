@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
@@ -6,7 +7,10 @@ import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 
-final nearbyProductsProvider = StreamProvider<List<Product>>((ref) async* {
+final nearbyProductsProvider = StreamProvider.autoDispose<List<Product>>((ref) async* {
+  Timer? cacheDebounce;
+  ref.onDispose(() => cacheDebounce?.cancel());
+
   // 1. Watch shops changes first
   final shopsAsyncValue = ref.watch(nearbyShopsProvider);
   final shops = shopsAsyncValue.value ?? [];
@@ -73,7 +77,11 @@ final nearbyProductsProvider = StreamProvider<List<Product>>((ref) async* {
     productsByShop[shopId] = shopProducts;
 
     final allProducts = productsByShop.values.expand((p) => p).toList();
-    await DataCacheService.cacheProducts(allProducts);
+    // Debounce cache writes so rapid multi-shop events don't thrash disk
+    cacheDebounce?.cancel();
+    cacheDebounce = Timer(const Duration(seconds: 2), () {
+      DataCacheService.cacheProducts(allProducts);
+    });
     yield allProducts;
   }
 });

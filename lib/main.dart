@@ -9,6 +9,7 @@ import 'package:local_vyapari_user/core/theme/theme_provider.dart';
 import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/services/notifications/notification_service.dart';
 import 'package:local_vyapari_user/shared/widgets/global_error_screen.dart';
+import 'package:local_vyapari_user/shared/widgets/connectivity_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,7 +70,7 @@ class LocalVyapariApp extends ConsumerWidget {
               maxScaleFactor: 1.4,
             ),
           ),
-          child: child!,
+          child: ConnectivityBanner(child: child!),
         );
       },
     );

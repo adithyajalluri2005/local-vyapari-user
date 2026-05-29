@@ -11,6 +11,7 @@ import 'security_helper.dart';
 class DataCacheService {
   static Timer? _shopCacheTimer;
   static Timer? _productCacheTimer;
+  static Timer? _offerCacheTimer;
 
   static Future<File> _getFile(String filename) async {
     final dir = await getApplicationDocumentsDirectory();
@@ -139,6 +140,8 @@ class DataCacheService {
 
   // Caching Offers
   static Future<void> cacheOffers(List<Offer> offers) async {
+    _offerCacheTimer?.cancel();
+    _offerCacheTimer = Timer(const Duration(seconds: 2), () async {
     try {
       final file = await _getFile('cached_offers.json');
       final list = offers.map((o) => {
@@ -163,6 +166,7 @@ class DataCacheService {
     } catch (e) {
       debugPrint('Error caching offers: $e');
     }
+    }); // end Timer
   }
 
   static Future<List<Offer>> getCachedOffers() async {

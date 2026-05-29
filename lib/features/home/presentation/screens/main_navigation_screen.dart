@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/features/home/presentation/screens/home_screen.dart';
 import 'package:local_vyapari_user/features/profile/presentation/screens/profile_screen.dart';
 import 'package:local_vyapari_user/features/search/presentation/screens/search_screen.dart';
@@ -43,39 +42,47 @@ class MainNavigationScreen extends ConsumerWidget {
           const ProfileScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        height: AppDimensions.bottomNavBarHeight,
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) {
-          ref.read(navigationIndexProvider.notifier).setIndex(index);
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppTheme.primaryColor),
-            label: 'Home',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: Theme.of(context).colorScheme.outline, width: 1),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search, color: AppTheme.primaryColor),
-            label: 'Search',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.local_offer_outlined),
-            selectedIcon: Icon(Icons.local_offer, color: AppTheme.primaryColor),
-            label: 'Offers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.favorite_outline),
-            selectedIcon: Icon(Icons.favorite, color: AppTheme.primaryColor),
-            label: 'Favorites',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppTheme.primaryColor),
-            label: 'Profile',
-          ),
-        ],
+        ),
+        child: NavigationBar(
+          height: AppDimensions.bottomNavBarHeight,
+          selectedIndex: currentIndex,
+          onDestinationSelected: (index) {
+            ref.read(navigationIndexProvider.notifier).setIndex(index);
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.search_outlined),
+              selectedIcon: Icon(Icons.search_rounded),
+              label: 'Search',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.local_offer_outlined),
+              selectedIcon: Icon(Icons.local_offer_rounded),
+              label: 'Offers',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.favorite_outline),
+              selectedIcon: Icon(Icons.favorite_rounded),
+              label: 'Favorites',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }

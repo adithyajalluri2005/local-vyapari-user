@@ -70,41 +70,32 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
   
   await for (final event in shopRef.onValue) {
     final snapshot = event.snapshot;
-    final List<Shop> shops = [];
     List<Shop> sortedShops = [];
     if (snapshot.exists && snapshot.value != null) {
       try {
         final data = snapshot.value as Map<dynamic, dynamic>;
+        final List<({Shop shop, double dist})> withDist = [];
         data.forEach((key, value) {
           try {
             final shopId = key.toString();
             final shopData = Map<dynamic, dynamic>.from(value as Map);
             final shop = Shop.fromRTDB(shopId, shopData);
-            
-            // Calculate distance in km
-            final distance = Geolocator.distanceBetween(
+
+            final dist = Geolocator.distanceBetween(
               sortingLat,
               sortingLng,
               shop.location.latitude,
               shop.location.longitude,
-            ) / 1000.0;
-            
-            // Filter within 15 km
-            if (distance <= 15.0) {
-              shops.add(shop);
+            );
+
+            if (dist <= 15000.0) {
+              withDist.add((shop: shop, dist: dist));
             }
           } catch (e) {
             debugPrint('Error parsing shop item: $e');
           }
         });
-        
-        final withDist = shops.map((shop) {
-          final dist = Geolocator.distanceBetween(
-            sortingLat, sortingLng,
-            shop.location.latitude, shop.location.longitude,
-          );
-          return (shop: shop, dist: dist);
-        }).toList();
+
         withDist.sort((a, b) => a.dist.compareTo(b.dist));
         sortedShops = withDist.map((e) => e.shop).toList();
 

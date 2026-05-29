@@ -9,6 +9,9 @@ class FavoriteButton extends ConsumerStatefulWidget {
   final FavoriteType type;
   final double size;
   final Color? color;
+  /// For product favorites: the shop that owns this product.
+  /// Used to store an efficient lookup index in RTDB.
+  final String? shopId;
 
   const FavoriteButton({
     super.key,
@@ -16,6 +19,7 @@ class FavoriteButton extends ConsumerStatefulWidget {
     required this.type,
     this.size = 28.0,
     this.color,
+    this.shopId,
   });
 
   @override
@@ -70,7 +74,7 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton> with SingleTick
       onTap: () {
         _controller.forward(from: 0.0);
         if (widget.type == FavoriteType.product) {
-          ref.read(favoritesProvider.notifier).toggleFavoriteProduct(widget.itemId);
+          ref.read(favoritesProvider.notifier).toggleFavoriteProduct(widget.itemId, shopId: widget.shopId);
         } else {
           ref.read(favoritesProvider.notifier).toggleFavoriteShop(widget.itemId);
         }

@@ -439,7 +439,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
                 child: CachedNetworkImage(
-                  imageUrl: product.images.isNotEmpty ? product.images.first : 'https://via.placeholder.com/150',
+                  imageUrl: product.images.isNotEmpty ? product.images.first : '',
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Shimmer.fromColors(

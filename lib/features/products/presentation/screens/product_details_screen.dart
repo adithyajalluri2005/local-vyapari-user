@@ -215,6 +215,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             FavoriteButton(
               itemId: product.id,
               type: FavoriteType.product,
+              shopId: product.shopId,
             ),
           ],
         ),

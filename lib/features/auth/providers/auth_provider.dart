@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -182,7 +183,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       await _auth.currentUser?.verifyBeforeUpdateEmail(email.trim());
     } catch (e) {
-      print("Firebase Auth email update: $e");
+      debugPrint("Firebase Auth email update: $e");
     }
   }
 
@@ -238,15 +239,9 @@ class AuthNotifier extends Notifier<AuthState> {
         email: email.trim(),
         password: password,
       );
-      final user = credential.user;
-      if (user == null || !await isCustomerUser(user)) {
-        await _auth.signOut();
-        state = const AuthFailure(
-          'Access Denied: Unauthorized role.',
-        );
-        return false;
-      }
-      return true;
+      // Role validation is handled by the authStateChanges listener which fires
+      // immediately after sign-in — no need to call isCustomerUser here.
+      return credential.user != null;
     } on FirebaseAuthException catch (e) {
       state = AuthFailure(mapFirebaseError(e));
       return false;
@@ -268,16 +263,8 @@ class AuthNotifier extends Notifier<AuthState> {
         email: realEmail,
         password: password,
       );
-      final user = credential.user;
-
-      if (user == null || !await isCustomerUser(user)) {
-        await _auth.signOut();
-        state = const AuthFailure(
-          'Access Denied: Unauthorized role.',
-        );
-        return false;
-      }
-      return true;
+      // Role validation is handled by the authStateChanges listener.
+      return credential.user != null;
     } on FirebaseAuthException catch (e) {
       state = AuthFailure(mapFirebaseError(e));
       return false;

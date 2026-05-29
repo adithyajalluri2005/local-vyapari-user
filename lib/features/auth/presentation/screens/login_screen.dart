@@ -126,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Login to discover nearby offers',
-                      style: AppTextStyles.bodyLarge(context, color: Colors.grey),
+                      style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: AppSizes.paddingExtraLarge(context)),
@@ -135,8 +135,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline),
                       ),
                       child: Row(
                         children: [
@@ -158,8 +159,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   'Email Address',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: _isEmailMode ? Colors.white : Colors.grey[700],
-                                    fontWeight: FontWeight.bold,
+                                    color: _isEmailMode ? Colors.white : AppTheme.inkMuted,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -183,8 +184,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   'Phone Number',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: !_isEmailMode ? Colors.white : Colors.grey[700],
-                                    fontWeight: FontWeight.bold,
+                                    color: !_isEmailMode ? Colors.white : AppTheme.inkMuted,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
