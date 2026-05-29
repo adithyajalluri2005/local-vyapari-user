@@ -119,7 +119,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                       AppSpacing.verticalMd,
                       Text(
                         shop.description,
-                        style: AppTextStyles.bodyLarge(context, color: Colors.grey[800]),
+                        style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
                       ),
                       AppSpacing.verticalMd,
                       _buildAddressAndContact(context),
@@ -210,7 +210,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                   AppSpacing.verticalMd,
                   Text(
                     shop.description,
-                    style: AppTextStyles.bodyLarge(context, color: Colors.grey[800]),
+                    style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
                   ),
                   AppSpacing.verticalMd,
                   _buildAddressAndContact(context),
@@ -347,12 +347,12 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.location_on, color: Colors.grey, size: 20),
+              const Icon(Icons.location_on_outlined, color: AppTheme.inkMuted, size: 18),
               AppSpacing.horizontalSm,
               Expanded(
                 child: Text(
                   shop.location.address.isNotEmpty ? shop.location.address : shop.location.city,
-                  style: AppTextStyles.bodyLarge(context, color: Colors.grey[800]),
+                  style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
                 ),
               ),
             ],
@@ -361,11 +361,11 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
           AppSpacing.verticalSm,
           Row(
             children: [
-              const Icon(Icons.phone, color: Colors.grey, size: 20),
+              const Icon(Icons.phone_outlined, color: AppTheme.inkMuted, size: 18),
               AppSpacing.horizontalSm,
               Text(
                 shop.phone,
-                style: AppTextStyles.bodyLarge(context, color: Colors.grey[800]),
+                style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
               ),
             ],
           ),
@@ -380,21 +380,18 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
         Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
+              child: OutlinedButton.icon(
                 onPressed: () => _callShop(context),
-                icon: const Icon(Icons.call),
+                icon: const Icon(Icons.phone_outlined, size: 18),
                 label: const Text('Call'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                ),
               ),
             ),
             AppSpacing.horizontalMd,
             Expanded(
-              child: ElevatedButton.icon(
+              child: OutlinedButton.icon(
                 onPressed: () => _launchMaps(context),
-                icon: const Icon(Icons.directions),
-                label: const Text('Navigate'),
+                icon: const Icon(Icons.directions_outlined, size: 18),
+                label: const Text('Directions'),
               ),
             ),
           ],
@@ -411,16 +408,8 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                 'shopLogo': shop.shopLogo,
               });
             },
-            icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('Chat with Vendor'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-            ),
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+            label: const Text('Chat with vendor'),
           ),
         ),
       ],
@@ -467,7 +456,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     productId: product.id,
                     initialRating: product.rating,
                     initialTotalReviews: product.totalReviews,
-                    style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                    style: AppTextStyles.bodyMedium(context, color: AppTheme.inkMuted),
                     iconSize: 12,
                   ),
                   const SizedBox(height: 4),
