@@ -137,7 +137,11 @@ class AuthNotifier extends Notifier<AuthState> {
           } else {
             await _auth.signInWithCredential(credential);
           }
-        } catch (_) {}
+        } catch (e) {
+          // Auto-verification is best-effort, but a failure here can leave the
+          // 'phones' index / 'verified' flag out of sync — surface it for debugging.
+          debugPrint('Phone auto-verification post-link write failed: $e');
+        }
       },
       verificationFailed: onFailed,
       codeSent: onCodeSent,
@@ -237,7 +241,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
-        password: password,
+        password: password.trim(),
       );
       // Role validation is handled by the authStateChanges listener which fires
       // immediately after sign-in — no need to call isCustomerUser here.
@@ -261,7 +265,7 @@ class AuthNotifier extends Notifier<AuthState> {
       final realEmail = await resolveLoginEmailForPhone(formattedPhone);
       final credential = await _auth.signInWithEmailAndPassword(
         email: realEmail,
-        password: password,
+        password: password.trim(),
       );
       // Role validation is handled by the authStateChanges listener.
       return credential.user != null;
@@ -296,7 +300,7 @@ class AuthNotifier extends Notifier<AuthState> {
       
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
-        password: password,
+        password: password.trim(),
       );
       final uid = credential.user?.uid;
       if (uid != null) {
@@ -312,44 +316,6 @@ class AuthNotifier extends Notifier<AuthState> {
         if (phone != null && phone.isNotEmpty) {
           await _rtdb.ref('phones').child(phone.trim()).set(uid);
         }
-      }
-      return true;
-    } on FirebaseAuthException catch (e) {
-      state = AuthFailure(mapFirebaseError(e));
-      return false;
-    } catch (e) {
-      state = AuthFailure(e.toString());
-      return false;
-    } finally {
-      ref.read(authLoadingProvider.notifier).setLoading(false);
-    }
-  }
-
-  Future<bool> registerWithPhoneAndPassword({
-    required String phone,
-    required String password,
-  }) async {
-    ref.read(authLoadingProvider.notifier).setLoading(true);
-    state = const AuthLoading();
-    try {
-      final formattedPhone = phone.trim();
-      final cleanedPhone = formattedPhone.replaceAll(RegExp(r'\D'), '');
-      final email = '$cleanedPhone@localvyapari.com';
-
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      final uid = credential.user?.uid;
-      if (uid != null) {
-        await _rtdb.ref('users').child(uid).update({
-          'email': email,
-          'phone': formattedPhone,
-          'createdAt': ServerValue.timestamp,
-          'verified': true,
-        });
-        await _rtdb.ref('phones').child(formattedPhone).set(uid);
       }
       return true;
     } on FirebaseAuthException catch (e) {

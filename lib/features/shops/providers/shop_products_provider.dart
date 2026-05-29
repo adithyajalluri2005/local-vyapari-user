@@ -8,7 +8,7 @@ final shopProductsProvider = StreamProvider.family<List<Product>, String>((ref, 
 
   return dbRef.onValue.map((event) {
     final snapshot = event.snapshot;
-    if (!snapshot.exists || snapshot.value == null) {
+    if (!snapshot.exists || snapshot.value is! Map) {
       return <Product>[];
     }
 
@@ -31,8 +31,8 @@ final shopProductsProvider = StreamProvider.family<List<Product>, String>((ref, 
     });
 
     return products;
-  }).handleError((error) {
-    debugPrint('Error in shopProductsProvider stream for shop $shopId: $error');
-    return <Product>[];
   });
+  // Per-item parse failures are already swallowed above; connection/permission
+  // errors are intentionally left to propagate so the UI shows an error state
+  // (via AsyncValue.error) instead of an indefinite loading spinner.
 });

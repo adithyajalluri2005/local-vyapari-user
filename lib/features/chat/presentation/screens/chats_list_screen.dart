@@ -1,129 +1,305 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
-import 'package:local_vyapari_user/core/theme/app_sizes.dart';
-import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
-import 'package:local_vyapari_user/core/theme/app_spacing.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
-import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 import 'package:local_vyapari_user/shared/models/chat_session.dart';
+import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
 class ChatsListScreen extends ConsumerWidget {
   const ChatsListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chatsAsync = ref.watch(userChatsStreamProvider);
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
       appBar: AppBar(
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
         title: Text(
           'My Chats',
-          style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : AppColors.textPrimary,
+          ),
         ),
-        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: AppColors.border.withValues(alpha: 0.5)),
+        ),
       ),
       body: chatsAsync.when(
+        skipLoadingOnReload: true,
+        loading: () => _ShimmerList(),
+        error: (err, _) => _ErrorView(message: err.toString()),
         data: (chats) {
-          if (chats.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline_rounded,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
-                  AppSpacing.verticalMd,
-                  Text(
-                    'No conversations yet',
-                    style: AppTextStyles.titleMedium(context, color: Colors.grey[600]),
-                  ),
-                  AppSpacing.verticalSm,
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      'Start chatting with local vendors directly from their shop details page!',
-                      style: AppTextStyles.bodyMedium(context, color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+          if (chats.isEmpty) return const _EmptyView();
 
-          return ListView.separated(
-            padding: EdgeInsets.symmetric(
-              vertical: AppSizes.paddingMedium(context),
-            ),
+          return ListView.builder(
+            padding: const EdgeInsets.only(top: 8, bottom: 90),
             itemCount: chats.length,
-            separatorBuilder: (context, index) => const Divider(
-              height: 1,
-              indent: 76,
-              endIndent: 16,
-            ),
             itemBuilder: (context, index) {
               final chat = chats[index];
-              return Dismissible(
-                key: Key(chat.shopId),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: AppTheme.errorColor,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: Colors.white,
-                  ),
+              return FadeInSlide(
+                delay: Duration(milliseconds: 50 * index),
+                child: _ChatTile(
+                  session: chat,
+                  onDelete: () async {
+                    final ok = await _confirmDelete(context, chat.shopName);
+                    if (ok == true) {
+                      await ref.read(chatServiceProvider).deleteChat(chat.shopId);
+                    }
+                  },
                 ),
-                confirmDismiss: (direction) async {
-                  return await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Delete Chat'),
-                      content: Text('Are you sure you want to delete this conversation with ${chat.shopName.isNotEmpty ? chat.shopName : "this shop"}? This will remove it from your chats list.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
-                          child: const Text('Delete'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                onDismissed: (direction) async {
-                  await ref.read(chatServiceProvider).deleteChat(chat.shopId);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Conversation with ${chat.shopName.isNotEmpty ? chat.shopName : "shop"} deleted'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                },
-                child: _ChatSessionTile(session: chat),
               );
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Text(
-            'Failed to load chats: $err',
-            style: AppTextStyles.bodyLarge(context, color: AppTheme.errorColor),
+      ),
+    );
+  }
+
+  Future<bool?> _confirmDelete(BuildContext context, String shopName) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Text(
+          'Delete conversation?',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: Text(
+          'Your chat with ${shopName.isNotEmpty ? shopName : "this shop"} will be removed from your list.',
+          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete', style: GoogleFonts.poppins(color: AppColors.error, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Chat tile ─────────────────────────────────────────────────────────────────
+
+class _ChatTile extends StatelessWidget {
+  final ChatSession session;
+  final VoidCallback onDelete;
+
+  const _ChatTile({required this.session, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final name = session.shopName.isNotEmpty ? session.shopName : 'Shop';
+    final logo = session.shopLogo;
+    final time = _formatTime(session.lastMessageTimestamp);
+
+    return Dismissible(
+      key: Key(session.shopId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: AppColors.error,
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
+      ),
+      confirmDismiss: (_) async {
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+            title: Text('Delete conversation?',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+            content: Text('This will remove the chat from your list.',
+                style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Delete',
+                    style: GoogleFonts.poppins(color: AppColors.error, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        );
+        return ok ?? false;
+      },
+      onDismissed: (_) => onDelete(),
+      child: ScaleOnTap(
+        onTap: () => context.push('/chat', extra: {
+          'shopId': session.shopId,
+          'shopName': name,
+          'shopLogo': logo,
+        }),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkScaffold : AppColors.background,
+            border: Border(
+              bottom: BorderSide(
+                color: AppColors.border.withValues(alpha: 0.5),
+                width: 0.7,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Avatar
+              _ShopAvatar(logo: logo, name: name),
+              const SizedBox(width: 12),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: session.unread ? FontWeight.w700 : FontWeight.w600,
+                        color: isDark ? Colors.white : AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      session.lastMessageText.isNotEmpty
+                          ? session.lastMessageText
+                          : 'Say hello 👋',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.5,
+                        color: session.unread
+                            ? (isDark ? Colors.white : AppColors.textPrimary)
+                            : AppColors.textHint,
+                        fontWeight:
+                            session.unread ? FontWeight.w500 : FontWeight.normal,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Trailing
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (time.isNotEmpty)
+                    Text(
+                      time,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: session.unread ? AppColors.primary : AppColors.textHint,
+                        fontWeight: session.unread ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  if (session.unread) ...[
+                    const SizedBox(height: 5),
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    if (dt.millisecondsSinceEpoch == 0) return '';
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inDays == 0) return DateFormat('hh:mm a').format(dt);
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return DateFormat('EEEE').format(dt);
+    return DateFormat('dd/MM/yy').format(dt);
+  }
+}
+
+class _ShopAvatar extends StatelessWidget {
+  final String logo;
+  final String name;
+  const _ShopAvatar({required this.logo, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
+      ),
+      child: ClipOval(
+        child: logo.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: logo,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Shimmer.fromColors(
+                  baseColor: AppColors.border,
+                  highlightColor: AppColors.surfaceElevated,
+                  child: Container(color: Colors.white),
+                ),
+                errorWidget: (_, __, ___) => _Fallback(name: name),
+              )
+            : _Fallback(name: name),
+      ),
+    );
+  }
+}
+
+class _Fallback extends StatelessWidget {
+  final String name;
+  const _Fallback({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.primary.withValues(alpha: 0.1),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : 'S',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primary,
           ),
         ),
       ),
@@ -131,142 +307,104 @@ class ChatsListScreen extends ConsumerWidget {
   }
 }
 
-class _ChatSessionTile extends ConsumerWidget {
-  final ChatSession session;
+// ── States ────────────────────────────────────────────────────────────────────
 
-  const _ChatSessionTile({required this.session});
+class _EmptyView extends StatelessWidget {
+  const _EmptyView();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final shopDetailsAsync = ref.watch(shopDetailsProvider(session.shopId));
-
-    return shopDetailsAsync.when(
-      data: (shop) {
-        final name = shop?.shopName ?? (session.shopName.isNotEmpty ? session.shopName : 'Shop');
-        final logo = shop?.shopLogo ?? session.shopLogo;
-        return _buildTile(context, name, logo);
-      },
-      loading: () => _buildTile(
-        context,
-        session.shopName.isNotEmpty ? session.shopName : 'Loading shop...',
-        session.shopLogo,
-      ),
-      error: (_, __) => _buildTile(
-        context,
-        session.shopName.isNotEmpty ? session.shopName : 'Shop',
-        session.shopLogo,
-      ),
-    );
-  }
-
-  Widget _buildTile(BuildContext context, String name, String logoUrl) {
-    final formattedTime = session.lastMessageTimestamp.millisecondsSinceEpoch == 0
-        ? ''
-        : _formatDateTime(session.lastMessageTimestamp);
-
-    return ListTile(
-      leading: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.circular),
-          color: Colors.grey[200],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.circular),
-          child: logoUrl.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: logoUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey[300]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(color: Colors.white),
-                  ),
-                  errorWidget: (context, url, error) => const Icon(
-                    Icons.storefront_outlined,
-                    color: Colors.grey,
-                  ),
-                )
-              : const Icon(
-                  Icons.storefront_outlined,
-                  color: Colors.grey,
-                  size: 24,
-                ),
-        ),
-      ),
-      title: Text(
-        name,
-        style: AppTextStyles.bodyLarge(
-          context,
-          fontWeight: session.unread ? FontWeight.bold : FontWeight.w600,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
-        child: Text(
-          session.lastMessageText.isNotEmpty ? session.lastMessageText : 'Start chatting',
-          style: AppTextStyles.bodyMedium(
-            context,
-            color: session.unread
-                ? Theme.of(context).colorScheme.onSurface
-                : Colors.grey[600],
-            fontWeight: session.unread ? FontWeight.w500 : FontWeight.normal,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (formattedTime.isNotEmpty)
-            Text(
-              formattedTime,
-              style: TextStyle(
-                fontSize: 12,
-                color: session.unread ? AppTheme.primaryColor : Colors.grey,
-                fontWeight: session.unread ? FontWeight.bold : FontWeight.normal,
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.06),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 36,
+                color: AppColors.textHint,
               ),
             ),
-          if (session.unread) ...[
-            AppSpacing.verticalSm,
-            Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primaryColor,
+            const SizedBox(height: 16),
+            Text(
+              'No conversations yet',
+              style: GoogleFonts.poppins(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start a chat from any shop page to talk directly with local vendors.',
+              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
+              textAlign: TextAlign.center,
             ),
           ],
-        ],
+        ),
       ),
-      onTap: () {
-        context.push('/chat', extra: {
-          'shopId': session.shopId,
-          'shopName': name,
-          'shopLogo': logoUrl,
-        });
-      },
     );
   }
+}
 
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+class _ErrorView extends StatelessWidget {
+  final String message;
+  const _ErrorView({required this.message});
 
-    if (difference.inDays == 0) {
-      return DateFormat('hh:mm a').format(dateTime);
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return DateFormat('EEEE').format(dateTime); // Weekday name
-    } else {
-      return DateFormat('dd/MM/yyyy').format(dateTime);
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        'Could not load chats',
+        style: GoogleFonts.poppins(color: AppColors.error, fontSize: 14),
+      ),
+    );
+  }
+}
+
+class _ShimmerList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: AppColors.border,
+      highlightColor: AppColors.surfaceElevated,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: 6,
+        itemBuilder: (_, __) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              const CircleAvatar(radius: 24, backgroundColor: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(height: 13, width: 120, decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    )),
+                    const SizedBox(height: 6),
+                    Container(height: 11, width: double.infinity, decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

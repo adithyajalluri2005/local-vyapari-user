@@ -18,10 +18,10 @@ final chatMessagesProvider = StreamProvider.autoDispose.family<List<ChatMessage>
   final userId = ref.watch(userIdProvider);
   if (userId == null) return Stream.value([]);
 
-  final dbRef = FirebaseDatabase.instance.ref('chats/$userId/$shopId/messages');
+  final dbRef = FirebaseDatabase.instance.ref('chats/$userId/$shopId/messages').limitToLast(50);
   return dbRef.onValue.map((event) {
     final snapshot = event.snapshot;
-    if (!snapshot.exists || snapshot.value == null) return [];
+    if (!snapshot.exists || snapshot.value is! Map) return [];
 
     final List<ChatMessage> messages = [];
     final map = snapshot.value as Map<dynamic, dynamic>;
@@ -44,7 +44,7 @@ final userChatsStreamProvider = StreamProvider.autoDispose<List<ChatSession>>((r
   final dbRef = FirebaseDatabase.instance.ref('chats/$userId');
   return dbRef.onValue.map((event) {
     final snapshot = event.snapshot;
-    if (!snapshot.exists || snapshot.value == null) return [];
+    if (!snapshot.exists || snapshot.value is! Map) return [];
 
     final List<ChatSession> sessions = [];
     final map = snapshot.value as Map<dynamic, dynamic>;

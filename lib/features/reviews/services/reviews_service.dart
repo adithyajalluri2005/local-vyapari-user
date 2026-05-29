@@ -10,14 +10,10 @@ class ReviewsService {
     return _firestore
         .collection('shop_reviews')
         .where('shopId', isEqualTo: shopId)
+        .orderBy('createdAt', descending: true)
+        .limit(20)
         .snapshots()
-        .map((snapshot) {
-          final list = snapshot.docs
-              .map((doc) => ShopReview.fromFirestore(doc))
-              .toList();
-          list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          return list;
-        });
+        .map((snapshot) => snapshot.docs.map((doc) => ShopReview.fromFirestore(doc)).toList());
   }
 
   // Stream of recent reviews for a product

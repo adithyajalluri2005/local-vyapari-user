@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -13,61 +14,58 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:local_vyapari_user/firebase_options.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/services/location/location_cache.dart';
-import 'package:local_vyapari_user/core/router/app_router.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling a background message: ${message.messageId}");
-  
-  // Ensure environment variables are loaded for DefaultFirebaseOptions
+
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint("Failed to load .env file in background isolate: $e");
   }
-  
+
   try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   } catch (e) {
     debugPrint("Firebase already initialized or failed in background: $e");
   }
 
-  // Handle manual notification display if it's a data-only message (where OS won't show it automatically)
   if (message.notification == null && message.data.isNotEmpty) {
-    final title = message.data['title'] ?? 'New Offer!';
-    final body = message.data['body'] ?? 'Check out the new offer nearby!';
-    
+    final type = message.data['type'] ?? '';
+    final isChat = type == 'chat';
+
+    final title = message.data['title'] ?? (isChat ? 'New message' : 'New Offer!');
+    final body = message.data['body'] ?? (isChat ? 'You have a new message.' : 'Check out the new offer nearby!');
+    final channelId = isChat ? 'chat_channel_id' : 'offers_channel_id';
+    final channelName = isChat ? 'Chat Messages' : 'Nearby Offers';
+    final channelDesc = isChat
+        ? 'Notifications for new messages from shops'
+        : 'Notifications for new offers in nearby shops';
+
     final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    const AndroidInitializationSettings initSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
-    
+
     try {
       await localNotifications.initialize(
-        settings: initializationSettings,
+        settings: const InitializationSettings(android: initSettings),
       );
-      
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-          AndroidNotificationDetails(
-        'offers_channel_id',
-        'Nearby Offers',
-        channelDescription: 'Notifications for new offers in nearby shops',
+
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: channelDesc,
         importance: Importance.max,
         priority: Priority.high,
         showWhen: true,
         playSound: true,
-      );
-
-      const NotificationDetails platformChannelSpecifics = NotificationDetails(
-        android: androidPlatformChannelSpecifics,
       );
 
       final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -75,9 +73,9 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         id: id,
         title: title,
         body: body,
-        notificationDetails: platformChannelSpecifics,
+        notificationDetails: NotificationDetails(android: androidDetails),
+        payload: isChat ? 'chat:${message.data['shopId'] ?? ''}' : null,
       );
-      debugPrint("Displayed background native notification for data-only message");
     } catch (e) {
       debugPrint("Error displaying background notification: $e");
     }
@@ -87,8 +85,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 final notificationServiceProvider = Provider((ref) {
   final service = NotificationService(ref);
   service.init();
-  
-  // Listen to active browsing location changes to update topics and DB registry
+
   ref.listen<AsyncValue<LocationResult?>>(activeBrowsingLocationProvider, (previous, next) {
     next.whenData((location) {
       if (location != null) {
@@ -107,6 +104,10 @@ class NotificationService {
   bool _firstLoadDone = false;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
+  StreamSubscription<DatabaseEvent>? _chatSubscription;
+  final Map<String, int> _lastChatNotifyTs = {};
+  Timer? _offersTimer;
+
   NotificationService(this._ref);
 
   void init() {
@@ -117,29 +118,34 @@ class NotificationService {
     _initFirebaseMessaging();
     _listenForNewOffers();
 
-    // Sync device registration whenever the auth state changes (e.g. login/logout)
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _syncDeviceRegistration();
+        _listenForChatMessages();
+      } else {
+        _chatSubscription?.cancel();
+        _chatSubscription = null;
+        _lastChatNotifyTs.clear();
       }
     });
   }
 
   Future<void> _initLocalNotifications() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    const AndroidInitializationSettings initSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
 
     try {
       await _localNotifications.initialize(
-        settings: initializationSettings,
+        settings: const InitializationSettings(android: initSettingsAndroid),
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           try {
             final context = rootNavigatorKey.currentContext;
-            if (context != null) {
+            if (context == null) return;
+
+            final payload = response.payload ?? '';
+            if (payload.startsWith('chat:')) {
+              GoRouter.of(context).go('/chats');
+            } else {
               GoRouter.of(context).go('/home');
             }
           } catch (e) {
@@ -148,24 +154,28 @@ class NotificationService {
         },
       );
 
-      // Request permissions for Android 13+
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+      final AndroidFlutterLocalNotificationsPlugin? androidImpl =
           _localNotifications.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
-              
-      if (androidImplementation != null) {
-        await androidImplementation.requestNotificationsPermission();
-        
-        // Create the notification channel explicitly
-        const AndroidNotificationChannel channel = AndroidNotificationChannel(
+
+      if (androidImpl != null) {
+        await androidImpl.requestNotificationsPermission();
+
+        await androidImpl.createNotificationChannel(const AndroidNotificationChannel(
           'offers_channel_id',
           'Nearby Offers',
           description: 'Notifications for new offers in nearby shops',
           importance: Importance.max,
           playSound: true,
-        );
-        await androidImplementation.createNotificationChannel(channel);
-        debugPrint('Explicitly created local notification channel: offers_channel_id');
+        ));
+
+        await androidImpl.createNotificationChannel(const AndroidNotificationChannel(
+          'chat_channel_id',
+          'Chat Messages',
+          description: 'Notifications for new messages from shops',
+          importance: Importance.high,
+          playSound: true,
+        ));
       }
     } catch (e) {
       debugPrint('Error initializing local notifications: $e');
@@ -173,8 +183,7 @@ class NotificationService {
   }
 
   Future<void> _showNativeNotification(String title, String body) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'offers_channel_id',
       'Nearby Offers',
       channelDescription: 'Notifications for new offers in nearby shops',
@@ -184,10 +193,6 @@ class NotificationService {
       playSound: true,
     );
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-    );
-
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
     try {
@@ -195,73 +200,171 @@ class NotificationService {
         id: id,
         title: title,
         body: body,
-        notificationDetails: platformChannelSpecifics,
+        notificationDetails: const NotificationDetails(android: androidDetails),
       );
-      debugPrint('Triggered native notification: $title');
     } catch (e) {
       debugPrint('Error displaying native notification: $e');
     }
   }
 
-  void _listenForNewOffers() {
-    final dbRef = FirebaseDatabase.instance.ref('offers');
+  Future<void> _showChatNativeNotification({
+    required String shopId,
+    required String shopName,
+    required String messageText,
+  }) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'chat_channel_id',
+      'Chat Messages',
+      channelDescription: 'Notifications for new messages from shops',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      playSound: true,
+    );
 
-    dbRef.onValue.listen((event) async {
-      final snapshot = event.snapshot;
+    final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    try {
+      await _localNotifications.show(
+        id: id,
+        title: 'New message from $shopName',
+        body: messageText.isEmpty ? 'Sent you a message' : messageText,
+        notificationDetails: const NotificationDetails(android: androidDetails),
+        payload: 'chat:$shopId',
+      );
+    } catch (e) {
+      debugPrint('Error displaying chat notification: $e');
+    }
+  }
+
+  void _listenForChatMessages() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userId = user.uid;
+    _chatSubscription?.cancel();
+    _lastChatNotifyTs.clear();
+
+    // Seed current timestamps so we don't re-fire for already-unread messages on startup
+    FirebaseDatabase.instance.ref('chats/$userId').once().then((snapshot) {
+      if (snapshot.snapshot.exists && snapshot.snapshot.value != null) {
+        final map = snapshot.snapshot.value as Map<dynamic, dynamic>;
+        map.forEach((key, value) {
+          if (value is Map) {
+            final lastMsg = value['lastMessage'] as Map?;
+            if (lastMsg != null && lastMsg['timestamp'] is int) {
+              _lastChatNotifyTs[key.toString()] = lastMsg['timestamp'] as int;
+            }
+          }
+        });
+      }
+
+      // Subscribe to child changes after seeding
+      _chatSubscription = FirebaseDatabase.instance
+          .ref('chats/$userId')
+          .onChildChanged
+          .listen((event) async {
+            final shopId = event.snapshot.key;
+            if (shopId == null) return;
+
+            final sessionValue = event.snapshot.value;
+            if (sessionValue is! Map) return;
+
+            final lastMsg = sessionValue['lastMessage'] as Map?;
+            if (lastMsg == null) return;
+
+            final unread = lastMsg['unread'] == true;
+            final senderId = lastMsg['senderId']?.toString();
+            final messageText = lastMsg['text']?.toString() ?? '';
+            final timestamp = lastMsg['timestamp'] is int ? lastMsg['timestamp'] as int : 0;
+
+            // Only notify for messages from vendor (not current user) that are unread
+            if (!unread || senderId == userId) return;
+            // Skip if already notified for this exact message
+            if (_lastChatNotifyTs[shopId] == timestamp) return;
+
+            _lastChatNotifyTs[shopId] = timestamp;
+
+            final shopName = sessionValue['shopName']?.toString() ?? 'Shop';
+
+            await _showChatNativeNotification(
+              shopId: shopId,
+              shopName: shopName,
+              messageText: messageText,
+            );
+            _showForegroundNotification(
+              'New message from $shopName',
+              messageText.isEmpty ? 'Sent you a message' : messageText,
+              icon: Icons.chat_bubble_rounded,
+              gradientColors: const [AppColors.primary, AppColors.primaryLight],
+              onTap: () {
+                try {
+                  final context = rootNavigatorKey.currentContext;
+                  if (context != null) GoRouter.of(context).go('/chats');
+                } catch (_) {}
+              },
+            );
+          });
+    }).catchError((e) {
+      debugPrint('Error seeding chat notify timestamps: $e');
+    });
+  }
+
+  void _listenForNewOffers() {
+    // Check immediately on startup, then every 10 minutes.
+    // Using periodic .get() instead of onValue avoids a 24/7 persistent connection
+    // to the entire offers tree.
+    _checkNewOffers();
+    _offersTimer = Timer.periodic(const Duration(minutes: 10), (_) => _checkNewOffers());
+  }
+
+  Future<void> _checkNewOffers() async {
+    try {
+      final snapshot = await FirebaseDatabase.instance.ref('offers').get();
       if (!snapshot.exists || snapshot.value == null) {
         _firstLoadDone = true;
         return;
       }
 
-      try {
-        final Map<dynamic, dynamic> shopsOffersMap = snapshot.value as Map<dynamic, dynamic>;
-        final List<MapEntry<String, Map<String, dynamic>>> newOffers = [];
+      final Map<dynamic, dynamic> shopsOffersMap = snapshot.value as Map<dynamic, dynamic>;
+      final List<MapEntry<String, Map<String, dynamic>>> newOffers = [];
 
-        shopsOffersMap.forEach((shopIdKey, offersValue) {
-          final shopId = shopIdKey.toString();
-          if (offersValue is Map) {
-            offersValue.forEach((offerIdKey, offerValue) {
-              if (offerValue is Map) {
-                final offerId = offerIdKey.toString();
-                final offerData = Map<String, dynamic>.from(offerValue);
-                
-                if (!_seenOfferIds.contains(offerId)) {
-                  if (_firstLoadDone) {
-                    newOffers.add(MapEntry(shopId, offerData));
-                  }
-                  _seenOfferIds.add(offerId);
-                }
+      shopsOffersMap.forEach((shopIdKey, offersValue) {
+        final shopId = shopIdKey.toString();
+        if (offersValue is Map) {
+          offersValue.forEach((offerIdKey, offerValue) {
+            if (offerValue is Map) {
+              final offerId = offerIdKey.toString();
+              final offerData = Map<String, dynamic>.from(offerValue);
+              if (!_seenOfferIds.contains(offerId)) {
+                if (_firstLoadDone) newOffers.add(MapEntry(shopId, offerData));
+                _seenOfferIds.add(offerId);
               }
-            });
-          }
-        });
-
-        _firstLoadDone = true;
-
-        // Process any new offers detected
-        for (final entry in newOffers) {
-          final shopId = entry.key;
-          final offerData = entry.value;
-          final title = offerData['title'] ?? 'New Offer!';
-          debugPrint('Detected new offer added in DB: $title (Shop ID: $shopId)');
-
-          final isNearby = await _isShopNearby(shopId);
-          if (isNearby) {
-            final shopName = await _getShopName(shopId);
-            final discount = offerData['discountPercentage'] ?? 0;
-            final titleStr = 'New Offer at $shopName!';
-            final bodyStr = '$title - Get ${discount.toInt()}% OFF!';
-            
-            await _showNativeNotification(titleStr, bodyStr);
-            _showForegroundNotification(titleStr, bodyStr);
-          } else {
-            debugPrint('Offer "$title" was ignored because Shop ID $shopId is outside the 15km radius of the user\'s active location.');
-          }
+            }
+          });
         }
-      } catch (e) {
-        debugPrint('Error listening for new offers: $e');
+      });
+
+      _firstLoadDone = true;
+
+      for (final entry in newOffers) {
+        final shopId = entry.key;
+        final offerData = entry.value;
+        final title = offerData['title'] ?? 'New Offer!';
+
+        final isNearby = await _isShopNearby(shopId);
+        if (isNearby) {
+          final shopName = await _getShopName(shopId);
+          final discount = offerData['discountPercentage'] ?? 0;
+          final titleStr = 'New Offer at $shopName!';
+          final bodyStr = '$title - Get ${discount.toInt()}% OFF!';
+          await _showNativeNotification(titleStr, bodyStr);
+          _showForegroundNotification(titleStr, bodyStr);
+        }
       }
-    });
+    } catch (e) {
+      debugPrint('Error checking for new offers: $e');
+    }
   }
 
   Future<bool> _isShopNearby(String shopId) async {
@@ -275,7 +378,6 @@ class NotificationService {
       final shopData = Map<dynamic, dynamic>.from(shopSnapshot.snapshot.value as Map);
       final lat = (shopData['latitude'] ?? 0.0).toDouble();
       final lng = (shopData['longitude'] ?? 0.0).toDouble();
-
       if (lat == 0.0 && lng == 0.0) return false;
 
       final distanceInMeters = Geolocator.distanceBetween(
@@ -285,7 +387,7 @@ class NotificationService {
         lng,
       );
 
-      return distanceInMeters <= 15000; // 15 km radius
+      return distanceInMeters <= 15000;
     } catch (e) {
       debugPrint('Error checking nearby shop for notification: $e');
       return false;
@@ -294,16 +396,16 @@ class NotificationService {
 
   Future<String> _getShopName(String shopId) async {
     try {
-      final shopSnapshot = await FirebaseDatabase.instance.ref('shop/$shopId/name').once();
-      if (shopSnapshot.snapshot.exists && shopSnapshot.snapshot.value != null) {
-        return shopSnapshot.snapshot.value.toString();
+      final snap = await FirebaseDatabase.instance.ref('shop/$shopId/name').once();
+      if (snap.snapshot.exists && snap.snapshot.value != null) {
+        return snap.snapshot.value.toString();
       }
-      final shopNameSnapshot = await FirebaseDatabase.instance.ref('shop/$shopId/shopName').once();
-      if (shopNameSnapshot.snapshot.exists && shopNameSnapshot.snapshot.value != null) {
-        return shopNameSnapshot.snapshot.value.toString();
+      final snap2 = await FirebaseDatabase.instance.ref('shop/$shopId/shopName').once();
+      if (snap2.snapshot.exists && snap2.snapshot.value != null) {
+        return snap2.snapshot.value.toString();
       }
     } catch (e) {
-      debugPrint('Error fetching shop name for notification: $e');
+      debugPrint('Error fetching shop name: $e');
     }
     return 'Nearby Shop';
   }
@@ -311,18 +413,12 @@ class NotificationService {
   Future<void> _initFirebaseMessaging() async {
     final messaging = FirebaseMessaging.instance;
 
-    // Set background message handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // Request permissions for iOS and Android 13+
     try {
       final settings = await messaging.requestPermission(
         alert: true,
-        announcement: false,
         badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
         sound: true,
       );
       debugPrint('User granted permission: ${settings.authorizationStatus}');
@@ -330,47 +426,58 @@ class NotificationService {
       debugPrint('Error requesting notification permissions: $e');
     }
 
-    // Listen to foreground notifications
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('Foreground notification received: ${message.messageId}');
       final notification = message.notification;
       if (notification != null) {
         final title = notification.title ?? 'New Offer!';
         final body = notification.body ?? 'Check out the new offer nearby!';
+        final isChat = message.data['type'] == 'chat';
+        final shopId = message.data['shopId'] ?? '';
+
         _showNativeNotification(title, body);
-        _showForegroundNotification(title, body);
+        _showForegroundNotification(
+          title,
+          body,
+          icon: isChat ? Icons.chat_bubble_rounded : Icons.campaign,
+          gradientColors: isChat
+              ? const [AppColors.primary, AppColors.primaryLight]
+              : const [AppTheme.primaryColor, Color(0xFF673AB7)],
+          onTap: isChat
+              ? () {
+                  try {
+                    final context = rootNavigatorKey.currentContext;
+                    if (context != null) GoRouter.of(context).go('/chats');
+                  } catch (_) {}
+                }
+              : null,
+        );
+        if (isChat && shopId.isNotEmpty) {
+          _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
+        }
       }
     });
 
-    // Handle message opened when app is in background (but not terminated)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('FCM message opened from background: ${message.messageId}');
-      _handleNotificationClick(message);
-    });
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
 
-    // Check if the app was opened from a terminated state via a notification
     messaging.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        debugPrint('FCM message opened from terminated state: ${message.messageId}');
-        // Wait a short delay for GoRouter/Navigator to be ready
         Future.delayed(const Duration(milliseconds: 500), () {
           _handleNotificationClick(message);
         });
       }
     });
 
-    // Listen to token refresh
-    messaging.onTokenRefresh.listen((token) {
-      debugPrint('FCM Token refreshed: $token');
-      _syncDeviceRegistration();
-    });
+    messaging.onTokenRefresh.listen((_) => _syncDeviceRegistration());
   }
 
   void _handleNotificationClick(RemoteMessage message) {
     try {
       final context = rootNavigatorKey.currentContext;
-      if (context != null) {
-        // Navigate to home screen where offers are displayed
+      if (context == null) return;
+
+      if (message.data['type'] == 'chat') {
+        GoRouter.of(context).go('/chats');
+      } else {
         GoRouter.of(context).go('/home');
       }
     } catch (e) {
@@ -388,11 +495,7 @@ class NotificationService {
 
       final dbRef = FirebaseDatabase.instance.ref('users_devices/${user.uid}/customer');
 
-      // If location is null, attempt to read from cache
-      LocationResult? activeLoc = location;
-      if (activeLoc == null) {
-        activeLoc = await LocationCache.getActiveLocation();
-      }
+      LocationResult? activeLoc = location ?? await LocationCache.getActiveLocation();
 
       final Map<String, dynamic> data = {
         'fcmToken': token,
@@ -407,7 +510,6 @@ class NotificationService {
       }
 
       await dbRef.update(data);
-      debugPrint('Device registration synced to RTDB for user: ${user.uid} (customer)');
     } catch (e) {
       debugPrint('Error syncing device registration: $e');
     }
@@ -421,29 +523,18 @@ class NotificationService {
 
       final lastPrefix = await _getLastSubscribedGeohash();
       if (lastPrefix == newPrefix) {
-        // Already subscribed to this hyperlocal zone
         await _syncDeviceRegistration(location: location);
         return;
       }
 
       final messaging = FirebaseMessaging.instance;
 
-      // Unsubscribe from the old zone topic
       if (lastPrefix != null) {
-        final oldTopic = 'offers_geo_$lastPrefix';
-        await messaging.unsubscribeFromTopic(oldTopic);
-        debugPrint('Unsubscribed from old topic: $oldTopic');
+        await messaging.unsubscribeFromTopic('offers_geo_$lastPrefix');
       }
 
-      // Subscribe to the new zone topic
-      final newTopic = 'offers_geo_$newPrefix';
-      await messaging.subscribeToTopic(newTopic);
-      debugPrint('Subscribed to new topic: $newTopic');
-
-      // Update cache
+      await messaging.subscribeToTopic('offers_geo_$newPrefix');
       await _saveLastSubscribedGeohash(newPrefix);
-
-      // Sync registration with the new location details
       await _syncDeviceRegistration(location: location);
     } catch (e) {
       debugPrint('Error updating location subscription: $e');
@@ -459,8 +550,7 @@ class NotificationService {
     try {
       final file = await _getSubscriptionCacheFile();
       if (await file.exists()) {
-        final content = await file.readAsString();
-        final data = json.decode(content) as Map<String, dynamic>;
+        final data = json.decode(await file.readAsString()) as Map<String, dynamic>;
         return data['last_geohash'] as String?;
       }
     } catch (e) {
@@ -478,7 +568,13 @@ class NotificationService {
     }
   }
 
-  void _showForegroundNotification(String title, String body) {
+  void _showForegroundNotification(
+    String title,
+    String body, {
+    IconData icon = Icons.campaign,
+    List<Color> gradientColors = const [AppTheme.primaryColor, Color(0xFF673AB7)],
+    VoidCallback? onTap,
+  }) {
     final overlay = rootNavigatorKey.currentState?.overlay;
     if (overlay == null) return;
 
@@ -487,15 +583,16 @@ class NotificationService {
       builder: (context) => ForegroundNotificationBanner(
         title: title,
         body: body,
-        onTap: () {
-          // Route the user to the offers screen when the notification is tapped
-          try {
-            GoRouter.of(context).go('/home'); // Or appropriate navigation path
-          } catch (_) {}
-        },
-        onDismissed: () {
-          entry.remove();
-        },
+        icon: icon,
+        gradientColors: gradientColors,
+        onTap: onTap ??
+            () {
+              try {
+                final ctx = rootNavigatorKey.currentContext;
+                if (ctx != null) GoRouter.of(ctx).go('/home');
+              } catch (_) {}
+            },
+        onDismissed: () => entry.remove(),
       ),
     );
 
@@ -503,11 +600,15 @@ class NotificationService {
   }
 }
 
+// ── Foreground banner overlay ─────────────────────────────────────────────────
+
 class ForegroundNotificationBanner extends StatefulWidget {
   final String title;
   final String body;
   final VoidCallback onTap;
   final VoidCallback onDismissed;
+  final IconData icon;
+  final List<Color> gradientColors;
 
   const ForegroundNotificationBanner({
     super.key,
@@ -515,13 +616,17 @@ class ForegroundNotificationBanner extends StatefulWidget {
     required this.body,
     required this.onTap,
     required this.onDismissed,
+    this.icon = Icons.campaign,
+    this.gradientColors = const [AppTheme.primaryColor, Color(0xFF673AB7)],
   });
 
   @override
-  State<ForegroundNotificationBanner> createState() => _ForegroundNotificationBannerState();
+  State<ForegroundNotificationBanner> createState() =>
+      _ForegroundNotificationBannerState();
 }
 
-class _ForegroundNotificationBannerState extends State<ForegroundNotificationBanner> with SingleTickerProviderStateMixin {
+class _ForegroundNotificationBannerState extends State<ForegroundNotificationBanner>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
 
@@ -535,18 +640,12 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
     _offsetAnimation = Tween<Offset>(
       begin: const Offset(0.0, -1.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
-    // Auto dismiss after 5 seconds
     Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        _dismiss();
-      }
+      if (mounted) _dismiss();
     });
   }
 
@@ -565,9 +664,9 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
+    final top = MediaQuery.of(context).padding.top;
     return Positioned(
-      top: mediaQuery.padding.top + 12,
+      top: top + 12,
       left: 16,
       right: 16,
       child: SlideTransition(
@@ -582,19 +681,16 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    AppTheme.primaryColor,
-                    Color(0xFF673AB7), // Sleek indigo/violet
-                  ],
+                gradient: LinearGradient(
+                  colors: widget.gradientColors,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 12,
+                    color: Colors.black.withValues(alpha: 0.28),
+                    blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -607,11 +703,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.campaign,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                    child: Icon(widget.icon, color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -624,7 +716,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
+                            fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -632,7 +724,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                           widget.body,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 13,
+                            fontSize: 12,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -640,10 +732,12 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                    icon: const Icon(Icons.close, color: Colors.white, size: 18),
                     onPressed: _dismiss,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                 ],
               ),

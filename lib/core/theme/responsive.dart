@@ -1,62 +1,85 @@
 import 'package:flutter/material.dart';
 
-enum DeviceType { smallPhone, mobile, tablet }
-
 class Responsive {
-  static late MediaQueryData mediaQueryData;
-  static late double screenWidth;
-  static late double screenHeight;
-  static late double horizontalPadding;
-  static late double verticalPadding;
-  static late double devicePixelRatio;
-  static late Orientation orientation;
+  // ── Breakpoints use shortestSide so landscape phones get phone layout ──
+  static bool isPhone(BuildContext context) =>
+      MediaQuery.of(context).size.shortestSide < 600;
 
-  static void init(BuildContext context) {
-    mediaQueryData = MediaQuery.of(context);
-    screenWidth = mediaQueryData.size.width;
-    screenHeight = mediaQueryData.size.height;
-    orientation = mediaQueryData.orientation;
-    devicePixelRatio = mediaQueryData.devicePixelRatio;
+  static bool isTablet(BuildContext context) =>
+      MediaQuery.of(context).size.shortestSide >= 600;
 
-    // Breakpoint-based generic horizontal padding
-    if (isTablet(context)) {
-      horizontalPadding = screenWidth * 0.06; // 6% of screen width for tablets
-      verticalPadding = screenHeight * 0.03;
-    } else if (isSmallPhone(context)) {
-      horizontalPadding = 12.0;
-      verticalPadding = 12.0;
-    } else {
-      horizontalPadding = 16.0;
-      verticalPadding = 16.0;
-    }
-  }
+  static bool isLargeTablet(BuildContext context) =>
+      MediaQuery.of(context).size.shortestSide >= 840;
 
+  // ── Backward compat aliases ────────────────────────────────────────────
   static bool isSmallPhone(BuildContext context) =>
       MediaQuery.of(context).size.width < 360;
 
-  static bool isMobile(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 360 && MediaQuery.of(context).size.width < 600;
+  static bool isMobile(BuildContext context) => isPhone(context);
 
-  static bool isTablet(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 600;
-
-  static DeviceType deviceType(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
-    if (width < 360) return DeviceType.smallPhone;
-    if (width < 600) return DeviceType.mobile;
-    return DeviceType.tablet;
+  // ── Responsive padding ─────────────────────────────────────────────────
+  static double horizontalPadding(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w >= 1024) return 32;
+    if (w >= 720) return 28;
+    if (w >= 600) return 24;
+    return 16;
   }
 
-  // Dynamic dimension methods based on percentage of screen dimensions
-  static double widthMultiplier(BuildContext context, double percent) {
-    return MediaQuery.of(context).size.width * (percent / 100);
+  // ── Grid columns ───────────────────────────────────────────────────────
+  static int shopGridColumns(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    if (w >= 1200) return 3;
+    if (w >= 900) return 2;
+    return 1;
   }
 
-  static double heightMultiplier(BuildContext context, double percent) {
-    return MediaQuery.of(context).size.height * (percent / 100);
+  static int productGridColumns(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final landscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    if (w >= 1200) return 4;
+    if (w >= 900) return 3;
+    if (w >= 600) return 2;
+    if (landscape) return 3;
+    return 2;
   }
 
-  // Safe Area helpers
+  // ── Navigation ─────────────────────────────────────────────────────────
+  static bool useNavRail(BuildContext context) => isTablet(context);
+  static bool useExtendedRail(BuildContext context) => isLargeTablet(context);
+
+  // ── Misc helpers ───────────────────────────────────────────────────────
+  static double chartHeight(BuildContext context) => isTablet(context) ? 210 : 160;
+
+  static double heroTextScale(BuildContext context) => isTablet(context) ? 1.15 : 1.0;
+
+  static bool useStatsGrid(BuildContext context) => isTablet(context);
+
+  // ── Legacy static fields (kept for callsites that call Responsive.init) ─
+  static double get screenWidth => _width;
+  static double get screenHeight => _height;
+  static double get horizontalPaddingStatic => _hPad;
+  static Orientation get orientation => _orientation;
+
+  static double _width = 0;
+  static double _height = 0;
+  static double _hPad = 16;
+  static Orientation _orientation = Orientation.portrait;
+
+  static void init(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    _width = mq.size.width;
+    _height = mq.size.height;
+    _orientation = mq.orientation;
+    _hPad = horizontalPadding(context);
+  }
+
+  static double widthMultiplier(BuildContext context, double percent) =>
+      MediaQuery.of(context).size.width * (percent / 100);
+
+  static double heightMultiplier(BuildContext context, double percent) =>
+      MediaQuery.of(context).size.height * (percent / 100);
+
   static double getSafeAreaTop(BuildContext context) => MediaQuery.of(context).padding.top;
   static double getSafeAreaBottom(BuildContext context) => MediaQuery.of(context).padding.bottom;
 }

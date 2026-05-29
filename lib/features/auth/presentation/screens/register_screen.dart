@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
-import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/shared/utils/input_sanitizer.dart';
+import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+import 'package:local_vyapari_user/shared/widgets/primary_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -19,52 +21,46 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
-    final phone = '+91${_phoneController.text.trim()}';
-    final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
+    final email = _emailCtrl.text.trim();
+    final phone = '+91${_phoneCtrl.text.trim()}';
+    final password = _passCtrl.text;
 
-    final emailError = InputSanitizer.validateEmail(email);
-    if (emailError != null) {
-      CustomSnackBar.showError(context: context, message: emailError, title: 'Validation Error');
+    final emailErr = InputSanitizer.validateEmail(email);
+    if (emailErr != null) {
+      CustomSnackBar.showError(context: context, message: emailErr, title: 'Validation Error');
       return;
     }
-
-    if (_phoneController.text.trim().length != 10) {
+    if (_phoneCtrl.text.trim().length != 10) {
       CustomSnackBar.showError(
         context: context,
-        message: 'Please enter a valid 10-digit phone number',
+        message: 'Enter a valid 10-digit phone number',
         title: 'Validation Error',
       );
       return;
     }
-
-    final passwordError = InputSanitizer.validatePassword(password);
-    if (passwordError != null) {
-      CustomSnackBar.showError(context: context, message: passwordError, title: 'Validation Error');
+    final passErr = InputSanitizer.validatePassword(password);
+    if (passErr != null) {
+      CustomSnackBar.showError(context: context, message: passErr, title: 'Validation Error');
       return;
     }
-
-    if (password != confirmPassword) {
+    if (password != _confirmCtrl.text) {
       CustomSnackBar.showError(
         context: context,
         message: 'Passwords do not match',
@@ -73,42 +69,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
 
-    final authNotifier = ref.read(authProvider.notifier);
+    final notifier = ref.read(authProvider.notifier);
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _ProgressDialog(message: 'Sending OTP…'),
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(width: 16),
+            Text('Sending OTP…', style: GoogleFonts.poppins(fontSize: 14)),
+          ],
+        ),
+      ),
     );
 
-    await authNotifier.sendRegistrationOtp(
+    await notifier.sendRegistrationOtp(
       phone,
       onCodeSent: (verificationId) {
         Navigator.pop(context);
         showDialog<bool>(
           context: context,
           barrierDismissible: false,
-          builder: (dialogContext) {
-            final codeController = TextEditingController();
-            bool isVerifying = false;
-
+          builder: (dialogCtx) {
+            final codeCtrl = TextEditingController();
+            bool verifying = false;
             return StatefulBuilder(
-              builder: (context, setState) => AlertDialog(
-                title: Text(
-                  'Verify your number',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-                ),
+              builder: (ctx, setS) => AlertDialog(
+                title: Text('Verify Phone',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'We sent a 6-digit OTP to $phone.',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 13.5, color: AppTheme.inkMuted),
+                      'Enter the 6-digit OTP sent to $phone.',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, color: AppColors.textSecondary),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     TextFormField(
-                      controller: codeController,
+                      controller: codeCtrl,
                       decoration: const InputDecoration(
                         labelText: '6-digit OTP',
                         prefixIcon: Icon(Icons.lock_outline_rounded),
@@ -120,31 +125,34 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: isVerifying ? null : () => Navigator.pop(dialogContext),
+                    onPressed: verifying ? null : () => Navigator.pop(dialogCtx),
                     child: const Text('Cancel'),
                   ),
                   ElevatedButton(
-                    onPressed: isVerifying
+                    onPressed: verifying
                         ? null
                         : () async {
-                            final code = codeController.text.trim();
-                            if (code.length != 6) return;
-                            setState(() => isVerifying = true);
-                            final ok = await authNotifier.registerWithPhoneOtp(
+                            if (codeCtrl.text.trim().length != 6) return;
+                            setS(() => verifying = true);
+                            final ok = await notifier.registerWithPhoneOtp(
                               verificationId: verificationId,
-                              code: code,
+                              code: codeCtrl.text.trim(),
                               email: email,
                               password: password,
                               phone: phone,
                             );
-                            if (context.mounted) {
-                              setState(() => isVerifying = false);
-                              Navigator.pop(dialogContext, ok);
+                            if (ctx.mounted) {
+                              setS(() => verifying = false);
+                              Navigator.pop(dialogCtx, ok);
                             }
                           },
-                    child: isVerifying
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Verify & create'),
+                    child: verifying
+                        ? const SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Verify & Create'),
                   ),
                 ],
               ),
@@ -157,29 +165,31 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         if (error.contains('already registered')) {
           showDialog(
             context: context,
-            builder: (dialogContext) => AlertDialog(
-              title: Text('Account exists', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+            builder: (dialogCtx) => AlertDialog(
+              title: Text('Account exists',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
               content: Text(
-                'This phone number is already registered. You can log in with your password.',
-                style: GoogleFonts.plusJakartaSans(fontSize: 13.5),
+                'This phone is already registered. Sign in with your password.',
+                style: GoogleFonts.poppins(fontSize: 13),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
+                  onPressed: () => Navigator.pop(dialogCtx),
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(dialogContext);
+                    Navigator.pop(dialogCtx);
                     context.pop();
                   },
-                  child: const Text('Log in'),
+                  child: const Text('Sign in'),
                 ),
               ],
             ),
           );
         } else {
-          CustomSnackBar.showError(context: context, message: error, title: 'OTP Request Failed');
+          CustomSnackBar.showError(
+              context: context, message: error, title: 'OTP Failed');
         }
       },
     );
@@ -187,61 +197,242 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Responsive.init(context);
-
     ref.listen<AuthState>(authProvider, (_, next) {
       if (next is AuthFailure) {
-        CustomSnackBar.showError(context: context, message: next.message, title: 'Registration Failed');
+        CustomSnackBar.showError(
+            context: context, message: next.message, title: 'Registration failed');
         ref.read(authProvider.notifier).resetState();
       }
     });
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final formContent = _FormBody(
+      formKey: _formKey,
+      emailCtrl: _emailCtrl,
+      phoneCtrl: _phoneCtrl,
+      passCtrl: _passCtrl,
+      confirmCtrl: _confirmCtrl,
+      onSubmit: _register,
+      onSignIn: () => context.pop(),
+    );
 
-    return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Column(
+    if (Responsive.isTablet(context)) {
+      return _TabletLayout(onBack: () => context.pop(), form: formContent);
+    }
+    return _PortraitLayout(onBack: () => context.pop(), form: formContent);
+  }
+}
+
+// ── Shared form body (StatefulWidget for password toggle state) ───────────────
+
+class _FormBody extends StatefulWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController emailCtrl;
+  final TextEditingController phoneCtrl;
+  final TextEditingController passCtrl;
+  final TextEditingController confirmCtrl;
+  final VoidCallback onSubmit;
+  final VoidCallback onSignIn;
+
+  const _FormBody({
+    required this.formKey,
+    required this.emailCtrl,
+    required this.phoneCtrl,
+    required this.passCtrl,
+    required this.confirmCtrl,
+    required this.onSubmit,
+    required this.onSignIn,
+  });
+
+  @override
+  State<_FormBody> createState() => _FormBodyState();
+}
+
+class _FormBodyState extends State<_FormBody> {
+  bool _obscurePass = true;
+  bool _obscureConfirm = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        24, 24, 24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Form(
+            key: widget.formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Get started',
+                  style: GoogleFonts.poppins(
+                    fontSize: isSmall ? 19 : 22,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Create your Local Vyapari account',
+                  style: GoogleFonts.poppins(
+                    fontSize: isSmall ? 12 : 13,
+                    color: AppColors.textHint,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                TextFormField(
+                  controller: widget.emailCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Email address',
+                    prefixIcon: Icon(Icons.mail_outline_rounded),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Email is required' : null,
+                ),
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: widget.phoneCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone number',
+                    prefixText: '+91 ',
+                    prefixIcon: Icon(Icons.phone_outlined),
+                  ),
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Phone is required';
+                    if (v.length != 10) return 'Enter 10 digits';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: widget.passCtrl,
+                  obscureText: _obscurePass,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline_rounded),
+                    suffixIcon: GestureDetector(
+                      onTap: () => setState(() => _obscurePass = !_obscurePass),
+                      child: Icon(_obscurePass
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
+                    ),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Password is required' : null,
+                ),
+                const SizedBox(height: 14),
+
+                TextFormField(
+                  controller: widget.confirmCtrl,
+                  obscureText: _obscureConfirm,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => widget.onSubmit(),
+                  decoration: InputDecoration(
+                    labelText: 'Confirm password',
+                    prefixIcon: const Icon(Icons.lock_outline_rounded),
+                    suffixIcon: GestureDetector(
+                      onTap: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
+                      child: Icon(_obscureConfirm
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined),
+                    ),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Please confirm password' : null,
+                ),
+                const SizedBox(height: 24),
+
+                PrimaryButton(label: 'Create Account', onPressed: widget.onSubmit),
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Already have an account? ',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                    GestureDetector(
+                      onTap: widget.onSignIn,
+                      child: Text(
+                        'Sign in',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Layout 1: Portrait phone ──────────────────────────────────────────────────
+// Navy header (back + title) + white rounded sheet
+
+class _PortraitLayout extends StatelessWidget {
+  final VoidCallback onBack;
+  final Widget form;
+  const _PortraitLayout({required this.onBack, required this.form});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.primary,
+        body: Column(
           children: [
-            // ── Brand header ──────────────────────────────────────────
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
                 child: Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => context.pop(),
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.15),
-                        ),
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-                      ),
-                    ),
+                    _BackButton(onTap: onBack),
                     const Spacer(),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          'Create account',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: Responsive.isTablet(context) ? 26 : 22,
-                            fontWeight: FontWeight.w800,
+                          'Create Account',
+                          style: GoogleFonts.poppins(
+                            fontSize: isSmall ? 17 : 20,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
-                            letterSpacing: -0.3,
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Text(
-                          'Start discovering local deals',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                          'Customer Portal',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
                             color: Colors.white.withValues(alpha: 0.6),
                           ),
                         ),
@@ -252,135 +443,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             ),
 
-            // ── Form sheet ────────────────────────────────────────────
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkSurface : AppTheme.backgroundColor,
+                  color: isDark ? AppColors.darkScaffold : AppColors.background,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(28),
                     topRight: Radius.circular(28),
                   ),
                 ),
                 child: AnnotatedRegion<SystemUiOverlayStyle>(
-                  value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                      24, 28, 24,
-                      MediaQuery.of(context).viewInsets.bottom + 24,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TextFormField(
-                              controller: _emailController,
-                              decoration: const InputDecoration(
-                                labelText: 'Email address',
-                                prefixIcon: Icon(Icons.mail_outline_rounded),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _phoneController,
-                              decoration: const InputDecoration(
-                                labelText: 'Phone number',
-                                prefixIcon: Icon(Icons.phone_outlined),
-                                prefixText: '+91 ',
-                              ),
-                              keyboardType: TextInputType.phone,
-                              textInputAction: TextInputAction.next,
-                              inputFormatters: [LengthLimitingTextInputFormatter(10)],
-                              validator: (v) {
-                                if (v == null || v.isEmpty) return 'Phone number is required';
-                                if (v.length != 10) return 'Enter a valid 10-digit number';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _passwordController,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                suffixIcon: GestureDetector(
-                                  onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                                  child: Icon(_obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined),
-                                ),
-                              ),
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.next,
-                              validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _confirmPasswordController,
-                              decoration: InputDecoration(
-                                labelText: 'Confirm password',
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                suffixIcon: GestureDetector(
-                                  onTap: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                                  child: Icon(_obscureConfirmPassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined),
-                                ),
-                              ),
-                              obscureText: _obscureConfirmPassword,
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _register(),
-                              validator: (v) => (v == null || v.isEmpty) ? 'Please confirm your password' : null,
-                            ),
-                            const SizedBox(height: 24),
-
-                            SizedBox(
-                              height: 52,
-                              child: ElevatedButton(
-                                onPressed: _register,
-                                child: const Text('Create account'),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Already have an account? ',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
-                                    color: AppTheme.inkMuted,
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: () => context.pop(),
-                                  child: Text(
-                                    'Sign in',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  value: isDark
+                      ? SystemUiOverlayStyle.light
+                      : SystemUiOverlayStyle.dark,
+                  child: form,
                 ),
               ),
             ),
@@ -391,26 +468,142 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 }
 
-class _ProgressDialog extends StatelessWidget {
-  final String message;
-  const _ProgressDialog({required this.message});
+// ── Layout 2: Tablet (portrait) ───────────────────────────────────────────────
+// Left fixed-width navy brand panel | Right scrollable form
+
+class _TabletLayout extends StatelessWidget {
+  final VoidCallback onBack;
+  final Widget form;
+  const _TabletLayout({required this.onBack, required this.form});
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      content: Row(
-        children: [
-          const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          ),
-          const SizedBox(width: 18),
-          Text(
-            message,
-            style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLarge = Responsive.isLargeTablet(context);
+    final leftWidth = isLarge ? 380.0 : 320.0;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        body: Row(
+          children: [
+            // Left: navy brand panel
+            SizedBox(
+              width: leftWidth,
+              child: Container(
+                color: AppColors.primary,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _BackButton(onTap: onBack),
+                        ),
+                      ),
+                      const Spacer(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Image.asset(
+                              'assets/images/logo.png',
+                              height: isLarge ? 80 : 64,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.storefront_rounded,
+                                size: isLarge ? 64 : 52,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'Local Vyapari',
+                              style: GoogleFonts.poppins(
+                                fontSize: isLarge ? 28 : 24,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.full),
+                              ),
+                              child: Text(
+                                'Customer Portal',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Discover local shops & exclusive offers near you.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13.5,
+                                color: Colors.white.withValues(alpha: 0.65),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(flex: 2),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            Container(
+              width: 0.7,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : AppColors.border,
+            ),
+
+            // Right: form panel
+            Expanded(
+              child: Container(
+                color: isDark ? AppColors.darkScaffold : AppColors.background,
+                child: form,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shared back button ────────────────────────────────────────────────────────
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: 0.15),
+        ),
+        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 17),
       ),
     );
   }

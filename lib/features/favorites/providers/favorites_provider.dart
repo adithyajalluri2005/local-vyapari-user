@@ -58,19 +58,19 @@ class FavoritesNotifier extends Notifier<AsyncValue<FavoritesState>> {
       final productIds = <String>{};
       final shopIds = <String>{};
 
-      if (snapshot.exists && snapshot.value != null) {
+      if (snapshot.value is Map) {
         final data = snapshot.value as Map<dynamic, dynamic>;
 
-        if (data['products'] != null) {
-          final productsMap = data['products'] as Map<dynamic, dynamic>;
+        final productsMap = data['products'];
+        if (productsMap is Map) {
           // value is `true` (legacy) or a shopId string (new)
           productsMap.forEach((key, value) {
             if (value != null && value != false) productIds.add(key.toString());
           });
         }
 
-        if (data['shops'] != null) {
-          final shopsMap = data['shops'] as Map<dynamic, dynamic>;
+        final shopsMap = data['shops'];
+        if (shopsMap is Map) {
           shopsMap.forEach((key, value) {
             if (value == true) shopIds.add(key.toString());
           });
@@ -84,7 +84,7 @@ class FavoritesNotifier extends Notifier<AsyncValue<FavoritesState>> {
 
       // Set up a listener for real-time updates from other devices
       _favoritesSubscription = _rtdb.ref('users/$userId/favorites').onValue.listen((event) {
-        if (!event.snapshot.exists || event.snapshot.value == null) {
+        if (event.snapshot.value is! Map) {
            state = AsyncValue.data(FavoritesState(productIds: {}, shopIds: {}));
            return;
         }
@@ -93,18 +93,24 @@ class FavoritesNotifier extends Notifier<AsyncValue<FavoritesState>> {
         final newProductIds = <String>{};
         final newShopIds = <String>{};
 
-        if (data['products'] != null) {
-          (data['products'] as Map<dynamic, dynamic>).forEach((key, value) {
+        final products = data['products'];
+        if (products is Map) {
+          products.forEach((key, value) {
             if (value != null && value != false) newProductIds.add(key.toString());
           });
         }
-        if (data['shops'] != null) {
-          (data['shops'] as Map<dynamic, dynamic>).forEach((key, value) {
+        final shops = data['shops'];
+        if (shops is Map) {
+          shops.forEach((key, value) {
             if (value == true) newShopIds.add(key.toString());
           });
         }
 
         state = AsyncValue.data(FavoritesState(productIds: newProductIds, shopIds: newShopIds));
+      }, onError: (Object e, StackTrace st) {
+        // Surface listener failures (e.g. permission revoked) instead of leaving
+        // the previous state silently stale.
+        state = AsyncValue.error(e, st);
       });
 
     } catch (e, st) {
@@ -286,9 +292,15 @@ final favoriteShopsProvider = FutureProvider<List<Shop>>((ref) async {
   
   for (final shopId in favoritesState.shopIds) {
     final snapshot = await rtdb.child('shop/$shopId').get();
-    if (snapshot.exists && snapshot.value != null) {
-      final data = snapshot.value as Map<dynamic, dynamic>;
-      shops.add(Shop.fromRTDB(shopId, data));
+    if (snapshot.value is Map) {
+      try {
+        shops.add(Shop.fromRTDB(
+          shopId,
+          Map<dynamic, dynamic>.from(snapshot.value as Map),
+        ));
+      } catch (e) {
+        debugPrint('Error parsing favorite shop $shopId: $e');
+      }
     }
   }
   return shops;

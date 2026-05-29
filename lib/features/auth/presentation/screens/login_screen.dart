@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
-import 'package:local_vyapari_user/core/theme/responsive.dart';
-import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/shared/utils/input_sanitizer.dart';
+import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+import 'package:local_vyapari_user/shared/widgets/primary_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -19,120 +20,124 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _isEmailMode = true;
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _isEmail = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _phoneController.dispose();
-    _passwordController.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
-  void _login() async {
+  void _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final password = _passwordController.text;
-    final passwordError = InputSanitizer.validatePassword(password);
-    if (passwordError != null) {
-      CustomSnackBar.showError(context: context, message: passwordError, title: 'Validation Error');
+    final pw = _passCtrl.text;
+    final pwErr = InputSanitizer.validatePassword(pw);
+    if (pwErr != null) {
+      CustomSnackBar.showError(context: context, message: pwErr, title: 'Validation Error');
       return;
     }
 
-    if (_isEmailMode) {
-      final email = _emailController.text.trim();
-      final emailError = InputSanitizer.validateEmail(email);
-      if (emailError != null) {
-        CustomSnackBar.showError(context: context, message: emailError, title: 'Validation Error');
+    if (_isEmail) {
+      final email = _emailCtrl.text.trim();
+      final emailErr = InputSanitizer.validateEmail(email);
+      if (emailErr != null) {
+        CustomSnackBar.showError(context: context, message: emailErr, title: 'Validation Error');
         return;
       }
-      await ref.read(authProvider.notifier).login(email, password);
+      await ref.read(authProvider.notifier).login(email, pw);
     } else {
-      final phone = _phoneController.text.trim();
+      final phone = _phoneCtrl.text.trim();
       if (phone.length != 10) {
         CustomSnackBar.showError(
           context: context,
-          message: 'Please enter a valid 10-digit phone number',
+          message: 'Enter a valid 10-digit number',
           title: 'Validation Error',
         );
         return;
       }
-      await ref.read(authProvider.notifier).loginWithPhoneAndPassword('+91$phone', password);
+      await ref.read(authProvider.notifier).loginWithPhoneAndPassword('+91$phone', pw);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    Responsive.init(context);
-
-    ref.listen<AuthState>(authProvider, (previous, next) {
+    ref.listen<AuthState>(authProvider, (_, next) {
       if (next is AuthFailure) {
-        CustomSnackBar.showError(context: context, message: next.message, title: 'Authentication Failed');
+        CustomSnackBar.showError(context: context, message: next.message, title: 'Sign in failed');
         ref.read(authProvider.notifier).resetState();
       }
     });
 
-    final authState = ref.watch(authProvider);
-    final isLoading = authState is AuthLoading;
+    final isLoading = ref.watch(authProvider) is AuthLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: AppTheme.primaryDark,
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle.light,
-        child: Column(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: AppColors.primary,
+        body: Column(
           children: [
-            // ── Brand header ──────────────────────────────────────────
+            // ── Brand header ────────────────────────────────────
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 36, 28, 28),
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
                 child: Column(
                   children: [
                     Image.asset(
                       'assets/images/logo.png',
-                      height: Responsive.isTablet(context) ? 90 : 68,
+                      height: 72,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.storefront_rounded,
-                        size: 64,
+                        size: 60,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 14),
                     Text(
-                      'Welcome back',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: Responsive.isTablet(context) ? 30 : 26,
-                        fontWeight: FontWeight.w800,
+                      'Local Vyapari',
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        letterSpacing: -0.4,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
-                      'Sign in to discover deals near you',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.6),
+                      'Customer Portal',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.65),
                       ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Discover local shops & exclusive offers',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
             ),
 
-            // ── Form sheet ────────────────────────────────────────────
+            // ── Form sheet ───────────────────────────────────────
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: isDark ? AppTheme.darkSurface : AppTheme.backgroundColor,
+                  color: isDark ? AppColors.darkScaffold : AppColors.background,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(28),
                     topRight: Radius.circular(28),
@@ -145,154 +150,145 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       24, 28, 24,
                       MediaQuery.of(context).viewInsets.bottom + 24,
                     ),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 480),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // ── Mode toggle ──────────────────────────
-                            _ModeToggle(
-                              isEmailMode: _isEmailMode,
-                              onChanged: (v) {
-                                setState(() => _isEmailMode = v);
-                                ref.read(authProvider.notifier).resetState();
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            // ── Identifier field ─────────────────────
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              child: _isEmailMode
-                                  ? TextFormField(
-                                      key: const ValueKey('email'),
-                                      controller: _emailController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Email address',
-                                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                                      ),
-                                      keyboardType: TextInputType.emailAddress,
-                                      textInputAction: TextInputAction.next,
-                                      validator: (v) => (v == null || v.isEmpty) ? 'Email is required' : null,
-                                    )
-                                  : TextFormField(
-                                      key: const ValueKey('phone'),
-                                      controller: _phoneController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Phone number',
-                                        prefixIcon: Icon(Icons.phone_outlined),
-                                        prefixText: '+91 ',
-                                      ),
-                                      keyboardType: TextInputType.phone,
-                                      textInputAction: TextInputAction.next,
-                                      inputFormatters: [LengthLimitingTextInputFormatter(10)],
-                                      validator: (v) {
-                                        if (v == null || v.isEmpty) return 'Phone number is required';
-                                        if (v.length != 10) return 'Enter a valid 10-digit number';
-                                        return null;
-                                      },
-                                    ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            // ── Password field ───────────────────────
-                            TextFormField(
-                              controller: _passwordController,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                suffixIcon: GestureDetector(
-                                  onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                                  child: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_outlined
-                                        : Icons.visibility_off_outlined,
-                                  ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Welcome back',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : AppColors.textPrimary,
                                 ),
                               ),
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => isLoading ? null : _login(),
-                              validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
-                            ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Sign in to continue',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: AppColors.textHint,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
 
-                            // ── Forgot password ──────────────────────
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () async {
-                                  final ok = await showDialog<bool>(
-                                    context: context,
-                                    builder: (_) => _ResetPasswordDialog(ref: ref),
-                                  );
-                                  if (ok == true && context.mounted) {
-                                    CustomSnackBar.showSuccess(
-                                      context: context,
-                                      title: 'Password reset',
-                                      message: 'Your password has been reset. You can now log in.',
-                                    );
-                                  }
+                              // ── Mode toggle ─────────────────────
+                              _ModeToggle(
+                                isEmail: _isEmail,
+                                onChanged: (v) {
+                                  setState(() => _isEmail = v);
+                                  ref.read(authProvider.notifier).resetState();
                                 },
-                                child: Text(
-                                  'Forgot password?',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
+                                isDark: isDark,
                               ),
-                            ),
+                              const SizedBox(height: 18),
 
-                            const SizedBox(height: 6),
-
-                            // ── CTA ──────────────────────────────────
-                            SizedBox(
-                              height: 52,
-                              child: ElevatedButton(
-                                onPressed: isLoading ? null : _login,
-                                child: isLoading
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.5,
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: _isEmail
+                                    ? TextFormField(
+                                        key: const ValueKey('email'),
+                                        controller: _emailCtrl,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Email address',
+                                          prefixIcon: Icon(Icons.mail_outline_rounded),
                                         ),
+                                        keyboardType: TextInputType.emailAddress,
+                                        textInputAction: TextInputAction.next,
+                                        validator: (v) =>
+                                            (v == null || v.isEmpty) ? 'Email is required' : null,
                                       )
-                                    : const Text('Sign in'),
+                                    : TextFormField(
+                                        key: const ValueKey('phone'),
+                                        controller: _phoneCtrl,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Phone number',
+                                          prefixIcon: Icon(Icons.phone_outlined),
+                                          prefixText: '+91 ',
+                                        ),
+                                        keyboardType: TextInputType.phone,
+                                        textInputAction: TextInputAction.next,
+                                        inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                                        validator: (v) {
+                                          if (v == null || v.isEmpty) return 'Phone is required';
+                                          if (v.length != 10) return 'Enter a valid 10-digit number';
+                                          return null;
+                                        },
+                                      ),
                               ),
-                            ),
+                              const SizedBox(height: 14),
 
-                            const SizedBox(height: 20),
-
-                            // ── Sign-up link ─────────────────────────
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  "Don't have an account? ",
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 14,
-                                    color: AppTheme.inkMuted,
+                              TextFormField(
+                                controller: _passCtrl,
+                                obscureText: _obscure,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => isLoading ? null : _submit(),
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                  suffixIcon: GestureDetector(
+                                    onTap: () => setState(() => _obscure = !_obscure),
+                                    child: Icon(_obscure
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined),
                                   ),
                                 ),
-                                GestureDetector(
-                                  onTap: () => context.push('/register'),
+                                validator: (v) =>
+                                    (v == null || v.isEmpty) ? 'Password is required' : null,
+                              ),
+
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => _showResetDialog(context),
                                   child: Text(
-                                    'Create one',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.primaryColor,
+                                    'Forgot Password?',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              const SizedBox(height: 4),
+
+                              PrimaryButton(
+                                label: 'Sign in',
+                                isLoading: isLoading,
+                                onPressed: _submit,
+                              ),
+                              const SizedBox(height: 20),
+
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Don't have an account? ",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => context.push('/register'),
+                                    child: Text(
+                                      'Create Account',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -305,40 +301,59 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+
+  void _showResetDialog(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ResetDialog(ref: ref),
+    );
+    if (ok == true && context.mounted) {
+      CustomSnackBar.showSuccess(
+        context: context,
+        title: 'Password reset',
+        message: 'Your password has been reset successfully.',
+      );
+    }
+  }
 }
 
+// ── Mode toggle ──────────────────────────────────────────────────────────────
+
 class _ModeToggle extends StatelessWidget {
-  final bool isEmailMode;
+  final bool isEmail;
   final ValueChanged<bool> onChanged;
-  const _ModeToggle({required this.isEmailMode, required this.onChanged});
+  final bool isDark;
+  const _ModeToggle({required this.isEmail, required this.onChanged, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppTheme.darkSurfaceMuted : AppTheme.surfaceMuted;
-
+    final bg = isDark ? AppColors.darkElevated : AppColors.surfaceElevated;
     return Container(
       height: 44,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: isDark ? Colors.white10 : AppColors.border,
+          width: 0.7,
+        ),
       ),
       child: Row(
         children: [
-          _Pill(label: 'Email', active: isEmailMode, onTap: () => onChanged(true)),
-          _Pill(label: 'Phone', active: !isEmailMode, onTap: () => onChanged(false)),
+          _Tab(label: 'Email', active: isEmail, onTap: () => onChanged(true)),
+          _Tab(label: 'Phone', active: !isEmail, onTap: () => onChanged(false)),
         ],
       ),
     );
   }
 }
 
-class _Pill extends StatelessWidget {
+class _Tab extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
-  const _Pill({required this.label, required this.active, required this.onTap});
+  const _Tab({required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -348,16 +363,16 @@ class _Pill extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
-            color: active ? AppTheme.primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            color: active ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-              color: active ? Colors.white : AppTheme.inkMuted,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: active ? Colors.white : AppColors.textHint,
             ),
           ),
         ),
@@ -366,65 +381,58 @@ class _Pill extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reset password dialog — logic unchanged, UI refreshed
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Reset dialog (unchanged logic, refreshed UI) ─────────────────────────────
 
-class _ResetPasswordDialog extends StatefulWidget {
+class _ResetDialog extends StatefulWidget {
   final WidgetRef ref;
-  const _ResetPasswordDialog({required this.ref});
+  const _ResetDialog({required this.ref});
 
   @override
-  State<_ResetPasswordDialog> createState() => _ResetPasswordDialogState();
+  State<_ResetDialog> createState() => _ResetDialogState();
 }
 
-class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
-  final _passwordController = TextEditingController();
+class _ResetDialogState extends State<_ResetDialog> {
+  final _form = GlobalKey<FormState>();
+  final _phoneCtrl = TextEditingController();
+  final _otpCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _otpSent = false;
-  bool _isLoading = false;
+  bool _loading = false;
   String? _verificationId;
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _otpController.dispose();
-    _passwordController.dispose();
+    _phoneCtrl.dispose();
+    _otpCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
   void _sendOtp() async {
-    final phone = _phoneController.text.trim();
-    if (phone.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid 10-digit number')),
-      );
-      return;
-    }
-    setState(() => _isLoading = true);
+    final phone = _phoneCtrl.text.trim();
+    if (phone.length != 10) return;
+    setState(() => _loading = true);
     await widget.ref.read(authProvider.notifier).requestPasswordResetOtp(
       '+91$phone',
       onCodeSent: (id) {
-        if (mounted) setState(() { _isLoading = false; _otpSent = true; _verificationId = id; });
+        if (mounted) setState(() { _loading = false; _otpSent = true; _verificationId = id; });
       },
-      onFailed: (err) {
-        if (mounted) setState(() => _isLoading = false);
+      onFailed: (e) {
+        if (mounted) setState(() => _loading = false);
       },
     );
   }
 
-  void _resetPassword() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+  void _reset() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() => _loading = true);
     final ok = await widget.ref.read(authProvider.notifier).resetPasswordWithPhoneOtp(
       verificationId: _verificationId!,
-      code: _otpController.text.trim(),
-      newPassword: _passwordController.text.trim(),
+      code: _otpCtrl.text.trim(),
+      newPassword: _passCtrl.text.trim(),
     );
     if (mounted) {
-      setState(() => _isLoading = false);
+      setState(() => _loading = false);
       if (ok) Navigator.pop(context, true);
     }
   }
@@ -434,18 +442,18 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
     return AlertDialog(
       title: Text(
         'Reset Password',
-        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
       ),
       content: Form(
-        key: _formKey,
+        key: _form,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                controller: _phoneController,
+                controller: _phoneCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Registered phone number',
+                  labelText: 'Phone number',
                   prefixText: '+91 ',
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
@@ -453,15 +461,15 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
                 readOnly: _otpSent,
                 inputFormatters: [LengthLimitingTextInputFormatter(10)],
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Phone number is required';
-                  if (v.length != 10) return 'Enter a valid 10-digit number';
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (v.length != 10) return 'Enter 10 digits';
                   return null;
                 },
               ),
               if (_otpSent) ...[
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 TextFormField(
-                  controller: _otpController,
+                  controller: _otpCtrl,
                   decoration: const InputDecoration(
                     labelText: '6-digit OTP',
                     prefixIcon: Icon(Icons.lock_outline_rounded),
@@ -469,22 +477,20 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [LengthLimitingTextInputFormatter(6)],
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'OTP is required';
-                    if (v.length != 6) return 'OTP must be 6 digits';
+                    if (v == null || v.length != 6) return 'Enter 6-digit OTP';
                     return null;
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 TextFormField(
-                  controller: _passwordController,
+                  controller: _passCtrl,
                   decoration: const InputDecoration(
                     labelText: 'New password',
                     prefixIcon: Icon(Icons.lock_outline_rounded),
                   ),
                   obscureText: true,
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password is required';
-                    if (v.length < 6) return 'At least 6 characters required';
+                    if (v == null || v.length < 6) return 'At least 6 characters';
                     return null;
                   },
                 ),
@@ -495,14 +501,17 @@ class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          onPressed: _loading ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : (_otpSent ? _resetPassword : _sendOtp),
-          child: _isLoading
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : Text(_otpSent ? 'Reset password' : 'Send OTP'),
+          onPressed: _loading ? null : (_otpSent ? _reset : _sendOtp),
+          child: _loading
+              ? const SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Text(_otpSent ? 'Reset' : 'Send OTP'),
         ),
       ],
     );

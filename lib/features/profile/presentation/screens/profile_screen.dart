@@ -1,30 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/theme_provider.dart';
-import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/services/role_service.dart';
+import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
-import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Responsive.init(context);
     final authState = ref.watch(authProvider);
     final user = authState is Authenticated ? authState.user : null;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final initial = user?.email?.substring(0, 1).toUpperCase() ?? 'U';
+    final email = user?.email ?? '';
+    final phone = user?.phoneNumber ?? '';
 
     String themeModeLabel;
     IconData themeIcon;
@@ -40,257 +41,229 @@ class ProfileScreen extends ConsumerWidget {
         themeIcon = Icons.dark_mode_outlined;
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: CustomScrollView(
-        slivers: [
-          // ── Header with gradient ─────────────────────────────────
-          SliverToBoxAdapter(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppTheme.primaryDark, AppTheme.primaryColor],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
+        body: CustomScrollView(
+          slivers: [
+            // ── Hero header ──────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _ProfileHero(
+                initial: initial,
+                email: email,
+                phone: phone,
+                isDark: isDark,
               ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-                  child: Column(
-                    children: [
-                      // Top row
-                      Row(
-                        children: [
-                          Text(
-                            'Profile',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const Spacer(),
-                          AnnotatedRegion<SystemUiOverlayStyle>(
-                            value: SystemUiOverlayStyle.light,
-                            child: const SizedBox.shrink(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // Avatar + user info
-                      Row(
-                        children: [
-                          Container(
-                            width: 66,
-                            height: 66,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withValues(alpha: 0.18),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                width: 2,
+            ),
+
+            // ── Menu sections ────────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                    child: Column(
+                      children: [
+                        // Activity
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 100),
+                          child: _MenuSection(
+                            title: 'Activity',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.chat_bubble_outline_rounded,
+                                iconColor: const Color(0xFF7C3AED),
+                                label: 'My chats',
+                                onTap: () => context.push('/chats'),
                               ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                initial,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                              _MenuItem(
+                                icon: Icons.favorite_outline_rounded,
+                                iconColor: AppColors.error,
+                                label: 'Favourites',
+                                onTap: () => CustomSnackBar.showInfo(
+                                  context: context,
+                                  title: 'Coming soon',
+                                  message: 'Favourites will be available in the next update.',
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user?.email ?? 'User',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    letterSpacing: -0.2,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              _MenuItem(
+                                icon: Icons.location_on_outlined,
+                                iconColor: const Color(0xFF2563EB),
+                                label: 'Saved locations',
+                                onTap: () => CustomSnackBar.showInfo(
+                                  context: context,
+                                  title: 'Coming soon',
+                                  message: 'Saved Locations will be available in the next update.',
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  user?.phoneNumber ?? 'No phone added',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Preferences
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 160),
+                          child: _MenuSection(
+                            title: 'Preferences',
+                            items: [
+                              _MenuItem(
+                                icon: themeIcon,
+                                iconColor: isDark
+                                    ? const Color(0xFF8FBAD8)
+                                    : AppColors.primaryLight,
+                                label: 'App theme',
+                                trailing: Text(
+                                  themeModeLabel,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12.5,
+                                    color: AppColors.textHint,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ],
-                            ),
+                                onTap: () => _showThemeSheet(context, ref),
+                              ),
+                              _MenuItem(
+                                icon: Icons.notifications_none_rounded,
+                                iconColor: AppColors.warning,
+                                label: 'Notification settings',
+                                onTap: () => CustomSnackBar.showInfo(
+                                  context: context,
+                                  title: 'Coming soon',
+                                  message: 'Notification Settings will be available in the next update.',
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+                        ),
+                        const SizedBox(height: 12),
 
-          // ── Menu ─────────────────────────────────────────────────
-          SliverToBoxAdapter(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  child: Column(
-                    children: [
-                      _MenuSection(
-                        items: [
-                          _MenuItem(
-                            icon: Icons.location_on_outlined,
-                            iconColor: const Color(0xFF2563EB),
-                            label: 'Saved locations',
-                            onTap: () => CustomSnackBar.showInfo(
-                              context: context,
-                              title: 'Coming soon',
-                              message: 'Saved Locations will be available in the next update.',
-                            ),
+                        // More
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 220),
+                          child: _MenuSection(
+                            title: 'More',
+                            items: [
+                              _MenuItem(
+                                icon: Icons.share_outlined,
+                                iconColor: AppColors.accent,
+                                label: 'Share app',
+                                onTap: () => _showShareSheet(context),
+                              ),
+                              _MenuItem(
+                                icon: Icons.storefront_outlined,
+                                iconColor: AppColors.primary,
+                                label: 'Switch to Vendor app',
+                                onTap: () async {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => const Center(
+                                      child: CircularProgressIndicator(color: AppColors.primary),
+                                    ),
+                                  );
+                                  try {
+                                    await RoleService.instance
+                                        .switchRoleAndLaunchApp('merchant');
+                                    if (context.mounted) Navigator.pop(context);
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                      CustomSnackBar.showError(
+                                        context: context,
+                                        title: 'Switch Failed',
+                                        message: e.toString().replaceFirst('Exception: ', ''),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
                           ),
-                          _MenuItem(
-                            icon: Icons.favorite_outline_rounded,
-                            iconColor: const Color(0xFFDC2626),
-                            label: 'Favorite products',
-                            onTap: () => CustomSnackBar.showInfo(
-                              context: context,
-                              title: 'Coming soon',
-                              message: 'Favorite Products will be available in the next update.',
-                            ),
-                          ),
-                          _MenuItem(
-                            icon: Icons.storefront_outlined,
-                            iconColor: AppTheme.primaryColor,
-                            label: 'Favorite shops',
-                            onTap: () => CustomSnackBar.showInfo(
-                              context: context,
-                              title: 'Coming soon',
-                              message: 'Favorite Shops will be available in the next update.',
-                            ),
-                          ),
-                          _MenuItem(
-                            icon: Icons.chat_bubble_outline_rounded,
-                            iconColor: const Color(0xFF7C3AED),
-                            label: 'My chats',
-                            onTap: () => context.push('/chats'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _MenuSection(
-                        items: [
-                          _MenuItem(
-                            icon: Icons.notifications_none_rounded,
-                            iconColor: const Color(0xFFD97706),
-                            label: 'Notification settings',
-                            onTap: () => CustomSnackBar.showInfo(
-                              context: context,
-                              title: 'Coming soon',
-                              message: 'Notification Settings will be available in the next update.',
-                            ),
-                          ),
-                          _MenuItem(
-                            icon: themeIcon,
-                            iconColor: isDark ? const Color(0xFF8FBAD8) : const Color(0xFF1B3B56),
-                            label: 'App theme',
-                            trailing: Text(
-                              themeModeLabel,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                color: AppTheme.inkMuted,
-                                fontWeight: FontWeight.w500,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Logout
+                        FadeInSlide(
+                          delay: const Duration(milliseconds: 280),
+                          child: ScaleOnTap(
+                            onTap: () => ref.read(authProvider.notifier).logout(),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(
+                                  color: AppColors.error.withValues(alpha: 0.2),
+                                  width: 0.7,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.logout_rounded,
+                                      size: 18, color: AppColors.error),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Log out',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.error,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            onTap: () => _showThemeSheet(context, ref),
                           ),
-                          _MenuItem(
-                            icon: Icons.share_outlined,
-                            iconColor: AppTheme.primaryColor,
-                            label: 'Share app',
-                            onTap: () => _showShareSheet(context),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _MenuSection(
-                        items: [
-                          _MenuItem(
-                            icon: Icons.storefront_outlined,
-                            iconColor: const Color(0xFF1B3B56),
-                            label: 'Switch to Vendor app',
-                            onTap: () async {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => const Center(child: CircularProgressIndicator()),
-                              );
-                              try {
-                                await RoleService.instance.switchRoleAndLaunchApp('merchant');
-                                if (context.mounted) Navigator.pop(context);
-                              } catch (e) {
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  CustomSnackBar.showError(
-                                    context: context,
-                                    title: 'Switch Failed',
-                                    message: e.toString().replaceFirst('Exception: ', ''),
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                          _MenuItem(
-                            icon: Icons.logout_rounded,
-                            iconColor: AppTheme.errorColor,
-                            iconBg: AppTheme.errorColor.withValues(alpha: 0.1),
-                            label: 'Log out',
-                            labelColor: AppTheme.errorColor,
-                            onTap: () => ref.read(authProvider.notifier).logout(),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 80),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   void _showThemeSheet(BuildContext context, WidgetRef ref) {
     final current = ref.read(themeModeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 12),
-            Text(
-              'App theme',
-              style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w700),
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
+            Text('App theme',
+                style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.textPrimary)),
+            const SizedBox(height: 12),
             for (final entry in const [
               (ThemeMode.system, 'System default', Icons.brightness_auto_outlined),
               (ThemeMode.light, 'Light', Icons.light_mode_outlined),
@@ -298,10 +271,13 @@ class ProfileScreen extends ConsumerWidget {
             ])
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(entry.$3, color: AppTheme.primaryColor),
-                title: Text(entry.$2, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+                leading: Icon(entry.$3, color: AppColors.primary),
+                title: Text(entry.$2,
+                    style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppColors.textPrimary)),
                 trailing: current == entry.$1
-                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor)
+                    ? const Icon(Icons.check_circle_rounded, color: AppColors.primary)
                     : null,
                 onTap: () {
                   ref.read(themeModeProvider.notifier).setThemeMode(entry.$1);
@@ -315,24 +291,37 @@ class ProfileScreen extends ConsumerWidget {
   }
 
   void _showShareSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 12),
-            Text(
-              'Share Local Vyapari',
-              style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w700),
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+              ),
             ),
             const SizedBox(height: 16),
+            Text('Share Local Vyapari',
+                style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.textPrimary)),
+            const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.copy_outlined, color: AppTheme.primaryColor),
-              title: Text('Copy link', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.copy_outlined, color: AppColors.primary),
+              title: Text('Copy link',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppColors.textPrimary)),
               onTap: () async {
                 await Clipboard.setData(const ClipboardData(
                   text: 'Check out Local Vyapari! Discover nearby shops & offers: https://localvyapari.com/download',
@@ -347,11 +336,13 @@ class ProfileScreen extends ConsumerWidget {
                 }
               },
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: AppColors.border),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.share_outlined, color: Colors.green),
-              title: Text('Share via WhatsApp', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.share_outlined, color: Color(0xFF25D366)),
+              title: Text('Share via WhatsApp',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppColors.textPrimary)),
               onTap: () async {
                 final msg = Uri.encodeComponent(
                   'Check out Local Vyapari! Discover nearby shops & offers: https://localvyapari.com/download',
@@ -370,48 +361,166 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Menu components
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Profile hero header ───────────────────────────────────────────────────────
+
+class _ProfileHero extends StatelessWidget {
+  final String initial;
+  final String email;
+  final String phone;
+  final bool isDark;
+
+  const _ProfileHero({
+    required this.initial,
+    required this.email,
+    required this.phone,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primaryDark, AppColors.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Profile',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.15),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initial,
+                        style: GoogleFonts.poppins(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          email.isNotEmpty ? email : 'User',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          phone.isNotEmpty ? phone : 'No phone added',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            color: Colors.white.withValues(alpha: 0.65),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Menu section & item ───────────────────────────────────────────────────────
 
 class _MenuSection extends StatelessWidget {
+  final String title;
   final List<_MenuItem> items;
-  const _MenuSection({required this.items});
+  const _MenuSection({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkSurface : AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Column(
-          children: [
-            for (int i = 0; i < items.length; i++) ...[
-              items[i],
-              if (i < items.length - 1)
-                Divider(
-                  height: 1,
-                  indent: 54,
-                  endIndent: 0,
-                  color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
-                ),
-            ],
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            title.toUpperCase(),
+            style: GoogleFonts.poppins(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textHint,
+              letterSpacing: 0.8,
+            ),
+          ),
         ),
-      ),
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border,
+              width: 0.7,
+            ),
+            boxShadow: isDark
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (int i = 0; i < items.length; i++) ...[
+                items[i],
+                if (i < items.length - 1)
+                  Divider(
+                    height: 1,
+                    indent: 52,
+                    color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border,
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -419,56 +528,49 @@ class _MenuSection extends StatelessWidget {
 class _MenuItem extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
-  final Color? iconBg;
   final String label;
-  final Color? labelColor;
   final Widget? trailing;
   final VoidCallback onTap;
 
   const _MenuItem({
     required this.icon,
     required this.iconColor,
-    this.iconBg,
     required this.label,
-    this.labelColor,
     this.trailing,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ScaleOnTap(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: iconBg ?? iconColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(icon, color: iconColor, size: 18),
+              child: Icon(icon, color: iconColor, size: 17),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 14.5,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: labelColor ?? Theme.of(context).colorScheme.onSurface,
+                  color: isDark ? Colors.white : AppColors.textPrimary,
                 ),
               ),
             ),
             trailing ??
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppTheme.inkFaint,
-                ),
+                Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textHint),
           ],
         ),
       ),
