@@ -460,7 +460,7 @@ class _PromoBannerCarouselState extends State<_PromoBannerCarousel> {
         return Column(
           children: [
             SizedBox(
-              height: 168,
+              height: 184,
               child: PageView.builder(
                 controller: _controller,
                 itemCount: pages.length,
@@ -496,7 +496,7 @@ class _PromoBannerCarouselState extends State<_PromoBannerCarousel> {
         baseColor: widget.isDark ? const Color(0xFF2A2A3E) : Colors.grey.shade300,
         highlightColor: widget.isDark ? const Color(0xFF3A3A4E) : Colors.grey.shade100,
         child: Container(
-          height: 168,
+          height: 184,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -684,7 +684,7 @@ class _StaticBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 168,
+      height: 184,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF3D1A78), Color(0xFF6A35B8)],

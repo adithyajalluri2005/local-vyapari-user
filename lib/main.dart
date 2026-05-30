@@ -46,11 +46,11 @@ void main() {
     // Debug provider in debug builds; Play Integrity / DeviceCheck in release.
     await FirebaseAppCheck.instance.activate(
       providerAndroid: kReleaseMode
-          ? AndroidAppCheckProvider.playIntegrity
-          : AndroidAppCheckProvider.debug,
+          ? const AndroidPlayIntegrityProvider()
+          : const AndroidDebugProvider(),
       providerApple: kReleaseMode
-          ? AppleAppCheckProvider.deviceCheck
-          : AppleAppCheckProvider.debug,
+          ? const AppleDeviceCheckProvider()
+          : const AppleDebugProvider(),
     );
 
     // Crashlytics: collect only in release builds.
