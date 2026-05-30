@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/core/theme/app_sizes.dart';
@@ -160,7 +160,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -223,8 +223,8 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           productId: product.id,
           initialRating: product.rating,
           initialTotalReviews: product.totalReviews,
-          builder: (context, rating, count) {
-            if (count == 0) return const SizedBox();
+          builder: (context, rating, itemCount) {
+            if (itemCount == 0) return const SizedBox();
             return Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: Row(
@@ -232,7 +232,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   const Icon(Icons.star, color: Colors.amber, size: 20),
                   const SizedBox(width: 4),
                   Text(
-                    '${rating.toStringAsFixed(1)} ($count ratings)',
+                    '${rating.toStringAsFixed(1)} ($itemCount ratings)',
                     style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.w500),
                   ),
                 ],
@@ -312,6 +312,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
+                        cacheManager: AppCacheManager(),
                         placeholder: (context, url) => Shimmer.fromColors(
                           baseColor: Colors.grey[300]!,
                           highlightColor: Colors.grey[100]!,
@@ -336,14 +337,14 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       shopId: shop.id,
                       initialRating: shop.rating,
                       initialTotalReviews: shop.totalReviews,
-                      builder: (context, rating, count) {
+                      builder: (context, rating, itemCount) {
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.star, size: 14, color: Colors.amber),
                             const SizedBox(width: 4),
                             Text(
-                              '${rating.toStringAsFixed(1)} ($count reviews)',
+                              '${rating.toStringAsFixed(1)} ($itemCount reviews)',
                               style: AppTextStyles.bodyMedium(context),
                             ),
                           ],
@@ -709,6 +710,7 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                       child: CachedNetworkImage(
                         imageUrl: widget.images[index],
                         fit: BoxFit.contain,
+                        cacheManager: AppCacheManager(),
                         placeholder: (context, url) => Shimmer.fromColors(
                           baseColor: Colors.grey[300]!,
                           highlightColor: Colors.grey[100]!,
@@ -788,6 +790,7 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                         child: CachedNetworkImage(
                           imageUrl: widget.images[index],
                           fit: BoxFit.cover,
+                          cacheManager: AppCacheManager(),
                           placeholder: (context, url) => Container(
                             color: Colors.grey[100],
                           ),
@@ -921,8 +924,8 @@ class _FullscreenImageItemState extends State<_FullscreenImageItem> {
     } else {
       final position = _doubleTapDetails!.localPosition;
       _transformationController.value = Matrix4.identity()
-        ..translate(-position.dx * 1.5, -position.dy * 1.5)
-        ..scale(2.5);
+        ..translateByDouble(-position.dx * 1.5, -position.dy * 1.5, 0, 1)
+        ..scaleByDouble(2.5, 2.5, 1, 1);
     }
   }
 
@@ -944,6 +947,7 @@ class _FullscreenImageItemState extends State<_FullscreenImageItem> {
         child: CachedNetworkImage(
           imageUrl: widget.imageUrl,
           fit: BoxFit.contain,
+          cacheManager: AppCacheManager(),
           placeholder: (context, url) => const Center(
             child: CircularProgressIndicator(color: Colors.white),
           ),

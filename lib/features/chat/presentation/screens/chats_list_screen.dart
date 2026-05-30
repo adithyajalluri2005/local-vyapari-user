@@ -8,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/chat_session.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
@@ -272,12 +273,13 @@ class _ShopAvatar extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: logo,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Shimmer.fromColors(
+                cacheManager: AppCacheManager(),
+                placeholder: (_, _) => Shimmer.fromColors(
                   baseColor: AppColors.border,
                   highlightColor: AppColors.surfaceElevated,
                   child: Container(color: Colors.white),
                 ),
-                errorWidget: (_, __, ___) => _Fallback(name: name),
+                errorWidget: (_, _, _) => _Fallback(name: name),
               )
             : _Fallback(name: name),
       ),
@@ -379,7 +381,7 @@ class _ShimmerList extends StatelessWidget {
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: 6,
-        itemBuilder: (_, __) => Padding(
+        itemBuilder: (_, _) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [

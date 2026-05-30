@@ -98,7 +98,6 @@ final notificationServiceProvider = Provider((ref) {
 });
 
 class NotificationService {
-  final Ref _ref;
   bool _initialized = false;
   final Set<String> _seenOfferIds = {};
   bool _firstLoadDone = false;
@@ -106,9 +105,8 @@ class NotificationService {
 
   StreamSubscription<DatabaseEvent>? _chatSubscription;
   final Map<String, int> _lastChatNotifyTs = {};
-  Timer? _offersTimer;
 
-  NotificationService(this._ref);
+  NotificationService(Ref _);
 
   void init() {
     if (_initialized) return;
@@ -315,7 +313,7 @@ class NotificationService {
     // Using periodic .get() instead of onValue avoids a 24/7 persistent connection
     // to the entire offers tree.
     _checkNewOffers();
-    _offersTimer = Timer.periodic(const Duration(minutes: 10), (_) => _checkNewOffers());
+    Timer.periodic(const Duration(minutes: 10), (_) => _checkNewOffers());
   }
 
   Future<void> _checkNewOffers() async {

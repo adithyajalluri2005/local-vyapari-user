@@ -512,7 +512,7 @@ class _TabletLayout extends StatelessWidget {
                               'assets/images/logo.png',
                               height: isLarge ? 80 : 64,
                               fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => Icon(
+                              errorBuilder: (_, _, _) => Icon(
                                 Icons.storefront_rounded,
                                 size: isLarge ? 64 : 52,
                                 color: Colors.white,

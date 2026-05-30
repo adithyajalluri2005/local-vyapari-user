@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
@@ -103,6 +104,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                           child: CachedNetworkImage(
                             imageUrl: shop.shopLogo.isNotEmpty ? shop.shopLogo : (shop.shopBanner.isNotEmpty ? shop.shopBanner : 'https://via.placeholder.com/600x300'),
                             fit: BoxFit.cover,
+                            cacheManager: AppCacheManager(),
                             placeholder: (context, url) => Shimmer.fromColors(
                               baseColor: Colors.grey[300]!,
                               highlightColor: Colors.grey[100]!,
@@ -189,6 +191,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               background: CachedNetworkImage(
                 imageUrl: shop.shopLogo.isNotEmpty ? shop.shopLogo : (shop.shopBanner.isNotEmpty ? shop.shopBanner : 'https://via.placeholder.com/600x300'),
                 fit: BoxFit.cover,
+                cacheManager: AppCacheManager(),
                 placeholder: (context, url) => Shimmer.fromColors(
                   baseColor: Colors.grey[300]!,
                   highlightColor: Colors.grey[100]!,
@@ -431,6 +434,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                   imageUrl: product.images.isNotEmpty ? product.images.first : '',
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  cacheManager: AppCacheManager(),
                   placeholder: (context, url) => Shimmer.fromColors(
                     baseColor: Colors.grey[300]!,
                     highlightColor: Colors.grey[100]!,

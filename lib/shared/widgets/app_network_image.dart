@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 
 /// A consistent network image with a shimmer placeholder and a branded
 /// fallback. Safely handles empty/invalid URLs (which would otherwise throw
@@ -40,6 +41,7 @@ class AppNetworkImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        cacheManager: AppCacheManager(),
         fadeInDuration: const Duration(milliseconds: 200),
         placeholder: (context, _) => Shimmer.fromColors(
           baseColor: shimmerBase,

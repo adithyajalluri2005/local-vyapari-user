@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -40,6 +41,12 @@ void main() {
     }
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Cap Firestore local persistence at 20 MB (default is 100 MB)
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: 20 * 1024 * 1024,
     );
 
     // Register background handler for push notifications when the app is closed/backgrounded

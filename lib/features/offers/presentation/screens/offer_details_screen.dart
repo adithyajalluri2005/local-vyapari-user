@@ -6,6 +6,7 @@ import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 
@@ -162,7 +163,7 @@ class OfferDetailsScreen extends ConsumerWidget {
                       CircleAvatar(
                         radius: 30,
                         backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        backgroundImage: shop.shopLogo.isNotEmpty ? CachedNetworkImageProvider(shop.shopLogo) : null,
+                        backgroundImage: shop.shopLogo.isNotEmpty ? CachedNetworkImageProvider(shop.shopLogo, cacheManager: AppCacheManager()) : null,
                         child: shop.shopLogo.isEmpty ? const Icon(Icons.store, color: AppTheme.primaryColor, size: 30) : null,
                       ),
                       const SizedBox(width: 16),

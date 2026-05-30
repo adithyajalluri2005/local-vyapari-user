@@ -60,7 +60,6 @@ CustomTransitionPage<T> buildPageWithTransition<T>({
             ),
           );
         case TransitionType.slide:
-        default:
           return SlideTransition(
             position: Tween<Offset>(
               begin: const Offset(1.0, 0.0),
@@ -85,11 +84,11 @@ class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen<AuthState>(
       authProvider,
-      (_, __) => notifyListeners(),
+      (_, _) => notifyListeners(),
     );
     _ref.listen(
       userProfileProvider,
-      (_, __) => notifyListeners(),
+      (_, _) => notifyListeners(),
     );
   }
 }

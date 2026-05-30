@@ -88,6 +88,7 @@ class FakeFirebaseAuth implements FirebaseAuth {
 
 class FakeDatabaseReference implements DatabaseReference {
   final Map<String, dynamic> data;
+  @override
   final String path;
   
   FakeDatabaseReference(this.data, {this.path = ''});

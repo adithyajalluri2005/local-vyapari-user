@@ -8,6 +8,7 @@ import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/features/favorites/providers/favorites_provider.dart';
 import 'package:local_vyapari_user/features/home/presentation/screens/main_navigation_screen.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:shimmer/shimmer.dart';
@@ -158,6 +159,7 @@ class FavoritesScreen extends ConsumerWidget {
             ? CachedNetworkImage(
                 imageUrl: url,
                 fit: BoxFit.cover,
+                cacheManager: AppCacheManager(),
                 placeholder: (context, url) => Shimmer.fromColors(
                   baseColor: Colors.grey[300]!,
                   highlightColor: Colors.grey[100]!,

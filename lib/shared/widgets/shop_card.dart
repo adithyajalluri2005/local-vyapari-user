@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
@@ -116,7 +117,7 @@ class _ShopAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: AppColors.surfaceElevated,
-      backgroundImage: CachedNetworkImageProvider(logoUrl),
+      backgroundImage: CachedNetworkImageProvider(logoUrl, cacheManager: AppCacheManager()),
     );
   }
 }

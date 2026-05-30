@@ -11,6 +11,7 @@ import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/search/providers/hybrid_search_provider.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/shop_card.dart';
 
@@ -557,8 +558,9 @@ class _ProductTile extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: product.images.first,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(color: AppColors.surfaceElevated),
-                        errorWidget: (_, __, ___) => _ProductImageFallback(),
+                        cacheManager: AppCacheManager(),
+                        placeholder: (_, _) => Container(color: AppColors.surfaceElevated),
+                        errorWidget: (_, _, _) => _ProductImageFallback(),
                       )
                     : _ProductImageFallback(),
               ),
@@ -795,8 +797,8 @@ class _ShimmerResults extends StatelessWidget {
       child: ListView.separated(
         padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12),
         itemCount: 6,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
-        itemBuilder: (_, __) => Container(
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemBuilder: (_, _) => Container(
           height: 72,
           decoration: BoxDecoration(
             color: Colors.white,

@@ -30,7 +30,7 @@ class SplashScreen extends ConsumerWidget {
                       'assets/images/logo.png',
                       height: 140,
                       fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(

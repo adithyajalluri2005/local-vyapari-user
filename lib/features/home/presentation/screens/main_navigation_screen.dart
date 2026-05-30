@@ -33,7 +33,7 @@ class MainNavigationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(navigationIndexProvider);
-    final onTap = (int i) => ref.read(navigationIndexProvider.notifier).setIndex(i);
+    void onTap(int i) => ref.read(navigationIndexProvider.notifier).setIndex(i);
 
     final screens = [
       HomeScreen(onSearchTap: () => onTap(1)),

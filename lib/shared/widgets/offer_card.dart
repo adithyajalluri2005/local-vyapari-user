@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
@@ -153,11 +154,12 @@ class _OfferImage extends StatelessWidget {
         height: 140,
         width: double.infinity,
         fit: BoxFit.cover,
-        placeholder: (_, __) => Container(
+        cacheManager: AppCacheManager(),
+        placeholder: (_, _) => Container(
           height: 140,
           color: AppColors.surfaceElevated,
         ),
-        errorWidget: (_, __, ___) => Container(
+        errorWidget: (_, _, _) => Container(
           height: 140,
           color: AppColors.surfaceElevated,
           child: const Icon(Icons.image_not_supported_outlined, color: AppColors.textHint),

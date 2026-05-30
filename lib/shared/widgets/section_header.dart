@@ -22,7 +22,7 @@ class SectionHeader extends StatelessWidget {
             color: isDark ? Colors.white : AppColors.textPrimary,
           ),
         ),
-        if (trailing != null) trailing!,
+        ?trailing,
       ],
     );
   }

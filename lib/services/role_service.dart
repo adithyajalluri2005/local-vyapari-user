@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class RoleService {
@@ -30,7 +31,7 @@ class RoleService {
         }
       }
     } catch (e) {
-      print("Error fetching roles from JWT claims: $e");
+      debugPrint("Error fetching roles from JWT claims: $e");
     }
 
     // Fallback to RTDB
@@ -47,7 +48,7 @@ class RoleService {
         );
       }
     } catch (e) {
-      print("Error fetching roles from database: $e");
+      debugPrint("Error fetching roles from database: $e");
     }
     return {};
   }
@@ -61,7 +62,7 @@ class RoleService {
       final snapshot = await _rtdb.ref('users').child(user.uid).child('activeRole').get();
       return snapshot.value?.toString();
     } catch (e) {
-      print("Error fetching activeRole: $e");
+      debugPrint("Error fetching activeRole: $e");
       return null;
     }
   }

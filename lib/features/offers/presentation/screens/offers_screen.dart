@@ -9,6 +9,7 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_offers_provider.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
+import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
@@ -44,7 +45,7 @@ class OffersScreen extends ConsumerWidget {
       body: offersAsync.when(
         skipLoadingOnReload: true,
         loading: () => _ShimmerOffers(hPad: hPad),
-        error: (_, __) => Center(
+        error: (_, _) => Center(
           child: Text(
             'Failed to load offers',
             style: GoogleFonts.poppins(color: AppColors.textHint),
@@ -155,7 +156,7 @@ class _ShopOffersCardState extends ConsumerState<_ShopOffersCard> {
                           color: AppColors.primary.withValues(alpha: 0.08),
                           image: shop.shopLogo.isNotEmpty
                               ? DecorationImage(
-                                  image: CachedNetworkImageProvider(shop.shopLogo),
+                                  image: CachedNetworkImageProvider(shop.shopLogo, cacheManager: AppCacheManager()),
                                   fit: BoxFit.cover,
                                 )
                               : null,
@@ -208,7 +209,7 @@ class _ShopOffersCardState extends ConsumerState<_ShopOffersCard> {
                 ],
               ),
             ),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
 
           Divider(height: 1, color: isDark ? Colors.white12 : AppColors.border),
@@ -627,7 +628,7 @@ class _ShimmerOffers extends StatelessWidget {
       child: ListView.builder(
         padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
         itemCount: 4,
-        itemBuilder: (_, __) => Container(
+        itemBuilder: (_, _) => Container(
           height: 210,
           margin: const EdgeInsets.only(bottom: 14),
           decoration: BoxDecoration(

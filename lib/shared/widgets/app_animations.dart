@@ -184,9 +184,9 @@ class _FadeIndexedStackState extends State<FadeIndexedStack>
 // ── AppPageRoute ─────────────────────────────────────────────────────────────
 class AppPageRoute {
   static Route<T> slideUp<T>({required Widget page}) => PageRouteBuilder<T>(
-        pageBuilder: (_, __, ___) => page,
+        pageBuilder: (_, _, _) => page,
         transitionDuration: const Duration(milliseconds: 350),
-        transitionsBuilder: (_, anim, __, child) => SlideTransition(
+        transitionsBuilder: (_, anim, _, child) => SlideTransition(
           position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
               .chain(CurveTween(curve: Curves.easeOutCubic))
               .animate(anim),
@@ -195,9 +195,9 @@ class AppPageRoute {
       );
 
   static Route<T> slideRight<T>({required Widget page}) => PageRouteBuilder<T>(
-        pageBuilder: (_, __, ___) => page,
+        pageBuilder: (_, _, _) => page,
         transitionDuration: const Duration(milliseconds: 300),
-        transitionsBuilder: (_, anim, __, child) => SlideTransition(
+        transitionsBuilder: (_, anim, _, child) => SlideTransition(
           position: Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero)
               .chain(CurveTween(curve: Curves.easeOutCubic))
               .animate(anim),
