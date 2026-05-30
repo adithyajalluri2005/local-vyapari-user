@@ -126,6 +126,12 @@ class ProfileScreen extends ConsumerWidget {
                                 onTap: () => _showThemeSheet(context, ref),
                               ),
                               _MenuItem(
+                                icon: Icons.shield_outlined,
+                                iconColor: AppColors.primary,
+                                label: 'Security',
+                                onTap: () => context.push('/security'),
+                              ),
+                              _MenuItem(
                                 icon: Icons.notifications_none_rounded,
                                 iconColor: AppColors.warning,
                                 label: 'Notification settings',

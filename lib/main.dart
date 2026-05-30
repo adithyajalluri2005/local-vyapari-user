@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -25,12 +28,6 @@ void main() {
       DeviceOrientation.portraitDown,
     ]);
 
-    // Catch Flutter framework errors (layout overflow, assertion failures, etc.)
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-      debugPrint('Flutter error: ${details.exceptionAsString()}\n${details.stack}');
-    };
-
     // Intercept layout and render-time errors to show a premium error screen instead of standard crash layout
     ErrorWidget.builder = (FlutterErrorDetails details) {
       return GlobalErrorScreen(details: details);
@@ -44,6 +41,31 @@ void main() {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // App Check: attests that requests come from a genuine, untampered build.
+    // Debug provider in debug builds; Play Integrity / DeviceCheck in release.
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kReleaseMode
+          ? AndroidAppCheckProvider.playIntegrity
+          : AndroidAppCheckProvider.debug,
+      providerApple: kReleaseMode
+          ? AppleAppCheckProvider.deviceCheck
+          : AppleAppCheckProvider.debug,
+    );
+
+    // Crashlytics: collect only in release builds.
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+
+    // Catch Flutter framework errors (layout overflow, assertion failures, etc.)
+    // and forward them to Crashlytics in release builds.
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      if (kDebugMode) {
+        debugPrint('Flutter error: ${details.exceptionAsString()}\n${details.stack}');
+      } else {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+      }
+    };
 
     // Cap Firestore local persistence at 20 MB (default is 100 MB)
     FirebaseFirestore.instance.settings = const Settings(
@@ -61,7 +83,11 @@ void main() {
       ),
     );
   }, (error, stackTrace) {
-    debugPrint('Uncaught error: $error\n$stackTrace');
+    if (kDebugMode) {
+      debugPrint('Uncaught error: $error\n$stackTrace');
+    } else {
+      FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
+    }
   });
 }
 

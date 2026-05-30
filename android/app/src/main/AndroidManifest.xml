@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
-        android:label="local_vyapari_user"
+        android:label="Local Vyapari"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <!-- Set custom default icon for FCM notifications -->

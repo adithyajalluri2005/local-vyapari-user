@@ -1,6 +1,6 @@
 {
-    "name": "local_vyapari_user",
-    "short_name": "local_vyapari_user",
+    "name": "Local Vyapari",
+    "short_name": "Local Vyapari",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

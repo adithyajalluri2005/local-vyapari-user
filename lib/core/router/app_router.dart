@@ -17,6 +17,7 @@ import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/features/shops/presentation/screens/hyperlocal_radar_screen.dart';
 import 'package:local_vyapari_user/features/chat/presentation/screens/chat_screen.dart';
 import 'package:local_vyapari_user/features/chat/presentation/screens/chats_list_screen.dart';
+import 'package:local_vyapari_user/features/security/presentation/screens/security_settings_screen.dart';
 
 enum TransitionType { slide, fade, scale, slideUp }
 
@@ -265,6 +266,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: context,
           state: state,
           child: const ChatsListScreen(),
+          transitionType: TransitionType.slide,
+        ),
+      ),
+      GoRoute(
+        path: '/security',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const SecuritySettingsScreen(),
           transitionType: TransitionType.slide,
         ),
       ),

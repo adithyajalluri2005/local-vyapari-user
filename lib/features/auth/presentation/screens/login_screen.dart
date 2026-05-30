@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,8 @@ import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/features/security/presentation/screens/mfa_challenge_screen.dart';
+import 'package:local_vyapari_user/services/security/social_auth_service.dart';
 import 'package:local_vyapari_user/shared/utils/input_sanitizer.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
 import 'package:local_vyapari_user/shared/widgets/primary_button.dart';
@@ -66,12 +70,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _handleSocial(Future<UserCredential?> Function() signIn) async {
+    try {
+      final credential = await signIn();
+      if (credential == null) return; // user cancelled
+      // The blocking beforeSignIn function syncs roles/claims; authStateChanges
+      // + the router redirect take it from here.
+    } on FirebaseAuthMultiFactorException catch (e) {
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => MfaChallengeScreen(resolver: e.resolver)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        CustomSnackBar.showError(
+            context: context, message: '$e', title: 'Sign in failed');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authProvider, (_, next) {
       if (next is AuthFailure) {
         CustomSnackBar.showError(context: context, message: next.message, title: 'Sign in failed');
         ref.read(authProvider.notifier).resetState();
+      } else if (next is AuthMfaRequired) {
+        final resolver = next.resolver;
+        ref.read(authProvider.notifier).resetState();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => MfaChallengeScreen(resolver: resolver)),
+        );
       }
     });
 
@@ -262,6 +292,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 isLoading: isLoading,
                                 onPressed: _submit,
                               ),
+                              const SizedBox(height: 20),
+
+                              // ── Social sign-in ──
+                              Row(
+                                children: [
+                                  const Expanded(child: Divider()),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Text('or continue with',
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 12, color: AppColors.textHint)),
+                                  ),
+                                  const Expanded(child: Divider()),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              OutlinedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : () => _handleSocial(ref
+                                        .read(socialAuthServiceProvider)
+                                        .signInWithGoogle),
+                                icon: const Icon(Icons.g_mobiledata, size: 28),
+                                label: const Text('Continue with Google'),
+                              ),
+                              if (Platform.isIOS || Platform.isMacOS) ...[
+                                const SizedBox(height: 10),
+                                OutlinedButton.icon(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () => _handleSocial(ref
+                                          .read(socialAuthServiceProvider)
+                                          .signInWithApple),
+                                  icon: const Icon(Icons.apple, size: 24),
+                                  label: const Text('Continue with Apple'),
+                                ),
+                              ],
                               const SizedBox(height: 20),
 
                               Row(
