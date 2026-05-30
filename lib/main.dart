@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,35 +14,45 @@ import 'package:local_vyapari_user/services/notifications/notification_service.d
 import 'package:local_vyapari_user/shared/widgets/global_error_screen.dart';
 import 'package:local_vyapari_user/shared/widgets/connectivity_banner.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  
-  // Intercept layout and render-time errors to show a premium error screen instead of standard crash layout
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return GlobalErrorScreen(details: details);
-  };
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Failed to load .env file: $e");
-  }
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Register background handler for push notifications when the app is closed/backgrounded
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // Catch Flutter framework errors (layout overflow, assertion failures, etc.)
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('Flutter error: ${details.exceptionAsString()}\n${details.stack}');
+    };
 
-  runApp(
-    const ProviderScope(
-      child: LocalVyapariApp(),
-    ),
-  );
+    // Intercept layout and render-time errors to show a premium error screen instead of standard crash layout
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return GlobalErrorScreen(details: details);
+    };
+
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("Failed to load .env file: $e");
+    }
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Register background handler for push notifications when the app is closed/backgrounded
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    runApp(
+      const ProviderScope(
+        child: LocalVyapariApp(),
+      ),
+    );
+  }, (error, stackTrace) {
+    debugPrint('Uncaught error: $error\n$stackTrace');
+  });
 }
 
 class LocalVyapariApp extends ConsumerWidget {
