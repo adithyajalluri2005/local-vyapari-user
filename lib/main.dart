@@ -7,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/theme_provider.dart';
@@ -17,7 +18,8 @@ import 'package:local_vyapari_user/shared/widgets/connectivity_banner.dart';
 
 void main() {
   runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+    final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -52,6 +54,7 @@ void main() {
     // Register background handler for push notifications when the app is closed/backgrounded
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
+    FlutterNativeSplash.remove();
     runApp(
       const ProviderScope(
         child: LocalVyapariApp(),

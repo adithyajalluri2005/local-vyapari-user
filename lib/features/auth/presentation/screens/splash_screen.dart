@@ -14,9 +14,9 @@ class SplashScreen extends ConsumerWidget {
     ref.watch(authProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.background,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -35,12 +35,12 @@ class SplashScreen extends ConsumerWidget {
                         height: 100,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.12),
+                          color: AppColors.primary.withValues(alpha: 0.08),
                         ),
                         child: const Icon(
                           Icons.storefront_rounded,
                           size: 50,
-                          color: Colors.white,
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
@@ -50,7 +50,7 @@ class SplashScreen extends ConsumerWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -59,7 +59,7 @@ class SplashScreen extends ConsumerWidget {
                       'Discover · Shop · Support Local',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.65),
+                        color: AppColors.textSecondary,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -71,7 +71,7 @@ class SplashScreen extends ConsumerWidget {
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: AppColors.primary,
                   strokeWidth: 2.0,
                 ),
               ),
