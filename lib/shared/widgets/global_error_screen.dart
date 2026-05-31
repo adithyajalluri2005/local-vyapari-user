@@ -18,11 +18,15 @@ class _GlobalErrorScreenState extends State<GlobalErrorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final platformBrightness = MediaQuery.platformBrightnessOf(context);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: Scaffold(
-        backgroundColor: Colors.grey[50],
+      darkTheme: AppTheme.darkTheme,
+      themeMode: platformBrightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+      home: Builder(builder: (innerContext) {
+        final cs = Theme.of(innerContext).colorScheme;
+        return Scaffold(
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -46,17 +50,17 @@ class _GlobalErrorScreenState extends State<GlobalErrorScreen> {
                   Text(
                     'An Unexpected Error Occurred',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: Theme.of(innerContext).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: cs.onSurface,
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'We\'ve logged this error and are working on fixing it. You can attempt to reload the app or go back.',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                    style: Theme.of(innerContext).textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 32),
@@ -65,11 +69,8 @@ class _GlobalErrorScreenState extends State<GlobalErrorScreen> {
                     children: [
                       ElevatedButton.icon(
                         onPressed: () {
-                          // Simple solution to reload is to force the app to recreate the root layout
-                          // by returning to the landing screen or using native reloads.
-                          // Here we fallback to navigating back to home.
                           try {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
+                            Navigator.of(innerContext).popUntil((route) => route.isFirst);
                           } catch (_) {}
                         },
                         icon: const Icon(Icons.refresh_rounded),
@@ -93,14 +94,14 @@ class _GlobalErrorScreenState extends State<GlobalErrorScreen> {
                       });
                     },
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey[300]!),
+                      side: BorderSide(color: cs.outline),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                     child: Text(
                       _showDetails ? 'Hide Technical Details' : 'Show Technical Details',
-                      style: TextStyle(color: Colors.grey[700]),
+                      style: TextStyle(color: cs.onSurfaceVariant),
                     ),
                   ),
                   if (_showDetails) ...[
@@ -129,7 +130,8 @@ class _GlobalErrorScreenState extends State<GlobalErrorScreen> {
             ),
           ),
         ),
-      ),
+      );
+      }),
     );
   }
 }

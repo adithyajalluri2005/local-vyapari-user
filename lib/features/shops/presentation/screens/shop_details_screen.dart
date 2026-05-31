@@ -105,12 +105,15 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                             imageUrl: shop.shopLogo.isNotEmpty ? shop.shopLogo : (shop.shopBanner.isNotEmpty ? shop.shopBanner : 'https://via.placeholder.com/600x300'),
                             fit: BoxFit.cover,
                             cacheManager: AppCacheManager(),
-                            placeholder: (context, url) => Shimmer.fromColors(
-                              baseColor: Colors.grey[300]!,
-                              highlightColor: Colors.grey[100]!,
-                              child: Container(color: Colors.white),
-                            ),
-                            errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.store, size: 50)),
+                            placeholder: (ctx, url) {
+                              final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                              return Shimmer.fromColors(
+                                baseColor: isDark ? const Color(0xFF222C36) : Colors.grey.shade300,
+                                highlightColor: isDark ? const Color(0xFF2C3742) : Colors.grey.shade100,
+                                child: Container(color: isDark ? const Color(0xFF1E1E2E) : Colors.white),
+                              );
+                            },
+                            errorWidget: (ctx, url, error) => Container(color: Theme.of(ctx).colorScheme.surfaceContainerHighest, child: const Icon(Icons.store, size: 50)),
                           ),
                         ),
                       ),
@@ -197,7 +200,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                   highlightColor: Colors.grey[100]!,
                   child: Container(color: Colors.white),
                 ),
-                errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.store, size: 50)),
+                errorWidget: (ctx, url, error) => Container(color: Theme.of(ctx).colorScheme.surfaceContainerHighest, child: const Icon(Icons.store, size: 50)),
               ),
             ),
           ),
@@ -440,7 +443,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     highlightColor: Colors.grey[100]!,
                     child: Container(color: Colors.white),
                   ),
-                  errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.image)),
+                  errorWidget: (ctx, url, error) => Container(color: Theme.of(ctx).colorScheme.surfaceContainerHighest, child: const Icon(Icons.image)),
                 ),
               ),
             ),
@@ -578,16 +581,21 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
   }
 
   Widget _buildReviewsShimmer(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shimmerBase = isDark ? const Color(0xFF222C36) : Colors.grey.shade300;
+    final shimmerHi = isDark ? const Color(0xFF2C3742) : Colors.grey.shade100;
+    final shimmerBlock = isDark ? const Color(0xFF1E1E2E) : Colors.white;
+    final cs = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
+      baseColor: shimmerBase,
+      highlightColor: shimmerHi,
       child: Column(
         children: List.generate(3, (index) => Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            side: BorderSide(color: Colors.grey[200]!),
+            side: BorderSide(color: cs.outline),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -596,26 +604,18 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 20,
-                      backgroundColor: Colors.white,
+                      backgroundColor: shimmerBlock,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 100,
-                            height: 12,
-                            color: Colors.white,
-                          ),
+                          Container(width: 100, height: 12, color: shimmerBlock),
                           const SizedBox(height: 6),
-                          Container(
-                            width: 60,
-                            height: 10,
-                            color: Colors.white,
-                          ),
+                          Container(width: 60, height: 10, color: shimmerBlock),
                         ],
                       ),
                     ),
@@ -623,30 +623,18 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                       width: 40,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: shimmerBlock,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  height: 14,
-                  color: Colors.white,
-                ),
+                Container(width: double.infinity, height: 14, color: shimmerBlock),
                 const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  height: 14,
-                  color: Colors.white,
-                ),
+                Container(width: double.infinity, height: 14, color: shimmerBlock),
                 const SizedBox(height: 6),
-                Container(
-                  width: 150,
-                  height: 14,
-                  color: Colors.white,
-                ),
+                Container(width: 150, height: 14, color: shimmerBlock),
               ],
             ),
           ),

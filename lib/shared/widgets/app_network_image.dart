@@ -46,7 +46,7 @@ class AppNetworkImage extends StatelessWidget {
         placeholder: (context, _) => Shimmer.fromColors(
           baseColor: shimmerBase,
           highlightColor: shimmerHi,
-          child: Container(width: width, height: height, color: Colors.white),
+          child: Container(width: width, height: height, color: shimmerBase),
         ),
         errorWidget: (context, _, _) => _fallback(muted),
       );

@@ -16,12 +16,13 @@ class RatingBreakdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: Colors.grey[150] ?? Colors.grey[200]!),
+        border: Border.all(color: cs.outline),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -40,10 +41,10 @@ class RatingBreakdown extends StatelessWidget {
                     children: [
                       Text(
                         averageRating > 0 ? averageRating.toStringAsFixed(1) : '—',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.w900,
-                          color: Colors.black87,
+                          color: cs.onSurface,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -58,18 +59,18 @@ class RatingBreakdown extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$totalCount ratings',
-                  style: AppTextStyles.bodyMedium(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                  style: AppTextStyles.bodyMedium(context, color: cs.onSurfaceVariant, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-          
+
           // Divider between left and right
           Container(
             height: 100,
             width: 1,
-            color: Colors.grey[200],
+            color: cs.outline,
             margin: const EdgeInsets.symmetric(horizontal: 16),
           ),
 
@@ -82,7 +83,7 @@ class RatingBreakdown extends StatelessWidget {
                 final starNum = 5 - index;
                 final count = distribution[starNum] ?? 0;
                 final percentage = totalCount > 0 ? (count / totalCount) : 0.0;
-                
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2.0),
                   child: Row(
@@ -95,17 +96,17 @@ class RatingBreakdown extends StatelessWidget {
                           children: [
                             Text(
                               '$starNum',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: cs.onSurface,
                               ),
                             ),
-                            const Text(
+                            Text(
                               '★',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey,
+                                color: cs.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -118,7 +119,7 @@ class RatingBreakdown extends StatelessWidget {
                           height: 6,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(3),
-                            color: Colors.grey[100],
+                            color: cs.surfaceContainerHighest,
                           ),
                           child: FractionallySizedBox(
                             alignment: Alignment.centerLeft,
@@ -140,7 +141,7 @@ class RatingBreakdown extends StatelessWidget {
                           '$count',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: cs.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.left,

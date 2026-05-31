@@ -313,11 +313,14 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         height: 48,
                         fit: BoxFit.cover,
                         cacheManager: AppCacheManager(),
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(color: Colors.white),
-                        ),
+                        placeholder: (ctx, url) {
+                          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                          return Shimmer.fromColors(
+                            baseColor: isDark ? const Color(0xFF222C36) : Colors.grey.shade300,
+                            highlightColor: isDark ? const Color(0xFF2C3742) : Colors.grey.shade100,
+                            child: Container(color: isDark ? const Color(0xFF1E1E2E) : Colors.white),
+                          );
+                        },
                         errorWidget: (context, url, error) => const Icon(Icons.store),
                       )
                     : const CircleAvatar(
@@ -503,16 +506,21 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   }
 
   Widget _buildReviewsShimmer(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shimmerBase = isDark ? const Color(0xFF222C36) : Colors.grey.shade300;
+    final shimmerHi = isDark ? const Color(0xFF2C3742) : Colors.grey.shade100;
+    final shimmerBlock = isDark ? const Color(0xFF1E1E2E) : Colors.white;
+    final cs = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
+      baseColor: shimmerBase,
+      highlightColor: shimmerHi,
       child: Column(
         children: List.generate(3, (index) => Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            side: BorderSide(color: Colors.grey[200]!),
+            side: BorderSide(color: cs.outline),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -521,26 +529,18 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 20,
-                      backgroundColor: Colors.white,
+                      backgroundColor: shimmerBlock,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 100,
-                            height: 12,
-                            color: Colors.white,
-                          ),
+                          Container(width: 100, height: 12, color: shimmerBlock),
                           const SizedBox(height: 6),
-                          Container(
-                            width: 60,
-                            height: 10,
-                            color: Colors.white,
-                          ),
+                          Container(width: 60, height: 10, color: shimmerBlock),
                         ],
                       ),
                     ),
@@ -548,30 +548,18 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       width: 40,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: shimmerBlock,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  height: 14,
-                  color: Colors.white,
-                ),
+                Container(width: double.infinity, height: 14, color: shimmerBlock),
                 const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  height: 14,
-                  color: Colors.white,
-                ),
+                Container(width: double.infinity, height: 14, color: shimmerBlock),
                 const SizedBox(height: 6),
-                Container(
-                  width: 150,
-                  height: 14,
-                  color: Colors.white,
-                ),
+                Container(width: 150, height: 14, color: shimmerBlock),
               ],
             ),
           ),
@@ -711,11 +699,14 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                         imageUrl: widget.images[index],
                         fit: BoxFit.contain,
                         cacheManager: AppCacheManager(),
-                        placeholder: (context, url) => Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.grey[100]!,
-                          child: Container(color: Colors.white),
-                        ),
+                        placeholder: (ctx, url) {
+                          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                          return Shimmer.fromColors(
+                            baseColor: isDark ? const Color(0xFF222C36) : Colors.grey.shade300,
+                            highlightColor: isDark ? const Color(0xFF2C3742) : Colors.grey.shade100,
+                            child: Container(color: isDark ? const Color(0xFF1E1E2E) : Colors.white),
+                          );
+                        },
                         errorWidget: (context, url, error) => Container(
                           color: Colors.grey[200],
                           child: const Icon(Icons.image, size: 50, color: Colors.grey),
@@ -764,13 +755,15 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                   final isSelected = index == _currentIndex;
                   return GestureDetector(
                     onTap: () => _goToPage(index),
-                    child: Container(
+                    child: Builder(builder: (ctx) {
+                      final cs = Theme.of(ctx).colorScheme;
+                      return Container(
                       width: 60,
                       margin: const EdgeInsets.symmetric(horizontal: 5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cs.surface,
                         border: Border.all(
-                          color: isSelected ? AppTheme.primaryColor : Colors.grey[300]!,
+                          color: isSelected ? AppTheme.primaryColor : cs.outline,
                           width: isSelected ? 2.5 : 1.0,
                         ),
                         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -791,17 +784,18 @@ class _ProductImageGalleryState extends State<ProductImageGallery> {
                           imageUrl: widget.images[index],
                           fit: BoxFit.cover,
                           cacheManager: AppCacheManager(),
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[100],
+                          placeholder: (pCtx, url) => Container(
+                            color: Theme.of(pCtx).colorScheme.surfaceContainerHighest,
                           ),
-                          errorWidget: (context, url, error) => const Icon(
+                          errorWidget: (pCtx, url, error) => Icon(
                             Icons.image,
                             size: 20,
-                            color: Colors.grey,
+                            color: Theme.of(pCtx).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
-                    ),
+                    );
+                    }),
                   );
                 },
               ),

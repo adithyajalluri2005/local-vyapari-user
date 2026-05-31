@@ -30,12 +30,13 @@ class _ReviewCardState extends State<ReviewCard> {
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('dd MMM yyyy').format(widget.createdAt);
     
+    final cs = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(color: Colors.grey[200]!),
+        side: BorderSide(color: cs.outline),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -69,7 +70,7 @@ class _ReviewCardState extends State<ReviewCard> {
                       ),
                       Text(
                         formattedDate,
-                        style: AppTextStyles.bodyMedium(context, color: Colors.grey[500]),
+                        style: AppTextStyles.bodyMedium(context, color: cs.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -109,7 +110,7 @@ class _ReviewCardState extends State<ReviewCard> {
                 builder: (context, constraints) {
                   final textSpan = TextSpan(
                     text: widget.comment,
-                    style: AppTextStyles.bodyLarge(context, color: Colors.grey[800], height: 1.4),
+                    style: AppTextStyles.bodyLarge(context, color: cs.onSurface, height: 1.4),
                   );
 
                   final textPainter = TextPainter(
@@ -130,7 +131,7 @@ class _ReviewCardState extends State<ReviewCard> {
                         alignment: Alignment.topLeft,
                         child: Text(
                           widget.comment,
-                          style: AppTextStyles.bodyLarge(context, color: Colors.grey[800], height: 1.4),
+                          style: AppTextStyles.bodyLarge(context, color: cs.onSurface, height: 1.4),
                           maxLines: _isExpanded ? null : _maxLinesLimit,
                           overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                         ),

@@ -149,25 +149,27 @@ class FavoritesScreen extends ConsumerWidget {
   }
 
   Widget _buildImage(String url, IconData fallbackIcon, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
       child: Container(
         width: 60,
         height: 60,
-        color: Colors.grey[200],
+        color: cs.surfaceContainerHighest,
         child: url.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: url,
                 fit: BoxFit.cover,
                 cacheManager: AppCacheManager(),
-                placeholder: (context, url) => Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(color: Colors.white),
+                placeholder: (ctx, url) => Shimmer.fromColors(
+                  baseColor: isDark ? const Color(0xFF222C36) : Colors.grey.shade300,
+                  highlightColor: isDark ? const Color(0xFF2C3742) : Colors.grey.shade100,
+                  child: Container(color: isDark ? const Color(0xFF1E1E2E) : Colors.white),
                 ),
-                errorWidget: (context, url, error) => Icon(fallbackIcon, color: Colors.grey),
+                errorWidget: (ctx, url, error) => Icon(fallbackIcon, color: cs.onSurfaceVariant),
               )
-            : Icon(fallbackIcon, color: Colors.grey),
+            : Icon(fallbackIcon, color: cs.onSurfaceVariant),
       ),
     );
   }
