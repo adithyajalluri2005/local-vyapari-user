@@ -10,6 +10,7 @@ class Shop {
   final String shopBanner;
   final bool isVerified;
   final bool isOpen;
+  final bool storedIsOpen; // raw vendor-set value before schedule computation
   final String? openingTime;
   final String? closingTime;
   final double rating;
@@ -27,6 +28,7 @@ class Shop {
     required this.shopBanner,
     required this.isVerified,
     required this.isOpen,
+    required this.storedIsOpen,
     this.openingTime,
     this.closingTime,
     required this.rating,
@@ -37,6 +39,7 @@ class Shop {
 
   factory Shop.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
+    final rawIsOpen = data['isOpen'] as bool? ?? false;
     return Shop(
       id: doc.id,
       ownerId: data['ownerId'] ?? '',
@@ -46,9 +49,14 @@ class Shop {
       shopLogo: data['shopLogo'] ?? '',
       shopBanner: data['shopBanner'] ?? '',
       isVerified: data['isVerified'] ?? false,
-      isOpen: data['isOpen'] ?? false,
-      openingTime: data['openingTime'],
-      closingTime: data['closingTime'],
+      storedIsOpen: rawIsOpen,
+      isOpen: _computeIsOpen(
+        data['openingTime']?.toString(),
+        data['closingTime']?.toString(),
+        rawIsOpen,
+      ),
+      openingTime: data['openingTime']?.toString(),
+      closingTime: data['closingTime']?.toString(),
       rating: (data['rating'] ?? 0.0).toDouble(),
       totalReviews: data['totalReviews'] ?? 0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
@@ -56,9 +64,33 @@ class Shop {
     );
   }
 
+  // Computes whether the shop is currently open.
+  // Manual close (storedIsOpen == false) always wins over scheduled hours,
+  // so a vendor can close early or for an emergency even within their hours.
+  static bool _computeIsOpen(String? openingTime, String? closingTime, bool storedIsOpen) {
+    if (!storedIsOpen) return false; // Vendor manually closed → always closed
+    if (openingTime == null || closingTime == null) return storedIsOpen;
+    try {
+      final openParts = openingTime.split(':');
+      final closeParts = closingTime.split(':');
+      if (openParts.length < 2 || closeParts.length < 2) return storedIsOpen;
+      final now = DateTime.now();
+      final currentMinutes = now.hour * 60 + now.minute;
+      final openMinutes = int.parse(openParts[0]) * 60 + int.parse(openParts[1]);
+      final closeMinutes = int.parse(closeParts[0]) * 60 + int.parse(closeParts[1]);
+      if (closeMinutes <= openMinutes) {
+        // Overnight span (e.g. open 22:00 → close 06:00)
+        return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+      }
+      return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+    } catch (_) {
+      return storedIsOpen;
+    }
+  }
+
   factory Shop.fromRTDB(String id, Map<dynamic, dynamic> map) {
     final String addressStr = map['address'] ?? '';
-    
+
     // Attempt to extract city from address (e.g. "Venkatarayapuram, Tanuku, ...")
     String cityStr = map['city'] ?? '';
     if (cityStr.isEmpty && addressStr.isNotEmpty) {
@@ -74,6 +106,10 @@ class Shop {
       cityStr = 'Unknown City';
     }
 
+    final openingTime = map['openingTime']?.toString();
+    final closingTime = map['closingTime']?.toString();
+    final rawIsOpen = map['isOpen'] as bool? ?? false;
+
     return Shop(
       id: id,
       ownerId: map['ownerId'] ?? map['id'] ?? id,
@@ -83,9 +119,10 @@ class Shop {
       shopLogo: map['logoUrl'] ?? map['shopLogo'] ?? '',
       shopBanner: map['bannerUrl'] ?? map['shopBanner'] ?? '',
       isVerified: map['isVerified'] ?? false,
-      isOpen: map['isOpen'] ?? true,
-      openingTime: map['openingTime'],
-      closingTime: map['closingTime'],
+      storedIsOpen: rawIsOpen,
+      isOpen: _computeIsOpen(openingTime, closingTime, rawIsOpen),
+      openingTime: openingTime,
+      closingTime: closingTime,
       rating: (map['rating'] ?? 0.0).toDouble(),
       totalReviews: map['totalReviews'] ?? 0,
       createdAt: map['createdAt'] != null 

@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function validReview(data) {
+      return data.userId is string
+        && data.rating is number
+        && data.rating >= 1
+        && data.rating <= 5
+        && data.comment is string
+        && data.comment.size() <= 1000
+        && data.userDisplayName is string
+        && data.userDisplayName.size() <= 120;
+    }
+
+    match /searchable_shops/{shopId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /shop_reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isOwner(request.resource.data.userId)
+        && validReview(request.resource.data)
+        && request.resource.data.shopId is string
+        && reviewId == request.auth.uid + "_" + request.resource.data.shopId;
+      allow delete: if false;
+    }
+
+    match /product_reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isOwner(request.resource.data.userId)
+        && validReview(request.resource.data)
+        && request.resource.data.productId is string
+        && request.resource.data.shopId is string
+        && reviewId == request.auth.uid + "_" + request.resource.data.productId;
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
@@ -32,7 +34,8 @@ final queryCenterProvider = Provider<GeoPoint?>((ref) {
   }
 
   final newCenter = GeoPoint(loc.latitude, loc.longitude);
-  Future.microtask(() => ref.read(lastQueryCenterProvider.notifier).setCenter(newCenter));
+  Future.microtask(
+      () => ref.read(lastQueryCenterProvider.notifier).setCenter(newCenter));
   return newCenter;
 });
 
@@ -47,10 +50,6 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
   final sortingLat = userLocation?.latitude ?? centerPoint.latitude;
   final sortingLng = userLocation?.longitude ?? centerPoint.longitude;
 
-  // Tracks whether the UI has already received data. If it has, a later fetch
-  // failure leaves the cached data on screen (stale-while-revalidate); if it
-  // hasn't, the failure is rethrown so the UI shows an error instead of an
-  // endless loading state.
   var hasYielded = false;
 
   // 1. Serve cache immediately (stale-while-revalidate)
@@ -71,14 +70,7 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
     debugPrint('Error yielding cached shops: $e');
   }
 
-  // 2. Geo-bounded query against the Cloud-Function-maintained Firestore index
-  //    (searchable_shops, populated by onShopProfileUpdate with a geopoint).
-  //    Only shops within the radius are returned, so transferred data scales with
-  //    nearby shops — not with the total number of shops in the system.
-  //    Shops without valid coordinates are never indexed, so unconfigured shops
-  //    can never surface here.
-  //    Provider re-runs automatically when queryCenterProvider changes (user moves
-  //    >300 m) or when ref.invalidate(nearbyShopsProvider) is called (pull-to-refresh).
+  // 2. Geo-bounded Firestore query for nearby shop IDs (index only — one-time)
   try {
     final geoRef = GeoCollectionReference<Map<String, dynamic>>(
       FirebaseFirestore.instance.collection('searchable_shops'),
@@ -99,40 +91,85 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
       return;
     }
 
-    // Fetch the full shop records for just the nearby IDs (bounded fan-out).
-    final shopSnaps = await Future.wait(
-      shopIds.map((id) => FirebaseDatabase.instance.ref('shop/$id').get()),
-    );
+    // 3. Real-time RTDB listeners for each shop.
+    //    Any field change (including isOpen toggle) emits immediately.
+    final Map<String, Shop> shopMap = {};
+    final controller = StreamController<List<Shop>>();
+    final subscriptions = <StreamSubscription>[];
 
-    final List<({Shop shop, double dist})> withDist = [];
-    for (int i = 0; i < shopSnaps.length; i++) {
-      final snap = shopSnaps[i];
-      if (!snap.exists || snap.value == null) continue;
-      try {
-        final shop = Shop.fromRTDB(
-          shopIds[i],
-          Map<dynamic, dynamic>.from(snap.value as Map),
-        );
-        final d = Geolocator.distanceBetween(
+    List<Shop> buildSorted() {
+      final list = shopMap.values.toList();
+      list.sort((a, b) {
+        final dA = Geolocator.distanceBetween(
           sortingLat, sortingLng,
-          shop.location.latitude, shop.location.longitude,
+          a.location.latitude, a.location.longitude,
         );
-        if (d <= 15000.0) withDist.add((shop: shop, dist: d));
-      } catch (e) {
-        debugPrint('Error parsing shop: $e');
-      }
+        final dB = Geolocator.distanceBetween(
+          sortingLat, sortingLng,
+          b.location.latitude, b.location.longitude,
+        );
+        return dA.compareTo(dB);
+      });
+      return list;
     }
 
-    withDist.sort((a, b) => a.dist.compareTo(b.dist));
-    final sortedShops = withDist.map((e) => e.shop).toList();
+    for (final id in shopIds) {
+      final sub = FirebaseDatabase.instance
+          .ref('shop/$id')
+          .onValue
+          .listen(
+        (event) {
+          if (event.snapshot.exists && event.snapshot.value != null) {
+            try {
+              final shop = Shop.fromRTDB(
+                id,
+                Map<dynamic, dynamic>.from(event.snapshot.value as Map),
+              );
+              final d = Geolocator.distanceBetween(
+                sortingLat, sortingLng,
+                shop.location.latitude, shop.location.longitude,
+              );
+              if (d <= 15000.0) {
+                shopMap[id] = shop;
+              } else {
+                shopMap.remove(id);
+              }
+            } catch (e) {
+              debugPrint('Error parsing shop $id: $e');
+            }
+          } else {
+            shopMap.remove(id);
+          }
 
-    await DataCacheService.cacheShops(sortedShops);
-    await DataCacheService.cacheLastLocation(sortingLat, sortingLng);
-    yield sortedShops;
-    hasYielded = true;
+          if (!controller.isClosed) {
+            controller.add(buildSorted());
+          }
+        },
+        onError: (e) => debugPrint('RTDB stream error for $id: $e'),
+      );
+      subscriptions.add(sub);
+    }
+
+    ref.onDispose(() {
+      for (final sub in subscriptions) { sub.cancel(); }
+      if (!controller.isClosed) controller.close();
+    });
+
+    // Stream and yield live shop lists as RTDB pushes changes
+    var firstEmission = true;
+    await for (final shops in controller.stream) {
+      if (firstEmission) {
+        firstEmission = false;
+        try {
+          await DataCacheService.cacheShops(shops);
+          await DataCacheService.cacheLastLocation(sortingLat, sortingLng);
+        } catch (_) {}
+      }
+      yield shops;
+      hasYielded = true;
+    }
   } catch (e) {
-    debugPrint('Error fetching shops: $e');
-    // Nothing on screen yet → surface the error instead of hanging on loading.
+    debugPrint('Error in nearbyShopsProvider: $e');
     if (!hasYielded) rethrow;
   }
 });

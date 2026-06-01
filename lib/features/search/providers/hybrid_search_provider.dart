@@ -15,7 +15,11 @@ class HybridSearchResult {
   final List<Shop> shops;
   final bool isCapped;
 
-  const HybridSearchResult({this.products = const [], this.shops = const [], this.isCapped = false});
+  const HybridSearchResult({
+    this.products = const [],
+    this.shops = const [],
+    this.isCapped = false,
+  });
 }
 
 class LocationUnavailableException implements Exception {}
@@ -24,7 +28,7 @@ class NetworkOfflineException implements Exception {}
 class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
   Timer? _debounceTimer;
   StreamSubscription? _searchSubscription;
-  final double searchRadiusKm = 15.0; // Fixed 15km radius
+  final double searchRadiusKm = 15.0;
 
   @override
   AsyncValue<HybridSearchResult> build() {
@@ -35,8 +39,13 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
     return const AsyncValue.data(HybridSearchResult());
   }
 
-  void search(String query) {
-    if (query.trim().isEmpty) {
+  void search(String query, {String? category}) {
+    final trimmedQuery = query.trim();
+    final bool hasQuery = trimmedQuery.isNotEmpty;
+    final bool hasCategory = category != null && category.isNotEmpty;
+
+    if (!hasQuery && !hasCategory) {
+      _debounceTimer?.cancel();
       _searchSubscription?.cancel();
       state = const AsyncValue.data(HybridSearchResult());
       return;
@@ -45,7 +54,7 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
     _debounceTimer?.cancel();
     _searchSubscription?.cancel();
     state = const AsyncValue.loading();
-    
+
     _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
       try {
         final locationResult = ref.read(activeBrowsingLocationProvider).value;
@@ -57,7 +66,6 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
         final double centerLat = locationResult.latitude;
         final double centerLng = locationResult.longitude;
 
-        // 1. Fetch nearby shops from RTDB
         final nearbyShops = ref.read(nearbyShopsProvider).value ?? [];
         if (nearbyShops.isEmpty) {
           state = const AsyncValue.data(HybridSearchResult());
@@ -67,63 +75,74 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
         final Map<String, double> shopDistances = {};
         for (final shop in nearbyShops) {
           shopDistances[shop.id] = Geolocator.distanceBetween(
-            centerLat,
-            centerLng,
-            shop.location.latitude,
-            shop.location.longitude,
+            centerLat, centerLng,
+            shop.location.latitude, shop.location.longitude,
           );
         }
 
         final bool isCapped = nearbyShops.length > 10;
         final closestShops = nearbyShops.take(10).toList();
 
-        // 2. Fetch products for these nearby shops
-        final List<Product> nearbyProducts = [];
-        final futures = closestShops.map((shop) =>
-          FirebaseDatabase.instance.ref('products/${shop.id}').get()
+        // Fetch products for nearby shops in parallel
+        final futures = closestShops.map(
+          (shop) => FirebaseDatabase.instance.ref('products/${shop.id}').get(),
         );
         final snapshots = await Future.wait(futures);
 
+        final List<Product> nearbyProducts = [];
         for (int i = 0; i < snapshots.length; i++) {
-          final productsSnapshot = snapshots[i];
+          final snap = snapshots[i];
           final shopId = closestShops[i].id;
-          if (productsSnapshot.exists && productsSnapshot.value != null) {
-            final productsMap = productsSnapshot.value as Map<dynamic, dynamic>;
-            productsMap.forEach((key, value) {
+          if (snap.exists && snap.value != null) {
+            final map = snap.value as Map<dynamic, dynamic>;
+            map.forEach((key, value) {
               if (value is Map) {
                 try {
-                  nearbyProducts.add(Product.fromRTDB(
-                    key.toString(), shopId, Map<dynamic, dynamic>.from(value)));
+                  final p = Product.fromRTDB(
+                    key.toString(), shopId, Map<dynamic, dynamic>.from(value));
+                  if (p.isActive) nearbyProducts.add(p);
                 } catch (e) {
-                  debugPrint('Error parsing product in search: $e');
+                  debugPrint('Error parsing product: $e');
                 }
               }
             });
           }
         }
 
-        // 3. Fuzzy Search Filtering
-        final normalizedQuery = query.toLowerCase().trim();
-        
-        final filteredShops = nearbyShops.where((shop) {
-          final searchableText = '${shop.shopName} ${shop.description}'.toLowerCase();
-          return searchableText.contains(normalizedQuery) || 
-                 searchableText.similarityTo(normalizedQuery) > 0.4 || 
-                 normalizedQuery.similarityTo(shop.shopName.toLowerCase()) > 0.3;
-        }).take(15).toList();
+        final normalizedQuery = trimmedQuery.toLowerCase();
 
-        final filteredProducts = nearbyProducts.where((product) {
-          final searchableText = '${product.name} ${product.description}'.toLowerCase();
-          return searchableText.contains(normalizedQuery) || 
-                 searchableText.similarityTo(normalizedQuery) > 0.4 ||
-                 normalizedQuery.similarityTo(product.name.toLowerCase()) > 0.3;
+        // ── Product filtering ───────────────────────────────────────
+        // Category is an exact match; text is fuzzy on name + description.
+        final filteredProducts = nearbyProducts.where((p) {
+          if (hasCategory && p.category != category) return false;
+          if (!hasQuery) return true;
+          final text = '${p.name} ${p.description}'.toLowerCase();
+          return text.contains(normalizedQuery) ||
+              text.similarityTo(normalizedQuery) > 0.4 ||
+              normalizedQuery.similarityTo(p.name.toLowerCase()) > 0.3;
         }).toList();
 
         filteredProducts.sort((a, b) {
-          final distA = shopDistances[a.shopId] ?? double.infinity;
-          final distB = shopDistances[b.shopId] ?? double.infinity;
-          return distA.compareTo(distB);
+          final dA = shopDistances[a.shopId] ?? double.infinity;
+          final dB = shopDistances[b.shopId] ?? double.infinity;
+          return dA.compareTo(dB);
         });
+
+        // ── Shop filtering ──────────────────────────────────────────
+        // Text search: fuzzy match on shop name + description.
+        // Category-only: show shops that carry matching products.
+        List<Shop> filteredShops;
+        if (hasQuery) {
+          filteredShops = nearbyShops.where((s) {
+            final text = '${s.shopName} ${s.description}'.toLowerCase();
+            return text.contains(normalizedQuery) ||
+                text.similarityTo(normalizedQuery) > 0.4 ||
+                normalizedQuery.similarityTo(s.shopName.toLowerCase()) > 0.3;
+          }).take(15).toList();
+        } else {
+          final shopIds = filteredProducts.map((p) => p.shopId).toSet();
+          filteredShops = nearbyShops.where((s) => shopIds.contains(s.id)).toList();
+        }
 
         state = AsyncValue.data(HybridSearchResult(
           products: filteredProducts.take(30).toList(),
@@ -131,7 +150,8 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
           isCapped: isCapped,
         ));
       } catch (e, st) {
-        if (e.toString().contains('unavailable') || e.toString().contains('SocketException')) {
+        if (e.toString().contains('unavailable') ||
+            e.toString().contains('SocketException')) {
           state = AsyncValue.error(NetworkOfflineException(), st);
         } else {
           state = AsyncValue.error(e, st);
@@ -141,6 +161,7 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
   }
 }
 
-final hybridSearchProvider = NotifierProvider<HybridSearchNotifier, AsyncValue<HybridSearchResult>>(() {
-  return HybridSearchNotifier();
-});
+final hybridSearchProvider =
+    NotifierProvider<HybridSearchNotifier, AsyncValue<HybridSearchResult>>(
+  HybridSearchNotifier.new,
+);

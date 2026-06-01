@@ -1,0 +1,76 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "shop": {
+      ".read": true,
+      "$shopId": {
+        ".write": "auth != null && (auth.uid === $shopId || data.child('ownerId').val() === auth.uid || newData.child('ownerId').val() === auth.uid)"
+      }
+    },
+
+    "products": {
+      ".read": true,
+      "$shopId": {
+        ".write": "auth != null && (auth.uid === $shopId || root.child('shop').child($shopId).child('ownerId').val() === auth.uid)"
+      }
+    },
+
+    "offers": {
+      ".read": true,
+      "$shopId": {
+        ".write": "auth != null && (auth.uid === $shopId || root.child('shop').child($shopId).child('ownerId').val() === auth.uid)"
+      }
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$field": {
+          ".write": "auth != null && auth.uid === $uid && $field !== 'roles'"
+        },
+        "roles": {
+          ".write": false
+        },
+        "activeRole": {
+          ".write": "auth != null && auth.uid === $uid && (newData.val() === 'customer' || newData.val() === 'merchant')"
+        },
+        "favorites": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "phones": {
+      "$phone": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+      }
+    },
+
+    "chats": {
+      "$ownerId": {
+        "$peerId": {
+          ".read": "auth != null && (auth.uid === $ownerId || data.child('customerId').val() === auth.uid || data.child('vendorId').val() === auth.uid)",
+          ".write": "auth != null && (auth.uid === $ownerId || newData.child('customerId').val() === auth.uid || data.child('customerId').val() === auth.uid)"
+        }
+      }
+    },
+
+    "users_devices": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+
+    "analytics": {
+      "$vendorUid": {
+        ".read": "auth != null && auth.uid === $vendorUid",
+        ".write": "auth != null && auth.uid === $vendorUid"
+      }
+    }
+  }
+}

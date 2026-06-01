@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:path_provider/path_provider.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'security_helper.dart';
+
+// SecurityHelper calls FlutterSecureStorage (a platform channel). Platform
+// channels are only accessible from the root isolate, so we must NOT wrap
+// these calls in compute() — invoke them directly on the main isolate instead.
 
 class DataCacheService {
   static Timer? _shopCacheTimer;
@@ -33,7 +37,9 @@ class DataCacheService {
           'logoUrl': shop.shopLogo,
           'bannerUrl': shop.shopBanner,
           'isVerified': shop.isVerified,
-          'isOpen': shop.isOpen,
+          'isOpen': shop.storedIsOpen, // raw vendor toggle — NOT computed, so schedule re-evaluates correctly on next load
+          'openingTime': shop.openingTime,
+          'closingTime': shop.closingTime,
           'rating': shop.rating,
           'totalReviews': shop.totalReviews,
           'createdAt': shop.createdAt?.toIso8601String(),
@@ -48,7 +54,7 @@ class DataCacheService {
         }).toList();
         
         final jsonString = json.encode(list);
-        final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+        final encryptedString = await SecurityHelper.encryptData(jsonString);
         await file.writeAsString(encryptedString);
       } catch (e) {
         debugPrint('Error caching shops: $e');
@@ -65,7 +71,7 @@ class DataCacheService {
         
         String decryptedContent;
         try {
-          decryptedContent = await compute(SecurityHelper.decryptData, content);
+          decryptedContent = await SecurityHelper.decryptData(content);
         } catch (e) {
           // If decryption fails (e.g. key changed or legacy unencrypted file)
           await file.delete();
@@ -106,7 +112,7 @@ class DataCacheService {
         }).toList();
 
         final jsonString = json.encode(list);
-        final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+        final encryptedString = await SecurityHelper.encryptData(jsonString);
         await file.writeAsString(encryptedString);
       } catch (e) {
         debugPrint('Error caching products: $e');
@@ -123,7 +129,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await compute(SecurityHelper.decryptData, content);
+          decryptedContent = await SecurityHelper.decryptData(content);
         } catch (e) {
           await file.delete();
           return [];
@@ -161,7 +167,7 @@ class DataCacheService {
       }).toList();
 
       final jsonString = json.encode(list);
-      final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
       await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching offers: $e');
@@ -178,7 +184,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await compute(SecurityHelper.decryptData, content);
+          decryptedContent = await SecurityHelper.decryptData(content);
         } catch (e) {
           await file.delete();
           return [];
@@ -198,7 +204,7 @@ class DataCacheService {
     try {
       final file = await _getFile('sync_queue.json');
       final jsonString = json.encode(queue);
-      final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
       await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error saving sync queue: $e');
@@ -214,7 +220,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await compute(SecurityHelper.decryptData, content);
+          decryptedContent = await SecurityHelper.decryptData(content);
         } catch (e) {
           await file.delete();
           return [];
@@ -235,7 +241,7 @@ class DataCacheService {
       final file = await _getFile('cached_location.json');
       final data = {'latitude': latitude, 'longitude': longitude};
       final jsonString = json.encode(data);
-      final encryptedString = await compute(SecurityHelper.encryptData, jsonString);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
       await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error caching last location: $e');
@@ -251,7 +257,7 @@ class DataCacheService {
 
         String decryptedContent;
         try {
-          decryptedContent = await compute(SecurityHelper.decryptData, content);
+          decryptedContent = await SecurityHelper.decryptData(content);
         } catch (e) {
           await file.delete();
           return null;

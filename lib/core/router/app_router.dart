@@ -18,6 +18,7 @@ import 'package:local_vyapari_user/features/shops/presentation/screens/hyperloca
 import 'package:local_vyapari_user/features/chat/presentation/screens/chat_screen.dart';
 import 'package:local_vyapari_user/features/chat/presentation/screens/chats_list_screen.dart';
 import 'package:local_vyapari_user/features/security/presentation/screens/security_settings_screen.dart';
+import 'package:local_vyapari_user/features/products/presentation/screens/product_image_fullscreen_screen.dart';
 
 enum TransitionType { slide, fade, scale, slideUp }
 
@@ -277,6 +278,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           child: const SecuritySettingsScreen(),
           transitionType: TransitionType.slide,
         ),
+      ),
+      GoRoute(
+        path: '/product_image_fullscreen',
+        redirect: (context, state) => state.extra == null ? '/home' : null,
+        pageBuilder: (context, state) {
+          final extras = state.extra as Map<dynamic, dynamic>;
+          final images = List<String>.from(extras['images'] as List? ?? []);
+          final initialIndex = (extras['initialIndex'] as int?) ?? 0;
+          return buildPageWithTransition(
+            context: context,
+            state: state,
+            child: ProductImageFullscreenScreen(
+              images: images,
+              initialIndex: initialIndex,
+            ),
+            transitionType: TransitionType.fade,
+          );
+        },
       ),
     ],
   );

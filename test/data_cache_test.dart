@@ -53,6 +53,7 @@ void main() {
         shopBanner: 'https://banner.png',
         isVerified: true,
         isOpen: true,
+        storedIsOpen: true,
         rating: 4.8,
         totalReviews: 42,
         createdAt: DateTime(2026, 5, 21),
@@ -69,6 +70,7 @@ void main() {
       );
 
       await DataCacheService.cacheShops([shop]);
+      await Future.delayed(const Duration(seconds: 3)); // wait for 2-second debounce timer
       final retrieved = await DataCacheService.getCachedShops();
 
       expect(retrieved, isNotEmpty);
@@ -99,6 +101,7 @@ void main() {
       );
 
       await DataCacheService.cacheProducts([product]);
+      await Future.delayed(const Duration(seconds: 3)); // wait for 2-second debounce timer
       final retrieved = await DataCacheService.getCachedProducts();
 
       expect(retrieved, isNotEmpty);
@@ -125,6 +128,7 @@ void main() {
       );
 
       await DataCacheService.cacheOffers([offer]);
+      await Future.delayed(const Duration(seconds: 3)); // wait for 2-second debounce timer
       final retrieved = await DataCacheService.getCachedOffers();
 
       expect(retrieved, isNotEmpty);

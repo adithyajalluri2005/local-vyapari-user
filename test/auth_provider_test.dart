@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/services/notifications/notification_service.dart';
 import 'package:local_vyapari_user/services/role_service.dart';
 
 // Fake implementations for testing without Firebase SDK dependency
@@ -182,6 +183,7 @@ void main() {
         sessionValidationProvider.overrideWithValue((user, targetRole) async {
           return targetRole == 'customer';
         }),
+        notificationServiceProvider.overrideWith((ref) => NotificationService(ref)),
       ],
     );
   });

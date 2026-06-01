@@ -39,8 +39,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify empty state placeholder
-    expect(find.text('Start a conversation with Super Mart'), findsOneWidget);
-    expect(find.byIcon(Icons.chat_bubble_outline), findsOneWidget);
+    expect(find.text('Start the conversation'), findsOneWidget);
+    expect(find.byIcon(Icons.chat_bubble_outline_rounded), findsOneWidget);
   });
 
   testWidgets('ChatScreen renders messages list', (WidgetTester tester) async {

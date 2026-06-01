@@ -20,8 +20,33 @@ import 'package:local_vyapari_user/shared/widgets/shop_card.dart';
 enum _SearchFilter { all, openNow, topRated }
 
 const _kCategories = [
-  'Electronics', 'Groceries', 'Clothing', 'Pharmacy', 'Food & Drinks',
-  'Stationary', 'Hardware', 'Beauty',
+  'Groceries & Staples',
+  'Fruits & Vegetables',
+  'Dairy & Eggs',
+  'Meat & Seafood',
+  'Bakery & Sweets',
+  'Snacks & Beverages',
+  'Electronics',
+  'Mobile & Accessories',
+  'Clothing & Apparel',
+  'Sarees & Ethnic Wear',
+  'Footwear',
+  'Jewellery & Accessories',
+  'Home & Kitchen',
+  'Furniture & Decor',
+  'Pharmacy & Healthcare',
+  'Beauty & Personal Care',
+  'Books & Stationery',
+  'Toys & Games',
+  'Sports & Fitness',
+  'Hardware & Tools',
+  'Auto Parts & Accessories',
+  'Agriculture & Farming',
+  'Flowers & Plants',
+  'Gifts & Handicrafts',
+  'Pet Supplies',
+  'Office Supplies',
+  'Other',
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────────
@@ -37,7 +62,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _ctrl = TextEditingController();
   final _focusNode = FocusNode();
   String _query = '';
+  String? _selectedCategory;
   _SearchFilter _filter = _SearchFilter.all;
+
+  bool get _hasActiveSearch => _query.isNotEmpty || _selectedCategory != null;
 
   @override
   void dispose() {
@@ -46,14 +74,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
-  void _search(String value) {
-    setState(() => _query = value.trim());
-    ref.read(hybridSearchProvider.notifier).search(value.trim());
+  void _triggerSearch() {
+    ref.read(hybridSearchProvider.notifier).search(
+      _query,
+      category: _selectedCategory,
+    );
   }
 
-  void _clear() {
+  void _onTextChanged(String value) {
+    setState(() => _query = value.trim());
+    _triggerSearch();
+  }
+
+  void _onCategorySelected(String category) {
+    setState(() {
+      _selectedCategory = category;
+      _filter = _SearchFilter.all;
+    });
+    _triggerSearch();
+  }
+
+  void _clearCategory() {
+    setState(() => _selectedCategory = null);
+    _triggerSearch();
+  }
+
+  void _clearAll() {
     _ctrl.clear();
-    _search('');
+    setState(() {
+      _query = '';
+      _selectedCategory = null;
+      _filter = _SearchFilter.all;
+    });
+    _triggerSearch();
   }
 
   @override
@@ -66,15 +119,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Search header ────────────────────────────────────────
+            // ── Search bar ───────────────────────────────────────────
             Padding(
               padding: EdgeInsets.fromLTRB(hPad, 14, hPad, 10),
               child: _SearchBar(
                 ctrl: _ctrl,
                 focusNode: _focusNode,
-                hasQuery: _query.isNotEmpty,
-                onChanged: _search,
-                onClear: _clear,
+                hasQuery: _hasActiveSearch,
+                onChanged: _onTextChanged,
+                onClear: _clearAll,
               ),
             ),
 
@@ -102,6 +155,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     active: _filter == _SearchFilter.topRated,
                     onTap: () => setState(() => _filter = _SearchFilter.topRated),
                   ),
+                  if (_selectedCategory != null)
+                    _CategoryFilterChip(
+                      label: _selectedCategory!,
+                      onDismiss: _clearCategory,
+                    ),
                 ],
               ),
             ),
@@ -110,13 +168,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
             // ── Body ────────────────────────────────────────────────
             Expanded(
-              child: _query.isEmpty
-                  ? _SuggestionsView(onCategoryTap: _search)
+              child: !_hasActiveSearch
+                  ? _SuggestionsView(onCategorySelect: _onCategorySelected)
                   : _ResultsView(
                       query: _query,
+                      selectedCategory: _selectedCategory,
                       filter: _filter,
-                      onClearFilters: () => setState(() => _filter = _SearchFilter.all),
-                      onRetry: () => _search(_query),
+                      onClearFilters: () {
+                        setState(() {
+                          _filter = _SearchFilter.all;
+                          _selectedCategory = null;
+                        });
+                        _triggerSearch();
+                      },
+                      onRetry: _triggerSearch,
                     ),
             ),
           ],
@@ -260,11 +325,57 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
+// ── Dismissible category chip ─────────────────────────────────────────────────
+
+class _CategoryFilterChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onDismiss;
+
+  const _CategoryFilterChip({required this.label, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.5),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.category_rounded, size: 12, color: AppColors.primary),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 5),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Icon(Icons.close_rounded, size: 14, color: AppColors.primary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Suggestions (empty state) ─────────────────────────────────────────────────
 
 class _SuggestionsView extends StatelessWidget {
-  final ValueChanged<String> onCategoryTap;
-  const _SuggestionsView({required this.onCategoryTap});
+  final ValueChanged<String> onCategorySelect;
+  const _SuggestionsView({required this.onCategorySelect});
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +400,7 @@ class _SuggestionsView extends StatelessWidget {
           runSpacing: 8,
           children: _kCategories.map((cat) {
             return ScaleOnTap(
-              onTap: () => onCategoryTap(cat),
+              onTap: () => onCategorySelect(cat),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
@@ -320,8 +431,12 @@ class _SuggestionsView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        ...['Mobile phones', 'Fresh vegetables', 'Medicines', 'Snacks']
-            .map((q) => _QuickSearchItem(label: q, onTap: () => onCategoryTap(q))),
+        ...[
+          'Mobile & Accessories',
+          'Fruits & Vegetables',
+          'Pharmacy & Healthcare',
+          'Snacks & Beverages',
+        ].map((q) => _QuickSearchItem(label: q, onTap: () => onCategorySelect(q))),
       ],
     );
   }
@@ -363,12 +478,14 @@ class _QuickSearchItem extends StatelessWidget {
 
 class _ResultsView extends ConsumerWidget {
   final String query;
+  final String? selectedCategory;
   final _SearchFilter filter;
   final VoidCallback onClearFilters;
   final VoidCallback onRetry;
 
   const _ResultsView({
     required this.query,
+    required this.selectedCategory,
     required this.filter,
     required this.onClearFilters,
     required this.onRetry,
@@ -387,16 +504,24 @@ class _ResultsView extends ConsumerWidget {
         List<Shop> shops = result.shops;
         List<Product> products = result.products;
 
-        // Apply client-side filters
+        // Apply Open Now: filter shops, then keep only products from open shops
         if (filter == _SearchFilter.openNow) {
           shops = shops.where((s) => s.isOpen).toList();
-        } else if (filter == _SearchFilter.topRated) {
+          final openIds = shops.map((s) => s.id).toSet();
+          products = products.where((p) => openIds.contains(p.shopId)).toList();
+        }
+
+        // Apply 4★+: filter shops, then keep only products from top-rated shops
+        if (filter == _SearchFilter.topRated) {
           shops = shops.where((s) => s.rating >= 4.0).toList();
+          final topIds = shops.map((s) => s.id).toSet();
+          products = products.where((p) => topIds.contains(p.shopId)).toList();
         }
 
         if (shops.isEmpty && products.isEmpty) {
           return _EmptyState(
             query: query,
+            selectedCategory: selectedCategory,
             hasFilter: filter != _SearchFilter.all,
             onClearFilters: onClearFilters,
           );
@@ -408,8 +533,7 @@ class _ResultsView extends ConsumerWidget {
         return ListView(
           padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 90),
           children: [
-            if (result.isCapped)
-              _CappedBanner(hPad: hPad),
+            if (result.isCapped) _CappedBanner(hPad: hPad),
 
             if (shops.isNotEmpty) ...[
               _SectionLabel(label: 'Shops', count: shops.length),
@@ -634,13 +758,26 @@ class _ProductImageFallback extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   final String query;
+  final String? selectedCategory;
   final bool hasFilter;
   final VoidCallback onClearFilters;
 
-  const _EmptyState({required this.query, required this.hasFilter, required this.onClearFilters});
+  const _EmptyState({
+    required this.query,
+    required this.selectedCategory,
+    required this.hasFilter,
+    required this.onClearFilters,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final displayTerm = selectedCategory ?? query;
+    final subtitle = selectedCategory != null
+        ? 'No products found in this category nearby.'
+        : hasFilter
+            ? 'Try removing filters or search with broader terms.'
+            : 'Try different keywords or check your location.';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -658,7 +795,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No results for "$query"',
+              'No results for "$displayTerm"',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -668,13 +805,11 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              hasFilter
-                  ? 'Try removing filters or search with broader terms.'
-                  : 'Try different keywords or check your location.',
+              subtitle,
               style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
-            if (hasFilter) ...[
+            if (hasFilter || selectedCategory != null) ...[
               const SizedBox(height: 20),
               OutlinedButton(
                 onPressed: onClearFilters,

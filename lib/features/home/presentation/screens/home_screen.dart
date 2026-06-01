@@ -1199,60 +1199,115 @@ class _DashedDivider extends StatelessWidget {
 
 // ── Shops list ────────────────────────────────────────────────────────────────
 
-class _ShopsList extends StatelessWidget {
+enum _ShopFilter { all, openNow, topRated }
+
+class _ShopsList extends StatefulWidget {
   final AsyncValue<List<Shop>> shopsAsync;
   const _ShopsList({required this.shopsAsync});
+
+  @override
+  State<_ShopsList> createState() => _ShopsListState();
+}
+
+class _ShopsListState extends State<_ShopsList> {
+  _ShopFilter _filter = _ShopFilter.all;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final columns = Responsive.shopGridColumns(context);
 
-    return shopsAsync.when(
+    return widget.shopsAsync.when(
       skipLoadingOnReload: false,
-      data: (shops) {
-        if (shops.isEmpty) {
-          return const _EmptySection(
-            icon: Icons.storefront_outlined,
-            message: 'No shops found nearby',
-          );
+      data: (allShops) {
+        // Apply selected filter
+        List<Shop> filtered = allShops;
+        if (_filter == _ShopFilter.openNow) {
+          filtered = allShops.where((s) => s.isOpen).toList();
+        } else if (_filter == _ShopFilter.topRated) {
+          filtered = allShops.where((s) => s.rating >= 4.0).toList();
         }
-        final displayShops = shops.take(6).toList();
 
-        if (columns >= 2) {
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 2.5,
-            ),
-            itemCount: displayShops.length,
-            itemBuilder: (ctx, i) => FadeInSlide(
-              delay: Duration(milliseconds: 50 * i),
-              child: ShopCard(
-                shop: displayShops[i],
-                onTap: () => context.push(
-                  '/shop_details',
-                  extra: displayShops[i],
-                ),
-              ),
-            ),
-          );
-        }
+        final displayShops = filtered.take(6).toList();
 
         return Column(
-          children: displayShops.asMap().entries.map((e) {
-            return FadeInSlide(
-              delay: Duration(milliseconds: 50 * e.key),
-              child: ShopCard(
-                shop: e.value,
-                onTap: () => context.push('/shop_details', extra: e.value),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Filter chips ────────────────────────────────────
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _HomeFilterChip(
+                    label: 'All',
+                    active: _filter == _ShopFilter.all,
+                    onTap: () => setState(() => _filter = _ShopFilter.all),
+                  ),
+                  const SizedBox(width: 8),
+                  _HomeFilterChip(
+                    label: 'Open Now',
+                    icon: Icons.circle,
+                    active: _filter == _ShopFilter.openNow,
+                    onTap: () => setState(() => _filter = _ShopFilter.openNow),
+                  ),
+                  const SizedBox(width: 8),
+                  _HomeFilterChip(
+                    label: '4★ & above',
+                    icon: Icons.star_rounded,
+                    active: _filter == _ShopFilter.topRated,
+                    onTap: () => setState(() => _filter = _ShopFilter.topRated),
+                  ),
+                ],
               ),
-            );
-          }).toList(),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Shop list / empty ───────────────────────────────
+            if (displayShops.isEmpty)
+              _EmptySection(
+                icon: _filter == _ShopFilter.openNow
+                    ? Icons.store_mall_directory_outlined
+                    : _filter == _ShopFilter.topRated
+                        ? Icons.star_border_rounded
+                        : Icons.storefront_outlined,
+                message: _filter == _ShopFilter.openNow
+                    ? 'No shops open right now'
+                    : _filter == _ShopFilter.topRated
+                        ? 'No 4★+ shops found nearby'
+                        : 'No shops found nearby',
+              )
+            else if (columns >= 2)
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.5,
+                ),
+                itemCount: displayShops.length,
+                itemBuilder: (ctx, i) => FadeInSlide(
+                  delay: Duration(milliseconds: 50 * i),
+                  child: ShopCard(
+                    shop: displayShops[i],
+                    onTap: () => context.push('/shop_details', extra: displayShops[i]),
+                  ),
+                ),
+              )
+            else
+              Column(
+                children: displayShops.asMap().entries.map((e) {
+                  return FadeInSlide(
+                    delay: Duration(milliseconds: 50 * e.key),
+                    child: ShopCard(
+                      shop: e.value,
+                      onTap: () => context.push('/shop_details', extra: e.value),
+                    ),
+                  );
+                }).toList(),
+              ),
+          ],
         );
       },
       loading: () => Column(
@@ -1275,6 +1330,69 @@ class _ShopsList extends StatelessWidget {
       error: (_, _) => const _EmptySection(
         icon: Icons.error_outline,
         message: 'Could not load shops',
+      ),
+    );
+  }
+}
+
+class _HomeFilterChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _HomeFilterChip({
+    required this.label,
+    this.icon,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.primary
+              : isDark
+                  ? AppColors.darkElevated
+                  : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.border,
+            width: 0.8,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: icon == Icons.circle ? 7 : 12,
+                color: active
+                    ? Colors.white
+                    : icon == Icons.circle
+                        ? AppColors.accent
+                        : AppColors.warning,
+              ),
+              const SizedBox(width: 5),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: active ? Colors.white : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

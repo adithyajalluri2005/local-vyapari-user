@@ -109,21 +109,6 @@ class ReviewsService {
     }
   }
 
-  // Helper to create mock orders for easy demonstration and testing
-  Future<void> createMockOrder({
-    required String userId,
-    required String shopId,
-    required List<String> productIds,
-  }) async {
-    await _firestore.collection('orders').add({
-      'userId': userId,
-      'shopId': shopId,
-      'productIds': productIds,
-      'status': 'completed',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
   // Get user's existing shop review if any
   Future<ShopReview?> getUserShopReview(String userId, String shopId) async {
     final docId = '${userId}_$shopId';

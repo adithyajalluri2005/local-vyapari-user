@@ -140,7 +140,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     context.push('/chat', extra: {
-                      'shopId': shop.id,
+                      'shopId': shop.ownerId,
                       'shopName': shop.shopName,
                       'shopLogo': shop.shopLogo,
                     });
