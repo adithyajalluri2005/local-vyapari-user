@@ -70,17 +70,17 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
               ? authState.user.email!.split('@').first
               : 'Anonymous User');
 
-      if (widget.shopId != null) {
-        await reviewsService.submitShopReview(
+      if (widget.productId != null) {
+        await reviewsService.submitProductReview(
+          productId: widget.productId!,
           shopId: widget.shopId!,
           userId: userId,
           userDisplayName: userDisplayName,
           rating: _rating,
           comment: _commentController.text.trim(),
         );
-      } else if (widget.productId != null) {
-        await reviewsService.submitProductReview(
-          productId: widget.productId!,
+      } else {
+        await reviewsService.submitShopReview(
           shopId: widget.shopId!,
           userId: userId,
           userDisplayName: userDisplayName,

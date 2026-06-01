@@ -1199,7 +1199,7 @@ class _DashedDivider extends StatelessWidget {
 
 // ── Shops list ────────────────────────────────────────────────────────────────
 
-enum _ShopFilter { all, openNow, topRated }
+enum _ShopFilter { all, openNow }
 
 class _ShopsList extends StatefulWidget {
   final AsyncValue<List<Shop>> shopsAsync;
@@ -1224,8 +1224,6 @@ class _ShopsListState extends State<_ShopsList> {
         List<Shop> filtered = allShops;
         if (_filter == _ShopFilter.openNow) {
           filtered = allShops.where((s) => s.isOpen).toList();
-        } else if (_filter == _ShopFilter.topRated) {
-          filtered = allShops.where((s) => s.rating >= 4.0).toList();
         }
 
         final displayShops = filtered.take(6).toList();
@@ -1250,13 +1248,6 @@ class _ShopsListState extends State<_ShopsList> {
                     active: _filter == _ShopFilter.openNow,
                     onTap: () => setState(() => _filter = _ShopFilter.openNow),
                   ),
-                  const SizedBox(width: 8),
-                  _HomeFilterChip(
-                    label: '4★ & above',
-                    icon: Icons.star_rounded,
-                    active: _filter == _ShopFilter.topRated,
-                    onTap: () => setState(() => _filter = _ShopFilter.topRated),
-                  ),
                 ],
               ),
             ),
@@ -1267,14 +1258,10 @@ class _ShopsListState extends State<_ShopsList> {
               _EmptySection(
                 icon: _filter == _ShopFilter.openNow
                     ? Icons.store_mall_directory_outlined
-                    : _filter == _ShopFilter.topRated
-                        ? Icons.star_border_rounded
-                        : Icons.storefront_outlined,
+                    : Icons.storefront_outlined,
                 message: _filter == _ShopFilter.openNow
                     ? 'No shops open right now'
-                    : _filter == _ShopFilter.topRated
-                        ? 'No 4★+ shops found nearby'
-                        : 'No shops found nearby',
+                    : 'No shops found nearby',
               )
             else if (columns >= 2)
               GridView.builder(
@@ -1523,17 +1510,34 @@ class _ProductsGrid extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                p.name,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark
-                                      ? Colors.white
-                                      : AppColors.textPrimary,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    p.name,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? Colors.white
+                                          : AppColors.textPrimary,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (p.category.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      p.category,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        color: AppColors.textHint,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

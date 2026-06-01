@@ -15,9 +15,6 @@ import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/shop_card.dart';
 
-// ── Filter state ──────────────────────────────────────────────────────────────
-
-enum _SearchFilter { all, openNow, topRated }
 
 const _kCategories = [
   'Groceries & Staples',
@@ -63,7 +60,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _focusNode = FocusNode();
   String _query = '';
   String? _selectedCategory;
-  _SearchFilter _filter = _SearchFilter.all;
 
   bool get _hasActiveSearch => _query.isNotEmpty || _selectedCategory != null;
 
@@ -87,10 +83,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _onCategorySelected(String category) {
-    setState(() {
-      _selectedCategory = category;
-      _filter = _SearchFilter.all;
-    });
+    setState(() => _selectedCategory = category);
     _triggerSearch();
   }
 
@@ -104,7 +97,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() {
       _query = '';
       _selectedCategory = null;
-      _filter = _SearchFilter.all;
     });
     _triggerSearch();
   }
@@ -138,23 +130,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(horizontal: hPad),
                 children: [
-                  _FilterChip(
-                    label: 'All',
-                    active: _filter == _SearchFilter.all,
-                    onTap: () => setState(() => _filter = _SearchFilter.all),
-                  ),
-                  _FilterChip(
-                    label: 'Open Now',
-                    icon: Icons.circle,
-                    active: _filter == _SearchFilter.openNow,
-                    onTap: () => setState(() => _filter = _SearchFilter.openNow),
-                  ),
-                  _FilterChip(
-                    label: '4★ & above',
-                    icon: Icons.star_rounded,
-                    active: _filter == _SearchFilter.topRated,
-                    onTap: () => setState(() => _filter = _SearchFilter.topRated),
-                  ),
                   if (_selectedCategory != null)
                     _CategoryFilterChip(
                       label: _selectedCategory!,
@@ -173,12 +148,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   : _ResultsView(
                       query: _query,
                       selectedCategory: _selectedCategory,
-                      filter: _filter,
                       onClearFilters: () {
-                        setState(() {
-                          _filter = _SearchFilter.all;
-                          _selectedCategory = null;
-                        });
+                        setState(() => _selectedCategory = null);
                         _triggerSearch();
                       },
                       onRetry: _triggerSearch,
@@ -264,66 +235,6 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ── Filter chip ───────────────────────────────────────────────────────────────
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _FilterChip({required this.label, this.icon, required this.active, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? AppColors.primary
-              : isDark
-                  ? AppColors.darkElevated
-                  : AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.full),
-          border: Border.all(
-            color: active ? AppColors.primary : AppColors.border,
-            width: 0.8,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: icon == Icons.circle ? 8 : 13,
-                color: active
-                    ? Colors.white
-                    : icon == Icons.circle
-                        ? AppColors.accent
-                        : AppColors.warning,
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Dismissible category chip ─────────────────────────────────────────────────
 
@@ -479,14 +390,12 @@ class _QuickSearchItem extends StatelessWidget {
 class _ResultsView extends ConsumerWidget {
   final String query;
   final String? selectedCategory;
-  final _SearchFilter filter;
   final VoidCallback onClearFilters;
   final VoidCallback onRetry;
 
   const _ResultsView({
     required this.query,
     required this.selectedCategory,
-    required this.filter,
     required this.onClearFilters,
     required this.onRetry,
   });
@@ -504,25 +413,11 @@ class _ResultsView extends ConsumerWidget {
         List<Shop> shops = result.shops;
         List<Product> products = result.products;
 
-        // Apply Open Now: filter shops, then keep only products from open shops
-        if (filter == _SearchFilter.openNow) {
-          shops = shops.where((s) => s.isOpen).toList();
-          final openIds = shops.map((s) => s.id).toSet();
-          products = products.where((p) => openIds.contains(p.shopId)).toList();
-        }
-
-        // Apply 4★+: filter shops, then keep only products from top-rated shops
-        if (filter == _SearchFilter.topRated) {
-          shops = shops.where((s) => s.rating >= 4.0).toList();
-          final topIds = shops.map((s) => s.id).toSet();
-          products = products.where((p) => topIds.contains(p.shopId)).toList();
-        }
-
         if (shops.isEmpty && products.isEmpty) {
           return _EmptyState(
             query: query,
             selectedCategory: selectedCategory,
-            hasFilter: filter != _SearchFilter.all,
+            hasFilter: false,
             onClearFilters: onClearFilters,
           );
         }

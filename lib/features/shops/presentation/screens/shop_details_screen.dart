@@ -660,7 +660,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
 
     if (!context.mounted) return;
 
-    showModalBottomSheet(
+    final submitted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -673,5 +673,9 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
         existingComment: existingReview?.comment,
       ),
     );
+
+    if (submitted == true) {
+      ref.invalidate(userShopReviewProvider(shop.id));
+    }
   }
 }

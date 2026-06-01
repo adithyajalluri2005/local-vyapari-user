@@ -380,56 +380,41 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   }
 
   Widget _buildReviewsSection(BuildContext context) {
-    final reviewsNotifier = ref.watch(productReviewsProvider(product.id));
+    final reviewsAsync = ref.watch(productReviewsProvider(product.id));
+    final distribution = ref.watch(productRatingDistributionProvider(product.id));
+    final authState = ref.watch(authProvider);
+    final isAuthenticated = authState is Authenticated;
 
-    return ListenableBuilder(
-      listenable: reviewsNotifier,
-      builder: (context, child) {
-        final reviewsState = reviewsNotifier.state;
-        final distribution = ref.watch(productRatingDistributionProvider(product.id));
-
-        return Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(),
         AppSpacing.verticalMd,
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Text(
-                'Ratings & Reviews',
-                style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            Text(
+              'Ratings & Reviews',
+              style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(width: 8),
-            Consumer(
-              builder: (context, ref, child) {
-                final authState = ref.watch(authProvider);
-                final isAuthenticated = authState is Authenticated;
-                
-                return ElevatedButton.icon(
-                  onPressed: () {
-                    if (isAuthenticated) {
-                      _handleRateProduct(context);
-                    } else {
-                      context.push('/login');
-                    }
-                  },
-                  icon: Icon(Icons.rate_review_outlined, size: 16, color: isAuthenticated ? AppTheme.primaryColor : Colors.grey),
-                  label: Text(isAuthenticated ? 'Rate Product' : 'Login to Rate', style: TextStyle(color: isAuthenticated ? AppTheme.primaryColor : Colors.grey)),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    backgroundColor: isAuthenticated ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                    foregroundColor: isAuthenticated ? AppTheme.primaryColor : Colors.grey,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                  ),
-                );
-              }
+            ElevatedButton.icon(
+              onPressed: () {
+                if (isAuthenticated) {
+                  _handleRateProduct(context);
+                } else {
+                  context.push('/login');
+                }
+              },
+              icon: Icon(Icons.rate_review_outlined, size: 18, color: isAuthenticated ? AppTheme.primaryColor : Colors.grey),
+              label: Text(isAuthenticated ? 'Rate Product' : 'Login to Rate', style: TextStyle(color: isAuthenticated ? AppTheme.primaryColor : Colors.grey)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isAuthenticated ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                foregroundColor: isAuthenticated ? AppTheme.primaryColor : Colors.grey,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
             ),
           ],
         ),
@@ -440,69 +425,51 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           distribution: distribution.distribution,
         ),
         AppSpacing.verticalMd,
-        if (reviewsState.isLoading && reviewsState.reviews.isEmpty)
-          _buildReviewsShimmer(context)
-        else if (reviewsState.error != null && reviewsState.reviews.isEmpty)
-          Center(child: Text('Failed to load reviews: ${reviewsState.error}'))
-        else if (reviewsState.reviews.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No reviews yet',
-                    style: AppTextStyles.bodyLarge(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Be the first to rate this product!',
-                    style: AppTextStyles.bodyMedium(context, color: Colors.grey[400]),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          Column(
-            children: [
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: reviewsState.reviews.length,
-                itemBuilder: (context, index) {
-                  final review = reviewsState.reviews[index];
-                  return ReviewCard(
-                    userName: review.userDisplayName,
-                    rating: review.rating,
-                    comment: review.comment,
-                    createdAt: review.createdAt,
-                  );
-                },
-              ),
-              if (reviewsState.hasMore)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Center(
-                    child: reviewsState.isLoading
-                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                        : OutlinedButton(
-                            onPressed: () => ref.read(productReviewsProvider(product.id)).loadMore(),
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                            ),
-                            child: const Text('Load More'),
-                          ),
+        reviewsAsync.when(
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No reviews yet',
+                        style: AppTextStyles.bodyLarge(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Be the first to rate this product!',
+                        style: AppTextStyles.bodyMedium(context, color: Colors.grey[400]),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        ],
-      );
-    });
+              );
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+                return ReviewCard(
+                  userName: review.userDisplayName,
+                  rating: review.rating,
+                  comment: review.comment,
+                  createdAt: review.createdAt,
+                );
+              },
+            );
+          },
+          loading: () => _buildReviewsShimmer(context),
+          error: (error, _) => Center(child: Text('Failed to load reviews: $error')),
+        ),
+      ],
+    );
   }
 
   Widget _buildReviewsShimmer(BuildContext context) {
@@ -585,7 +552,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
     if (!context.mounted) return;
 
-    showModalBottomSheet(
+    final submitted = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -599,6 +566,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         existingComment: existingReview?.comment,
       ),
     );
+
+    if (submitted == true) {
+      ref.invalidate(userProductReviewProvider(product.id));
+    }
   }
 }
 
