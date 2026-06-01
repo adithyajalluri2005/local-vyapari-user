@@ -65,27 +65,10 @@ class Shop {
   }
 
   // Computes whether the shop is currently open.
-  // Manual close (storedIsOpen == false) always wins over scheduled hours,
-  // so a vendor can close early or for an emergency even within their hours.
+  // The vendor's manual toggle always wins over the scheduled hours — both
+  // open and close — so the toggle is a true override in either direction.
   static bool _computeIsOpen(String? openingTime, String? closingTime, bool storedIsOpen) {
-    if (!storedIsOpen) return false; // Vendor manually closed → always closed
-    if (openingTime == null || closingTime == null) return storedIsOpen;
-    try {
-      final openParts = openingTime.split(':');
-      final closeParts = closingTime.split(':');
-      if (openParts.length < 2 || closeParts.length < 2) return storedIsOpen;
-      final now = DateTime.now();
-      final currentMinutes = now.hour * 60 + now.minute;
-      final openMinutes = int.parse(openParts[0]) * 60 + int.parse(openParts[1]);
-      final closeMinutes = int.parse(closeParts[0]) * 60 + int.parse(closeParts[1]);
-      if (closeMinutes <= openMinutes) {
-        // Overnight span (e.g. open 22:00 → close 06:00)
-        return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
-      }
-      return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
-    } catch (_) {
-      return storedIsOpen;
-    }
+    return storedIsOpen;
   }
 
   factory Shop.fromRTDB(String id, Map<dynamic, dynamic> map) {
