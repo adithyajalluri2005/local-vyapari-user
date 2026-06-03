@@ -109,7 +109,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     Text(
                       'Enter the 6-digit OTP sent to $phone.',
                       style: GoogleFonts.poppins(
-                          fontSize: 13, color: AppColors.textSecondary),
+                          fontSize: 13,
+                          color: Theme.of(ctx).brightness == Brightness.dark
+                              ? Colors.white70
+                              : AppColors.textSecondary),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -367,7 +370,7 @@ class _FormBodyState extends State<_FormBody> {
                     Text(
                       'Already have an account? ',
                       style: GoogleFonts.poppins(
-                          fontSize: 13, color: AppColors.textSecondary),
+                          fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary),
                     ),
                     GestureDetector(
                       onTap: widget.onSignIn,

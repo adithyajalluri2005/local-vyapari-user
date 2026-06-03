@@ -326,7 +326,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     "Don't have an account? ",
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
-                                      color: AppColors.textSecondary,
+                                      color: isDark ? Colors.white70 : AppColors.textSecondary,
                                     ),
                                   ),
                                   GestureDetector(

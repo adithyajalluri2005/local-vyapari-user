@@ -83,12 +83,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
         content: Text(
           'This action cannot be undone.',
-          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
+          style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: isDark ? Colors.white70 : AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -462,6 +462,7 @@ class _EmptyChat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -487,7 +488,7 @@ class _EmptyChat extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: isDark ? Colors.white : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 6),

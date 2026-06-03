@@ -67,7 +67,7 @@ class OfferCard extends StatelessWidget {
                               offer.shopName,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
-                                color: AppColors.textSecondary,
+                                color: isDark ? Colors.white70 : AppColors.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/core/theme/app_sizes.dart';
@@ -165,7 +166,8 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   }
 
   Widget _buildDetailsColumn(BuildContext context) {
-    final discountPercent = product.actualPrice > 0 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final discountPercent = product.actualPrice > 0
         ? (((product.actualPrice - product.offerPrice) / product.actualPrice) * 100).toInt()
         : 0;
 
@@ -284,7 +286,11 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         AppSpacing.verticalSm,
         Text(
           product.description,
-          style: AppTextStyles.bodyLarge(context, color: Colors.grey[800], height: 1.5),
+          style: AppTextStyles.bodyLarge(
+            context,
+            color: isDark ? Colors.white70 : const Color(0xFF374151),
+            height: 1.5,
+          ),
         ),
         AppSpacing.verticalLg,
         const Divider(),
@@ -301,7 +307,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                side: BorderSide(color: Colors.grey[200]!),
+                side: BorderSide(color: isDark ? Colors.white12 : Colors.grey.shade200),
               ),
               child: ListTile(
                 contentPadding: EdgeInsets.all(AppSizes.paddingMedium(context)),
@@ -348,7 +354,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             const SizedBox(width: 4),
                             Text(
                               '${rating.toStringAsFixed(1)} ($itemCount reviews)',
-                              style: AppTextStyles.bodyMedium(context),
+                              style: AppTextStyles.bodyMedium(context, color: AppColors.textHint),
                             ),
                           ],
                         );
@@ -358,7 +364,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         shop.location.address.isNotEmpty ? shop.location.address : shop.location.city,
-                        style: AppTextStyles.bodyMedium(context, color: Colors.grey),
+                        style: AppTextStyles.bodyMedium(context, color: AppColors.textHint),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -433,16 +439,16 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.rate_review_outlined, size: 48, color: Colors.grey[300]),
+                      Icon(Icons.rate_review_outlined, size: 48, color: AppColors.textHint),
                       const SizedBox(height: 8),
                       Text(
                         'No reviews yet',
-                        style: AppTextStyles.bodyLarge(context, color: Colors.grey[600], fontWeight: FontWeight.bold),
+                        style: AppTextStyles.bodyLarge(context, color: AppColors.textHint, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Be the first to rate this product!',
-                        style: AppTextStyles.bodyMedium(context, color: Colors.grey[400]),
+                        style: AppTextStyles.bodyMedium(context, color: AppColors.textHint),
                       ),
                     ],
                   ),

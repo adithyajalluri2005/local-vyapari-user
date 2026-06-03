@@ -85,12 +85,12 @@ class ChatsListScreen extends ConsumerWidget {
         ),
         content: Text(
           'Your chat with ${shopName.isNotEmpty ? shopName : "this shop"} will be removed from your list.',
-          style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary),
+          style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: isDark ? Colors.white70 : AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -135,11 +135,11 @@ class _ChatTile extends StatelessWidget {
             title: Text('Delete conversation?',
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
             content: Text('This will remove the chat from your list.',
-                style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textSecondary)),
+                style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: Text('Cancel', style: GoogleFonts.poppins(color: AppColors.textSecondary)),
+                child: Text('Cancel', style: GoogleFonts.poppins(color: isDark ? Colors.white70 : AppColors.textSecondary)),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
@@ -317,6 +317,7 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -342,7 +343,7 @@ class _EmptyView extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
+                color: isDark ? Colors.white : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
