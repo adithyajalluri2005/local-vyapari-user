@@ -42,7 +42,8 @@ final nearbyProductsProvider = StreamProvider.autoDispose<List<Product>>((ref) a
       targetShopIds.map((id) => FirebaseDatabase.instance.ref('products/$id').get()),
     );
 
-    final List<Product> allProducts = [];
+    // Collect raw products per shop into buckets.
+    final Map<String, List<Product>> byShop = {};
     for (int i = 0; i < snapshots.length; i++) {
       final shopId = targetShopIds[i];
       final snapshot = snapshots[i];
@@ -57,12 +58,36 @@ final nearbyProductsProvider = StreamProvider.autoDispose<List<Product>>((ref) a
               shopId,
               Map<dynamic, dynamic>.from(productValue),
             );
-            if (product.isActive && !product.isOutOfStock) allProducts.add(product);
+            if (product.isActive && !product.isOutOfStock) {
+              byShop.putIfAbsent(shopId, () => []).add(product);
+            }
           } catch (e) {
             debugPrint('Error parsing product: $e');
           }
         }
       });
+    }
+
+    // Per-shop: sort by highest discount first, then cap at 6.
+    // This prevents a single shop with 100 products from flooding the feed.
+    const kMaxPerShop = 6;
+    final shopBuckets = byShop.values.map((products) {
+      products.sort((a, b) {
+        final dA = a.actualPrice > 0 ? (a.actualPrice - a.offerPrice) / a.actualPrice : 0.0;
+        final dB = b.actualPrice > 0 ? (b.actualPrice - b.offerPrice) / b.actualPrice : 0.0;
+        return dB.compareTo(dA);
+      });
+      return products.take(kMaxPerShop).toList();
+    }).toList();
+
+    // Interleave round-robin across shops so variety appears immediately.
+    // e.g. shop A → shop B → shop C → shop A → shop B → ...
+    final List<Product> allProducts = [];
+    final maxLen = shopBuckets.fold(0, (m, b) => b.length > m ? b.length : m);
+    for (int i = 0; i < maxLen; i++) {
+      for (final bucket in shopBuckets) {
+        if (i < bucket.length) allProducts.add(bucket[i]);
+      }
     }
 
     await DataCacheService.cacheProducts(allProducts);

@@ -246,9 +246,6 @@ class AuthNotifier extends Notifier<AuthState> {
       // Role validation is handled by the authStateChanges listener which fires
       // immediately after sign-in — no need to call isCustomerUser here.
       return credential.user != null;
-    } on FirebaseAuthMultiFactorException catch (e) {
-      state = AuthMfaRequired(e.resolver);
-      return false;
     } on FirebaseAuthException catch (e) {
       state = AuthFailure(mapFirebaseError(e));
       return false;
@@ -272,42 +269,11 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       // Role validation is handled by the authStateChanges listener.
       return credential.user != null;
-    } on FirebaseAuthMultiFactorException catch (e) {
-      state = AuthMfaRequired(e.resolver);
-      return false;
     } on FirebaseAuthException catch (e) {
       state = AuthFailure(mapFirebaseError(e));
       return false;
     } on FirebaseFunctionsException catch (e) {
       state = AuthFailure(mapFunctionsError(e));
-      return false;
-    } catch (e) {
-      state = AuthFailure(e.toString());
-      return false;
-    } finally {
-      ref.read(authLoadingProvider.notifier).setLoading(false);
-    }
-  }
-
-  /// Completes a sign-in that required a TOTP second factor.
-  Future<bool> completeMfaChallenge(
-      MultiFactorResolver resolver, String code) async {
-    ref.read(authLoadingProvider.notifier).setLoading(true);
-    state = const AuthLoading();
-    try {
-      final hint = resolver.hints.firstWhere(
-        (h) => h.factorId == 'totp',
-        orElse: () => resolver.hints.first,
-      );
-      final assertion = await TotpMultiFactorGenerator.getAssertionForSignIn(
-        hint.uid,
-        code.trim(),
-      );
-      final credential = await resolver.resolveSignIn(assertion);
-      // authStateChanges listener handles role validation → Authenticated.
-      return credential.user != null;
-    } on FirebaseAuthException catch (e) {
-      state = AuthFailure(mapFirebaseError(e));
       return false;
     } catch (e) {
       state = AuthFailure(e.toString());

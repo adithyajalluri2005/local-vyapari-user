@@ -1,9 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/services/security/account_security_service.dart';
-import 'package:local_vyapari_user/services/security/mfa_service.dart';
-import 'package:local_vyapari_user/features/security/presentation/screens/mfa_enroll_screen.dart';
 
 /// Account-security hub: two-factor auth, signed-in devices, and
 /// "sign out everywhere".
@@ -17,70 +14,6 @@ class SecuritySettingsScreen extends ConsumerStatefulWidget {
 
 class _SecuritySettingsScreenState
     extends ConsumerState<SecuritySettingsScreen> {
-  List<MultiFactorInfo> _factors = const [];
-  bool _loadingFactors = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFactors();
-  }
-
-  Future<void> _loadFactors() async {
-    setState(() => _loadingFactors = true);
-    try {
-      final factors = await ref.read(mfaServiceProvider).enrolledFactors();
-      if (mounted) setState(() => _factors = factors);
-    } catch (_) {
-      // ignore — likely offline; section just shows "not enabled".
-    } finally {
-      if (mounted) setState(() => _loadingFactors = false);
-    }
-  }
-
-  Future<void> _enrollMfa() async {
-    final done = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const MfaEnrollScreen()),
-    );
-    if (done == true) _loadFactors();
-  }
-
-  Future<void> _unenroll(MultiFactorInfo factor) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Disable two-factor auth?'),
-        content: const Text(
-            'You may be asked to sign in again. Your account will be less protected.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Disable')),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    try {
-      await ref.read(mfaServiceProvider).unenroll(factor.uid);
-      await _loadFactors();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Two-factor authentication disabled.')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Could not disable. You may need to sign in again first.')),
-        );
-      }
-    }
-  }
 
   Future<void> _signOutEverywhere() async {
     final confirm = await showDialog<bool>(
@@ -120,38 +53,11 @@ class _SecuritySettingsScreenState
   @override
   Widget build(BuildContext context) {
     final devicesAsync = ref.watch(accountDevicesProvider);
-    final mfaEnabled = _factors.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Security')),
       body: ListView(
         children: [
-          _sectionHeader(context, 'Two-factor authentication'),
-          if (_loadingFactors)
-            const ListTile(
-                leading: Icon(Icons.security),
-                title: Text('Checking status…'))
-          else if (mfaEnabled)
-            ..._factors.map(
-              (f) => ListTile(
-                leading: const Icon(Icons.verified_user, color: Colors.green),
-                title: Text(f.displayName ?? 'Authenticator app'),
-                subtitle: const Text('Enabled'),
-                trailing: TextButton(
-                  onPressed: () => _unenroll(f),
-                  child: const Text('Disable'),
-                ),
-              ),
-            )
-          else
-            ListTile(
-              leading: const Icon(Icons.security),
-              title: const Text('Authenticator app (TOTP)'),
-              subtitle: const Text('Add a second layer of protection'),
-              trailing: FilledButton(
-                  onPressed: _enrollMfa, child: const Text('Enable')),
-            ),
-          const Divider(),
           _sectionHeader(context, 'Signed-in devices'),
           devicesAsync.when(
             loading: () => const Padding(

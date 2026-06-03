@@ -2,55 +2,65 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:local_vyapari_user/core/theme/app_theme.dart';
-import 'package:local_vyapari_user/core/theme/responsive.dart';
-import 'package:local_vyapari_user/core/theme/app_sizes.dart';
-import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:local_vyapari_user/features/favorites/providers/favorites_provider.dart';
-import 'package:local_vyapari_user/features/home/presentation/screens/main_navigation_screen.dart';
+import 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
+import 'package:local_vyapari_user/shared/widgets/shop_card.dart';
+import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    Responsive.init(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final favoriteProductsAsync = ref.watch(favoriteProductsProvider);
     final favoriteShopsAsync = ref.watch(favoriteShopsProvider);
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
         appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+          elevation: 0,
           title: Text(
-            'Favorites',
-            style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+            'Favourites',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : AppColors.textPrimary,
+            ),
           ),
-          centerTitle: true,
-          bottom: const TabBar(
-            indicatorColor: AppTheme.primaryColor,
-            labelColor: AppTheme.primaryColor,
-            unselectedLabelColor: Colors.grey,
-            tabs: [
+          bottom: TabBar(
+            indicatorColor: AppColors.primary,
+            indicatorWeight: 2.5,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textHint,
+            labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+            tabs: const [
               Tab(text: 'Products'),
               Tab(text: 'Shops'),
             ],
           ),
         ),
-        body: SafeArea(
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: TabBarView(
-                children: [
-                  _buildProductsTab(context, ref, favoriteProductsAsync),
-                  _buildShopsTab(context, ref, favoriteShopsAsync),
-                ],
-              ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: TabBarView(
+              children: [
+                _buildProductsTab(context, ref, favoriteProductsAsync, isDark),
+                _buildShopsTab(context, ref, favoriteShopsAsync, isDark),
+              ],
             ),
           ),
         ),
@@ -58,118 +68,79 @@ class FavoritesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProductsTab(BuildContext context, WidgetRef ref, AsyncValue<List<Product>> productsAsync) {
-    final padding = AppSizes.paddingMedium(context);
+  Widget _buildProductsTab(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Product>> productsAsync,
+    bool isDark,
+  ) {
     return productsAsync.when(
+      loading: () => const SkeletonListView(count: 6),
+      error: (_, _) => _buildError(context, isDark),
       data: (products) {
         if (products.isEmpty) {
           return _buildEmptyState(
             context,
             ref,
-            icon: Icons.favorite_border,
-            title: 'No favorite products yet',
-            subtitle: 'Products you heart will show up here.',
+            icon: Icons.favorite_border_rounded,
+            title: 'No favourite products yet',
+            subtitle: 'Tap the heart on any product to save it here.',
           );
         }
-        return ListView.separated(
-          padding: EdgeInsets.all(padding),
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           itemCount: products.length,
-          separatorBuilder: (context, index) => const Divider(),
-          itemBuilder: (context, index) => _buildProductItem(context, products[index]),
+          itemBuilder: (context, index) => FadeInSlide(
+            delay: Duration(milliseconds: 40 * index),
+            child: _ProductFavCard(product: products[index], isDark: isDark),
+          ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Failed to load favorites', style: AppTextStyles.bodyLarge(context))),
     );
   }
 
-  Widget _buildShopsTab(BuildContext context, WidgetRef ref, AsyncValue<List<Shop>> shopsAsync) {
-    final padding = AppSizes.paddingMedium(context);
+  Widget _buildShopsTab(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Shop>> shopsAsync,
+    bool isDark,
+  ) {
     return shopsAsync.when(
+      loading: () => const SkeletonListView(count: 6),
+      error: (_, _) => _buildError(context, isDark),
       data: (shops) {
         if (shops.isEmpty) {
           return _buildEmptyState(
             context,
             ref,
             icon: Icons.storefront_outlined,
-            title: 'No favorite shops yet',
-            subtitle: 'Shops you follow will appear here.',
+            title: 'No favourite shops yet',
+            subtitle: 'Tap the heart on any shop to save it here.',
           );
         }
-        return ListView.separated(
-          padding: EdgeInsets.all(padding),
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           itemCount: shops.length,
-          separatorBuilder: (context, index) => const Divider(),
-          itemBuilder: (context, index) => _buildShopItem(context, shops[index]),
+          itemBuilder: (context, index) => FadeInSlide(
+            delay: Duration(milliseconds: 40 * index),
+            child: ShopCard(
+              shop: shops[index],
+              onTap: () => context.push('/shop_details', extra: shops[index]),
+            ),
+          ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Failed to load favorites', style: AppTextStyles.bodyLarge(context))),
     );
   }
 
-  Widget _buildProductItem(BuildContext context, Product product) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: _buildImage(product.images.isNotEmpty ? product.images.first : '', Icons.image, context),
-      title: Text(
-        product.name,
-        style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '₹${product.offerPrice}',
-        style: AppTextStyles.bodyMedium(context, color: Colors.grey[700]),
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => context.push('/product_details', extra: product),
-    );
-  }
-
-  Widget _buildShopItem(BuildContext context, Shop shop) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: _buildImage(shop.shopLogo.isNotEmpty ? shop.shopLogo : shop.shopBanner, Icons.store, context),
-      title: Text(
-        shop.shopName,
-        style: AppTextStyles.bodyLarge(context, fontWeight: FontWeight.bold),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        shop.location.address,
-        style: AppTextStyles.bodyMedium(context, color: Colors.grey[700]),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => context.push('/shop_details', extra: shop),
-    );
-  }
-
-  Widget _buildImage(String url, IconData fallbackIcon, BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppSizes.radiusSmall),
-      child: Container(
-        width: 60,
-        height: 60,
-        color: cs.surfaceContainerHighest,
-        child: url.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                cacheManager: AppCacheManager(),
-                placeholder: (ctx, url) => Shimmer.fromColors(
-                  baseColor: isDark ? const Color(0xFF222C36) : Colors.grey.shade300,
-                  highlightColor: isDark ? const Color(0xFF2C3742) : Colors.grey.shade100,
-                  child: Container(color: isDark ? const Color(0xFF1E1E2E) : Colors.white),
-                ),
-                errorWidget: (ctx, url, error) => Icon(fallbackIcon, color: cs.onSurfaceVariant),
-              )
-            : Icon(fallbackIcon, color: cs.onSurfaceVariant),
+  Widget _buildError(BuildContext context, bool isDark) {
+    return Center(
+      child: Text(
+        'Failed to load favourites',
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          color: AppColors.textHint,
+        ),
       ),
     );
   }
@@ -181,33 +152,183 @@ class FavoritesScreen extends ConsumerWidget {
     required String title,
     required String subtitle,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 80, color: Colors.grey[300]),
-            const SizedBox(height: 16),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 38, color: AppColors.primary.withValues(alpha: 0.5)),
+            ),
+            const SizedBox(height: 20),
             Text(
               title,
-              style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: AppTextStyles.bodyMedium(context, color: Colors.grey[600]),
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: AppColors.textHint,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             ElevatedButton(
-              onPressed: () {
-                ref.read(navigationIndexProvider.notifier).setIndex(0);
-              },
-              child: const Text('Start Exploring'),
+              onPressed: () => ref.read(navigationIndexProvider.notifier).setIndex(0),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+              ),
+              child: Text(
+                'Start Exploring',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Product favourite card ─────────────────────────────────────────────────────
+
+class _ProductFavCard extends StatelessWidget {
+  final Product product;
+  final bool isDark;
+
+  const _ProductFavCard({required this.product, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColors.darkSurface : AppColors.surface;
+    final border = isDark ? Colors.white10 : AppColors.border.withValues(alpha: 0.8);
+    final shadow = Colors.black.withValues(alpha: isDark ? 0.2 : 0.055);
+    final hasDiscount = product.actualPrice > product.offerPrice;
+
+    return ScaleOnTap(
+      onTap: () => context.push('/product_details', extra: product),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: border, width: 0.7),
+          boxShadow: [BoxShadow(color: shadow, blurRadius: 14, offset: const Offset(0, 4))],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: SizedBox(
+                  width: 70,
+                  height: 70,
+                  child: product.images.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: product.images.first,
+                          fit: BoxFit.cover,
+                          cacheManager: AppCacheManager(),
+                          placeholder: (_, _) => Container(color: AppColors.surfaceElevated),
+                          errorWidget: (_, _, _) => Container(
+                            color: AppColors.surfaceElevated,
+                            child: const Icon(Icons.image_not_supported_outlined,
+                                color: AppColors.textHint, size: 22),
+                          ),
+                        )
+                      : Container(
+                          color: AppColors.surfaceElevated,
+                          child: const Icon(Icons.inventory_2_outlined,
+                              color: AppColors.textHint, size: 22),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppColors.textPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (product.category.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        product.category,
+                        style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textHint),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '₹${product.offerPrice}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        if (hasDiscount) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            '₹${product.actualPrice}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: AppColors.textHint,
+                              decoration: TextDecoration.lineThrough,
+                              decorationColor: AppColors.textHint,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FavoriteButton(
+                itemId: product.id,
+                type: FavoriteType.product,
+                shopId: product.shopId,
+                size: 22,
+                color: AppColors.textHint,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
@@ -79,7 +80,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -89,6 +90,8 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final recentLocationsAsync = ref.watch(recentLocationsStreamProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hintColor = isDark ? AppColors.textSecondary : AppColors.textHint;
 
     return Scaffold(
       appBar: AppBar(
@@ -123,7 +126,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                   prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          icon: Icon(Icons.clear, color: hintColor),
                           onPressed: () {
                             _searchController.clear();
                             _onSearchChanged('');
@@ -174,7 +177,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                       style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
                     ),
                     subtitle: const Text('Uses device GPS to find nearby shops'),
-                    trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                    trailing: Icon(Icons.chevron_right, color: hintColor),
                   ),
                   const Divider(),
 
@@ -186,30 +189,30 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                       ),
                     )
                   else if (_searchController.text.isNotEmpty && _searchResults.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 16.0),
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.location_off, size: 48, color: Colors.grey),
-                            SizedBox(height: 12),
+                            Icon(Icons.location_off, size: 48, color: hintColor),
+                            const SizedBox(height: 12),
                             Text(
                               'No locations found',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: hintColor),
                             ),
-                            SizedBox(height: 4),
-                            Text('Try searching for another town or check spelling', textAlign: TextAlign.center),
+                            const SizedBox(height: 4),
+                            const Text('Try searching for another town or check spelling', textAlign: TextAlign.center),
                           ],
                         ),
                       ),
                     )
                   else if (_searchResults.isNotEmpty) ...[
                     // Search Results
-                    const Padding(
-                      padding: EdgeInsets.only(left: 16.0, top: 12.0, bottom: 8.0),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16.0, top: 12.0, bottom: 8.0),
                       child: Text(
                         'Search Results',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: hintColor),
                       ),
                     ),
                     ListView.separated(
@@ -221,7 +224,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                         final location = _searchResults[index];
                         return ListTile(
                           onTap: () => _selectLocation(location),
-                          leading: const Icon(Icons.location_on_outlined, color: Colors.grey),
+                          leading: Icon(Icons.location_on_outlined, color: hintColor),
                           title: Text(
                             location.name,
                             style: const TextStyle(fontWeight: FontWeight.w500),
@@ -242,11 +245,11 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Padding(
-                              padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 8.0),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 8.0),
                               child: Text(
                                 'Recent Locations',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: hintColor),
                               ),
                             ),
                             ListView.separated(
@@ -258,7 +261,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                                 final location = recents[index];
                                 return ListTile(
                                   onTap: () => _selectLocation(location),
-                                  leading: const Icon(Icons.history, color: Colors.grey),
+                                  leading: Icon(Icons.history, color: hintColor),
                                   title: Text(
                                     location.name,
                                     style: const TextStyle(fontWeight: FontWeight.w500),

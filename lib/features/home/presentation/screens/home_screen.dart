@@ -10,7 +10,9 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_offers_provider.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_products_provider.dart';
+import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:local_vyapari_user/features/reviews/presentation/widgets/dynamic_product_rating.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
@@ -34,6 +36,41 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _offerPopupShown = false;
+  final _scrollCtrl = ScrollController();
+  bool _nearBottom = false;
+  int _productsVisible = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients || _scrollCtrl.position.maxScrollExtent <= 0) return;
+    final nearBottom =
+        _scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200;
+    if (!nearBottom) {
+      _nearBottom = false;
+      return;
+    }
+    if (_nearBottom) return;
+    _nearBottom = true;
+
+    final all = ref.read(nearbyProductsProvider).value ?? [];
+    if (_productsVisible < all.length) {
+      setState(() {
+        _productsVisible = (_productsVisible + 10).clamp(0, all.length);
+        _nearBottom = false; // allow re-trigger after next page loads
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +79,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final locationAsync = ref.watch(activeBrowsingLocationProvider);
     final shopsAsync = ref.watch(nearbyShopsProvider);
     final offersAsync = ref.watch(nearbyOffersProvider);
+
+    // Split offers so carousel and Hot Deals never show the same item.
+    // Featured offers go to the carousel; non-featured go to Hot Deals.
+    // If no vendor has marked any offer as featured, the carousel shows its
+    // static banner fallback and Hot Deals shows the full list.
+    final featuredOffersAsync = offersAsync.whenData(
+      (offers) => offers.where((o) => o.isFeatured).toList(),
+    );
+    final dealsOffersAsync = offersAsync.whenData(
+      (offers) => offers.where((o) => !o.isFeatured).toList(),
+    );
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locationName = locationAsync.whenOrNull(data: (l) => l?.name) ?? '';
 
@@ -50,6 +99,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.invalidate(nearbyShopsProvider);
         ref.invalidate(nearbyProductsProvider);
         ref.invalidate(nearbyOffersProvider);
+        setState(() { _productsVisible = 10; _nearBottom = false; });
       }
     });
 
@@ -87,9 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ref.invalidate(nearbyShopsProvider);
             ref.invalidate(nearbyOffersProvider);
             ref.invalidate(nearbyProductsProvider);
+            setState(() { _productsVisible = 10; _nearBottom = false; });
           },
           color: AppColors.primary,
           child: SingleChildScrollView(
+            controller: _scrollCtrl,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.only(
               bottom: 90 + MediaQuery.of(context).padding.bottom,
@@ -108,7 +160,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: FadeInSlide(
                         duration: const Duration(milliseconds: 500),
                         child: _PromoBannerCarousel(
-                          offersAsync: offersAsync,
+                          offersAsync: featuredOffersAsync,
                           isDark: isDark,
                           onOfferTap: (offer) =>
                               _navigateToShopForOffer(context, offer),
@@ -128,12 +180,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             padding: EdgeInsets.symmetric(horizontal: hp),
                             child: SectionHeader(
                               title: 'Hot Deals',
-                              trailing: SeeAllChip(onTap: () {}),
+                              trailing: SeeAllChip(onTap: () => context.push('/all_offers')),
                             ),
                           ),
                           const SizedBox(height: 12),
                           _OfferBannerList(
-                            offersAsync: offersAsync,
+                            offersAsync: dealsOffersAsync,
                             hp: hp,
                             isDark: isDark,
                             onOfferTap: (offer) =>
@@ -178,7 +230,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           children: [
                             const SectionHeader(title: 'For You'),
                             const SizedBox(height: 12),
-                            _ProductsGrid(isDark: isDark),
+                            _ProductsGrid(isDark: isDark, visibleCount: _productsVisible),
                           ],
                         ),
                       ),
@@ -748,18 +800,21 @@ class _StaticBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                  child: Text(
-                    'Explore Shops',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF3D1A78),
+                GestureDetector(
+                  onTap: () => context.push('/radar'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                    child: Text(
+                      'Explore Shops',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF3D1A78),
+                      ),
                     ),
                   ),
                 ),
@@ -1389,7 +1444,8 @@ class _HomeFilterChip extends StatelessWidget {
 
 class _ProductsGrid extends ConsumerWidget {
   final bool isDark;
-  const _ProductsGrid({required this.isDark});
+  final int visibleCount;
+  const _ProductsGrid({required this.isDark, required this.visibleCount});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1405,7 +1461,11 @@ class _ProductsGrid extends ConsumerWidget {
             message: 'No products found nearby',
           );
         }
-        return GridView.builder(
+        final visible = products.take(visibleCount).toList();
+        final hasMore = products.length > visibleCount;
+        return Column(
+          children: [
+        GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1414,9 +1474,9 @@ class _ProductsGrid extends ConsumerWidget {
             mainAxisSpacing: 10,
             childAspectRatio: 0.70,
           ),
-          itemCount: products.length,
+          itemCount: visible.length,
           itemBuilder: (ctx, i) {
-            final p = products[i];
+            final p = visible[i];
             final hasDiscount = p.actualPrice > p.offerPrice;
             final discPct = hasDiscount
                 ? ((1 - p.offerPrice / p.actualPrice) * 100).toInt()
@@ -1501,6 +1561,27 @@ class _ProductsGrid extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                          Positioned(
+                            top: 6,
+                            right: 6,
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: FavoriteButton(
+                                  itemId: p.id,
+                                  type: FavoriteType.product,
+                                  shopId: p.shopId,
+                                  size: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       Expanded(
@@ -1598,11 +1679,24 @@ class _ProductsGrid extends ConsumerWidget {
               ),
             );
           },
-        );
+        ),
+        if (hasMore)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: SkeletonProductGrid(
+              crossAxisCount: cols,
+              aspectRatio: 0.70,
+              spacing: 10,
+              rowCount: 1,
+            ),
+          ),
+          ], // Column children
+        ); // Column
       },
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(child: CircularProgressIndicator()),
+      loading: () => SkeletonProductGrid(
+        crossAxisCount: cols,
+        aspectRatio: 0.70,
+        spacing: 10,
       ),
       error: (_, _) => const _EmptySection(
         icon: Icons.error_outline,

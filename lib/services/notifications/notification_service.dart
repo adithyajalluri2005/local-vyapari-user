@@ -9,7 +9,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -17,9 +16,11 @@ import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/router/app_router.dart';
+import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/services/location/location_cache.dart';
+import 'package:local_vyapari_user/shared/models/shop.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -51,7 +52,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
     final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
     const AndroidInitializationSettings initSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     try {
       await localNotifications.initialize(
@@ -66,6 +67,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         priority: Priority.high,
         showWhen: true,
         playSound: true,
+        color: const Color(0xFF112E51),
       );
 
       final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -86,12 +88,15 @@ final notificationServiceProvider = Provider((ref) {
   final service = NotificationService(ref);
   service.init();
 
-  ref.listen<AsyncValue<LocationResult?>>(activeBrowsingLocationProvider, (previous, next) {
+  ref.listen<AsyncValue<LocationResult?>>(activeBrowsingLocationProvider, (_, next) {
     next.whenData((location) {
-      if (location != null) {
-        service.updateLocationSubscription(location);
-      }
+      if (location != null) service.updateLocationSubscription(location);
     });
+  });
+
+  // Set up real-time offer listeners whenever the nearby-shops list changes.
+  ref.listen<AsyncValue<List<Shop>>>(nearbyShopsProvider, (_, next) {
+    next.whenData((shops) => service.updateNearbyShops(shops));
   });
 
   return service;
@@ -100,11 +105,12 @@ final notificationServiceProvider = Provider((ref) {
 class NotificationService {
   bool _initialized = false;
   final Set<String> _seenOfferIds = {};
-  bool _firstLoadDone = false;
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   StreamSubscription<DatabaseEvent>? _chatSubscription;
   final Map<String, int> _lastChatNotifyTs = {};
+  // Per-shop real-time offer listeners, keyed by shopId.
+  final Map<String, StreamSubscription<DatabaseEvent>> _offerSubscriptions = {};
 
   NotificationService(Ref _);
 
@@ -114,7 +120,6 @@ class NotificationService {
 
     _initLocalNotifications();
     _initFirebaseMessaging();
-    _listenForNewOffers();
 
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
@@ -130,7 +135,7 @@ class NotificationService {
 
   Future<void> _initLocalNotifications() async {
     const AndroidInitializationSettings initSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     try {
       await _localNotifications.initialize(
@@ -142,10 +147,9 @@ class NotificationService {
 
             final payload = response.payload ?? '';
             if (payload.startsWith('chat:')) {
-              GoRouter.of(context).go('/chats');
-            } else {
-              GoRouter.of(context).go('/home');
+              GoRouter.of(context).push('/chats');
             }
+            // Non-chat notifications: app is already open, no navigation needed.
           } catch (e) {
             debugPrint('Error handling local notification click: $e');
           }
@@ -189,6 +193,7 @@ class NotificationService {
       priority: Priority.high,
       showWhen: true,
       playSound: true,
+      color: Color(0xFF112E51),
     );
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -218,6 +223,7 @@ class NotificationService {
       priority: Priority.high,
       showWhen: true,
       playSound: true,
+      color: Color(0xFF112E51),
     );
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -298,7 +304,7 @@ class NotificationService {
               onTap: () {
                 try {
                   final context = rootNavigatorKey.currentContext;
-                  if (context != null) GoRouter.of(context).go('/chats');
+                  if (context != null) GoRouter.of(context).push('/chats');
                 } catch (_) {}
               },
             );
@@ -308,88 +314,80 @@ class NotificationService {
     });
   }
 
-  void _listenForNewOffers() {
-    // Check immediately on startup, then every 10 minutes.
-    // Using periodic .get() instead of onValue avoids a 24/7 persistent connection
-    // to the entire offers tree.
-    _checkNewOffers();
-    Timer.periodic(const Duration(minutes: 10), (_) => _checkNewOffers());
+  // ── Real-time per-shop offer listeners ────────────────────────────────────
+
+  /// Called whenever the nearby-shops list changes. Sets up / tears down
+  /// per-shop RTDB `onChildAdded` listeners so new offers trigger a notification
+  /// immediately — no polling required.
+  void updateNearbyShops(List<Shop> shops) {
+    final shopIds = shops.map((s) => s.id).toSet();
+    _updateOfferListeners(shopIds);
   }
 
-  Future<void> _checkNewOffers() async {
+  Future<void> _updateOfferListeners(Set<String> newShopIds) async {
+    // Cancel listeners for shops that are no longer nearby.
+    final toRemove = Set<String>.from(_offerSubscriptions.keys).difference(newShopIds);
+    for (final shopId in toRemove) {
+      await _offerSubscriptions[shopId]?.cancel();
+      _offerSubscriptions.remove(shopId);
+    }
+
+    // Set up listeners for newly nearby shops.
+    for (final shopId in newShopIds.difference(_offerSubscriptions.keys.toSet())) {
+      await _setupShopOfferListener(shopId);
+    }
+  }
+
+  Future<void> _setupShopOfferListener(String shopId) async {
+    // 1. Seed existing offer IDs so we never re-notify for offers that
+    //    were already posted before the listener was attached.
     try {
-      final snapshot = await FirebaseDatabase.instance.ref('offers').get();
-      if (!snapshot.exists || snapshot.value == null) {
-        _firstLoadDone = true;
-        return;
+      final snapshot = await FirebaseDatabase.instance.ref('offers/$shopId').get();
+      if (snapshot.exists && snapshot.value is Map) {
+        (snapshot.value as Map).forEach((key, _) => _seenOfferIds.add(key.toString()));
       }
+    } catch (e) {
+      debugPrint('Error seeding offer IDs for shop $shopId: $e');
+    }
 
-      final Map<dynamic, dynamic> shopsOffersMap = snapshot.value as Map<dynamic, dynamic>;
-      final List<MapEntry<String, Map<String, dynamic>>> newOffers = [];
+    // 2. Listen for new children. onChildAdded fires for all existing children
+    //    first (they are already in _seenOfferIds from step 1 → skipped),
+    //    then fires for every genuinely new offer.
+    _offerSubscriptions[shopId] = FirebaseDatabase.instance
+        .ref('offers/$shopId')
+        .onChildAdded
+        .listen((event) async {
+          final offerId = event.snapshot.key;
+          if (offerId == null || _seenOfferIds.contains(offerId)) return;
+          _seenOfferIds.add(offerId);
 
-      shopsOffersMap.forEach((shopIdKey, offersValue) {
-        final shopId = shopIdKey.toString();
-        if (offersValue is Map) {
-          offersValue.forEach((offerIdKey, offerValue) {
-            if (offerValue is Map) {
-              final offerId = offerIdKey.toString();
-              final offerData = Map<String, dynamic>.from(offerValue);
-              if (!_seenOfferIds.contains(offerId)) {
-                if (_firstLoadDone) newOffers.add(MapEntry(shopId, offerData));
-                _seenOfferIds.add(offerId);
-              }
-            }
-          });
-        }
-      });
+          final raw = event.snapshot.value;
+          if (raw is! Map) return;
+          final offerData = Map<String, dynamic>.from(raw);
 
-      _firstLoadDone = true;
+          if (offerData['isActive'] != true) return;
 
-      for (final entry in newOffers) {
-        final shopId = entry.key;
-        final offerData = entry.value;
-        final title = offerData['title'] ?? 'New Offer!';
+          final title = offerData['title']?.toString() ?? 'New Offer!';
+          final storedName = offerData['shopName']?.toString();
+          final shopName = (storedName != null && storedName.isNotEmpty)
+              ? storedName
+              : await _getShopName(shopId);
+          final discount = (offerData['discountPercentage'] as num?)?.toInt() ?? 0;
 
-        final isNearby = await _isShopNearby(shopId);
-        if (isNearby) {
-          final shopName = await _getShopName(shopId);
-          final discount = offerData['discountPercentage'] ?? 0;
           final titleStr = 'New Offer at $shopName!';
-          final bodyStr = '$title - Get ${discount.toInt()}% OFF!';
-          await _showNativeNotification(titleStr, bodyStr);
+          final bodyStr = '$title - Get $discount% OFF!';
+          // Native notifications for offers come from FCM (foreground: onMessage,
+          // background: firebaseMessagingBackgroundHandler). Calling
+          // _showNativeNotification here too would produce a duplicate whenever
+          // the app is backgrounded, because both this RTDB listener and the FCM
+          // background handler fire concurrently.
+          // Only show the in-app foreground banner; it silently no-ops when the
+          // app is not visible (overlay == null guard inside _showForegroundNotification).
           _showForegroundNotification(titleStr, bodyStr);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error checking for new offers: $e');
-    }
-  }
-
-  Future<bool> _isShopNearby(String shopId) async {
-    try {
-      final activeLoc = await LocationCache.getActiveLocation();
-      if (activeLoc == null) return false;
-
-      final shopSnapshot = await FirebaseDatabase.instance.ref('shop/$shopId').once();
-      if (!shopSnapshot.snapshot.exists || shopSnapshot.snapshot.value == null) return false;
-
-      final shopData = Map<dynamic, dynamic>.from(shopSnapshot.snapshot.value as Map);
-      final lat = (shopData['latitude'] ?? 0.0).toDouble();
-      final lng = (shopData['longitude'] ?? 0.0).toDouble();
-      if (lat == 0.0 && lng == 0.0) return false;
-
-      final distanceInMeters = Geolocator.distanceBetween(
-        activeLoc.latitude,
-        activeLoc.longitude,
-        lat,
-        lng,
-      );
-
-      return distanceInMeters <= 15000;
-    } catch (e) {
-      debugPrint('Error checking nearby shop for notification: $e');
-      return false;
-    }
+        }, onError: (Object e) {
+          debugPrint('Offer listener error for shop $shopId: $e');
+          _offerSubscriptions.remove(shopId);
+        });
   }
 
   Future<String> _getShopName(String shopId) async {
@@ -426,31 +424,79 @@ class NotificationService {
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
+      final isChat = message.data['type'] == 'chat';
+      final shopId = message.data['shopId'] ?? '';
+
+      // onMessage fires ONLY in the foreground. Offer notifications are already
+      // handled by the per-shop RTDB onChildAdded listeners when those are active.
+      // Showing them here too would produce a duplicate for every new offer.
+      // Skip non-chat FCM notifications when RTDB listeners are live; fall back
+      // to FCM only when no listeners exist yet (location not resolved).
+      final rtdbListenersActive = _offerSubscriptions.isNotEmpty;
+
+      // Notification-payload message (rare on Android when app is foreground)
       if (notification != null) {
         final title = notification.title ?? 'New Offer!';
         final body = notification.body ?? 'Check out the new offer nearby!';
-        final isChat = message.data['type'] == 'chat';
-        final shopId = message.data['shopId'] ?? '';
 
-        _showNativeNotification(title, body);
-        _showForegroundNotification(
-          title,
-          body,
-          icon: isChat ? Icons.chat_bubble_rounded : Icons.campaign,
-          gradientColors: isChat
-              ? const [AppColors.primary, AppColors.primaryLight]
-              : const [AppTheme.primaryColor, Color(0xFF673AB7)],
-          onTap: isChat
-              ? () {
-                  try {
-                    final context = rootNavigatorKey.currentContext;
-                    if (context != null) GoRouter.of(context).go('/chats');
-                  } catch (_) {}
-                }
-              : null,
-        );
-        if (isChat && shopId.isNotEmpty) {
-          _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
+        if (isChat) {
+          _showNativeNotification(title, body);
+          _showForegroundNotification(
+            title,
+            body,
+            icon: Icons.chat_bubble_rounded,
+            gradientColors: const [AppColors.primary, AppColors.primaryLight],
+            onTap: () {
+              try {
+                final context = rootNavigatorKey.currentContext;
+                if (context != null) GoRouter.of(context).push('/chats');
+              } catch (_) {}
+            },
+          );
+          if (shopId.isNotEmpty) {
+            _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
+          }
+        } else if (!rtdbListenersActive) {
+          _showNativeNotification(title, body);
+          _showForegroundNotification(title, body,
+              icon: Icons.campaign,
+              gradientColors: const [AppTheme.primaryColor, Color(0xFF673AB7)]);
+        }
+        return;
+      }
+
+      // Data-only message — the common path for Cloud Function–sent notifications.
+      if (message.data.isNotEmpty) {
+        final title = message.data['title'] ?? (isChat ? 'New message' : 'New Offer!');
+        final body = message.data['body'] ??
+            (isChat ? 'You have a new message.' : 'Check out the new offer nearby!');
+
+        if (isChat) {
+          final shopName = message.data['shopName'] ?? 'Shop';
+          _showChatNativeNotification(
+            shopId: shopId.isNotEmpty ? shopId : 'unknown',
+            shopName: shopName,
+            messageText: body,
+          );
+          _showForegroundNotification(
+            'New message from $shopName',
+            body,
+            icon: Icons.chat_bubble_rounded,
+            gradientColors: const [AppColors.primary, AppColors.primaryLight],
+            onTap: () {
+              try {
+                final context = rootNavigatorKey.currentContext;
+                if (context != null) GoRouter.of(context).push('/chats');
+              } catch (_) {}
+            },
+          );
+          if (shopId.isNotEmpty) {
+            _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
+          }
+        } else if (!rtdbListenersActive) {
+          // RTDB listeners not yet active — use FCM as the fallback.
+          _showNativeNotification(title, body);
+          _showForegroundNotification(title, body);
         }
       }
     });
@@ -474,10 +520,10 @@ class NotificationService {
       if (context == null) return;
 
       if (message.data['type'] == 'chat') {
-        GoRouter.of(context).go('/chats');
-      } else {
-        GoRouter.of(context).go('/home');
+        // push preserves the existing back stack (→ /home → /chats)
+        GoRouter.of(context).push('/chats');
       }
+      // For non-chat FCM taps, app is already at /home from auth redirect; nothing to do.
     } catch (e) {
       debugPrint('Error handling FCM notification click: $e');
     }
@@ -583,13 +629,8 @@ class NotificationService {
         body: body,
         icon: icon,
         gradientColors: gradientColors,
-        onTap: onTap ??
-            () {
-              try {
-                final ctx = rootNavigatorKey.currentContext;
-                if (ctx != null) GoRouter.of(ctx).go('/home');
-              } catch (_) {}
-            },
+        // No default navigation: user is already in the app, just dismiss the banner.
+        onTap: onTap ?? () {},
         onDismissed: () => entry.remove(),
       ),
     );

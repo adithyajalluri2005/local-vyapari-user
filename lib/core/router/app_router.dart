@@ -19,6 +19,7 @@ import 'package:local_vyapari_user/features/chat/presentation/screens/chat_scree
 import 'package:local_vyapari_user/features/chat/presentation/screens/chats_list_screen.dart';
 import 'package:local_vyapari_user/features/security/presentation/screens/security_settings_screen.dart';
 import 'package:local_vyapari_user/features/products/presentation/screens/product_image_fullscreen_screen.dart';
+import 'package:local_vyapari_user/features/offers/presentation/screens/all_offers_screen.dart';
 
 enum TransitionType { slide, fade, scale, slideUp }
 
@@ -82,15 +83,27 @@ CustomTransitionPage<T> buildPageWithTransition<T>({
 
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
+  String? _lastAccountStatus;
 
   RouterNotifier(this._ref) {
     _ref.listen<AuthState>(
       authProvider,
       (_, _) => notifyListeners(),
     );
-    _ref.listen(
+    // Only force a re-route when the account status changes to banned/suspended.
+    // Listening to every profile field update would rebuild the GoRouter stack
+    // on every RTDB stream event, corrupting pushed navigation history.
+    _ref.listen<AsyncValue<Map<String, dynamic>?>>(
       userProfileProvider,
-      (_, _) => notifyListeners(),
+      (_, next) {
+        final status = next.value?['status']?.toString();
+        if (status != _lastAccountStatus) {
+          _lastAccountStatus = status;
+          if (status == 'suspended' || status == 'banned') {
+            notifyListeners();
+          }
+        }
+      },
     );
   }
 }
@@ -239,6 +252,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const HyperlocalRadarScreen(),
           transitionType: TransitionType.slideUp,
+        ),
+      ),
+      GoRoute(
+        path: '/all_offers',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const AllOffersScreen(),
+          transitionType: TransitionType.slide,
         ),
       ),
       GoRoute(

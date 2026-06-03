@@ -112,11 +112,12 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
         final normalizedQuery = trimmedQuery.toLowerCase();
 
         // ── Product filtering ───────────────────────────────────────
-        // Category is an exact match; text is fuzzy on name + description.
+        // Category is an exact match; text is fuzzy on name + description + searchKeywords.
         final filteredProducts = nearbyProducts.where((p) {
-          if (hasCategory && p.category != category) return false;
+          if (hasCategory && p.category.toLowerCase() != category.toLowerCase()) return false;
           if (!hasQuery) return true;
-          final text = '${p.name} ${p.description}'.toLowerCase();
+          final keywords = p.searchKeywords.join(' ').toLowerCase();
+          final text = '${p.name} ${p.description} $keywords'.toLowerCase();
           return text.contains(normalizedQuery) ||
               text.similarityTo(normalizedQuery) > 0.4 ||
               normalizedQuery.similarityTo(p.name.toLowerCase()) > 0.3;

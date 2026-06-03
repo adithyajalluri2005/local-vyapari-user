@@ -8,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:local_vyapari_user/features/search/providers/hybrid_search_provider.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
@@ -360,6 +361,7 @@ class _QuickSearchItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ScaleOnTap(
       onTap: onTap,
       child: Padding(
@@ -374,7 +376,7 @@ class _QuickSearchItem extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
+                  color: isDark ? Colors.white : AppColors.textPrimary,
                 ),
               ),
             ),
@@ -417,7 +419,6 @@ class _ResultsView extends ConsumerWidget {
           return _EmptyState(
             query: query,
             selectedCategory: selectedCategory,
-            hasFilter: false,
             onClearFilters: onClearFilters,
           );
         }
@@ -435,7 +436,7 @@ class _ResultsView extends ConsumerWidget {
               const SizedBox(height: 8),
               if (cols == 1)
                 ...shops.asMap().entries.map((e) => FadeInSlide(
-                      delay: Duration(milliseconds: 60 * e.key),
+                      delay: Duration(milliseconds: (60 * e.key).clamp(0, 300)),
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: ShopCard(
@@ -456,7 +457,7 @@ class _ResultsView extends ConsumerWidget {
                   ),
                   itemCount: shops.length,
                   itemBuilder: (_, i) => FadeInSlide(
-                    delay: Duration(milliseconds: 60 * i),
+                    delay: Duration(milliseconds: (60 * i).clamp(0, 300)),
                     child: ShopCard(
                       shop: shops[i],
                       onTap: () => context.push('/shop_details', extra: shops[i]),
@@ -470,7 +471,7 @@ class _ResultsView extends ConsumerWidget {
               _SectionLabel(label: 'Products', count: products.length),
               const SizedBox(height: 8),
               ...products.asMap().entries.map((e) => FadeInSlide(
-                    delay: Duration(milliseconds: 60 * e.key),
+                    delay: Duration(milliseconds: (60 * e.key).clamp(0, 300)),
                     child: _ProductTile(product: e.value),
                   )),
             ],
@@ -607,30 +608,42 @@ class _ProductTile extends StatelessWidget {
                       color: AppColors.textHint,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '₹${product.offerPrice.toStringAsFixed(0)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      if (product.actualPrice > product.offerPrice) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '₹${product.actualPrice.toStringAsFixed(0)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: AppColors.textHint,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '₹${product.offerPrice.toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accent,
-                  ),
-                ),
-                if (product.actualPrice > product.offerPrice)
-                  Text(
-                    '₹${product.actualPrice.toStringAsFixed(0)}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: AppColors.textHint,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-              ],
+            const SizedBox(width: 8),
+            FavoriteButton(
+              itemId: product.id,
+              type: FavoriteType.product,
+              shopId: product.shopId,
+              size: 20,
+              color: isDark ? Colors.white38 : AppColors.textHint,
             ),
           ],
         ),
@@ -654,13 +667,11 @@ class _ProductImageFallback extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   final String query;
   final String? selectedCategory;
-  final bool hasFilter;
   final VoidCallback onClearFilters;
 
   const _EmptyState({
     required this.query,
     required this.selectedCategory,
-    required this.hasFilter,
     required this.onClearFilters,
   });
 
@@ -669,9 +680,7 @@ class _EmptyState extends StatelessWidget {
     final displayTerm = selectedCategory ?? query;
     final subtitle = selectedCategory != null
         ? 'No products found in this category nearby.'
-        : hasFilter
-            ? 'Try removing filters or search with broader terms.'
-            : 'Try different keywords or check your location.';
+        : 'Try different keywords or check your location.';
 
     return Center(
       child: Padding(
@@ -704,7 +713,7 @@ class _EmptyState extends StatelessWidget {
               style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
-            if (hasFilter || selectedCategory != null) ...[
+            if (selectedCategory != null) ...[
               const SizedBox(height: 20),
               OutlinedButton(
                 onPressed: onClearFilters,

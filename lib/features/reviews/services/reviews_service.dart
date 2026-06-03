@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:local_vyapari_user/features/reviews/models/shop_review.dart';
 import 'package:local_vyapari_user/features/reviews/models/product_review.dart';
 
@@ -47,29 +46,6 @@ class ReviewsService {
       'comment': comment,
       'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-
-    await _updateShopRatingInRTDB(shopId);
-  }
-
-  Future<void> _updateShopRatingInRTDB(String shopId) async {
-    final snapshot = await _firestore
-        .collection('shop_reviews')
-        .where('shopId', isEqualTo: shopId)
-        .get();
-
-    if (snapshot.docs.isEmpty) return;
-
-    final count = snapshot.docs.length;
-    final sum = snapshot.docs.fold<double>(
-      0.0,
-      (acc, doc) => acc + ((doc.data()['rating'] as num?)?.toDouble() ?? 0.0),
-    );
-    final avg = double.parse((sum / count).toStringAsFixed(1));
-
-    await FirebaseDatabase.instance.ref('shop/$shopId').update({
-      'rating': avg,
-      'totalReviews': count,
-    });
   }
 
   // Submits or updates a product review using a deterministic ID to prevent duplicates

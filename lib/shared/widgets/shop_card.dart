@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
@@ -81,10 +82,21 @@ class ShopCard extends StatelessWidget {
                 children: [
                   StatusPill(isOpen: shop.isOpen),
                   const SizedBox(height: 8),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: isDark ? Colors.white38 : AppColors.textHint,
+                  Row(
+                    children: [
+                      FavoriteButton(
+                        itemId: shop.id,
+                        type: FavoriteType.shop,
+                        size: 20,
+                        color: isDark ? Colors.white38 : AppColors.textHint,
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: isDark ? Colors.white38 : AppColors.textHint,
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -9,7 +9,6 @@ import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
-import 'package:local_vyapari_user/features/security/presentation/screens/mfa_challenge_screen.dart';
 import 'package:local_vyapari_user/services/security/social_auth_service.dart';
 import 'package:local_vyapari_user/shared/utils/input_sanitizer.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
@@ -74,14 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       final credential = await signIn();
       if (credential == null) return; // user cancelled
-      // The blocking beforeSignIn function syncs roles/claims; authStateChanges
-      // + the router redirect take it from here.
-    } on FirebaseAuthMultiFactorException catch (e) {
-      if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MfaChallengeScreen(resolver: e.resolver)),
-        );
-      }
+      // authStateChanges + the router redirect take it from here.
     } catch (e) {
       if (mounted) {
         CustomSnackBar.showError(
@@ -96,12 +88,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (next is AuthFailure) {
         CustomSnackBar.showError(context: context, message: next.message, title: 'Sign in failed');
         ref.read(authProvider.notifier).resetState();
-      } else if (next is AuthMfaRequired) {
-        final resolver = next.resolver;
-        ref.read(authProvider.notifier).resetState();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => MfaChallengeScreen(resolver: resolver)),
-        );
       }
     });
 
@@ -110,9 +96,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: Scaffold(
-        backgroundColor: AppColors.primary,
-        body: Column(
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: AppColors.primary,
+            body: Column(
           children: [
             // ── Brand header ────────────────────────────────────
             SafeArea(
@@ -365,6 +353,49 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ],
         ),
+          ),
+          if (isLoading)
+            Container(
+              color: AppColors.primary,
+              child: SafeArea(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/logo.png',
+                        height: 80,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.storefront_rounded,
+                          size: 60,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Signing you in...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

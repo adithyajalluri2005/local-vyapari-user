@@ -9,7 +9,7 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/theme_provider.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
-import 'package:local_vyapari_user/services/role_service.dart';
+import 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
 
@@ -82,11 +82,7 @@ class ProfileScreen extends ConsumerWidget {
                                 icon: Icons.favorite_outline_rounded,
                                 iconColor: AppColors.error,
                                 label: 'Favourites',
-                                onTap: () => CustomSnackBar.showInfo(
-                                  context: context,
-                                  title: 'Coming soon',
-                                  message: 'Favourites will be available in the next update.',
-                                ),
+                                onTap: () => ref.read(navigationIndexProvider.notifier).setIndex(3),
                               ),
                               _MenuItem(
                                 icon: Icons.location_on_outlined,
@@ -157,34 +153,6 @@ class ProfileScreen extends ConsumerWidget {
                                 iconColor: AppColors.accent,
                                 label: 'Share app',
                                 onTap: () => _showShareSheet(context),
-                              ),
-                              _MenuItem(
-                                icon: Icons.storefront_outlined,
-                                iconColor: AppColors.primary,
-                                label: 'Switch to Vendor app',
-                                onTap: () async {
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (_) => const Center(
-                                      child: CircularProgressIndicator(color: AppColors.primary),
-                                    ),
-                                  );
-                                  try {
-                                    await RoleService.instance
-                                        .switchRoleAndLaunchApp('merchant');
-                                    if (context.mounted) Navigator.pop(context);
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      Navigator.pop(context);
-                                      CustomSnackBar.showError(
-                                        context: context,
-                                        title: 'Switch Failed',
-                                        message: e.toString().replaceFirst('Exception: ', ''),
-                                      );
-                                    }
-                                  }
-                                },
                               ),
                             ],
                           ),

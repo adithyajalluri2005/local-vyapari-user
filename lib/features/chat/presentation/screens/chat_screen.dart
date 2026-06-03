@@ -7,6 +7,7 @@ import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
+import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String shopId;
@@ -184,12 +185,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Messages
           Expanded(
             child: messagesAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.primary,
-                  strokeWidth: 2,
-                ),
-              ),
+              loading: () => const SkeletonChatMessages(),
               error: (err, _) => Center(
                 child: Text('Could not load messages',
                     style: GoogleFonts.poppins(color: AppColors.error)),

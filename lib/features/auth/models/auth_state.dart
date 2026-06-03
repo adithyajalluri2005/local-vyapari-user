@@ -26,9 +26,3 @@ class AuthFailure extends AuthState {
   const AuthFailure(this.message);
 }
 
-/// Emitted when a sign-in needs a second factor (TOTP). The login screen
-/// watches for this and routes to the MFA challenge screen.
-class AuthMfaRequired extends AuthState {
-  final MultiFactorResolver resolver;
-  const AuthMfaRequired(this.resolver);
-}

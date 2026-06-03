@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
@@ -6,32 +7,30 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 import 'package:local_vyapari_user/features/chat/presentation/screens/chats_list_screen.dart';
+import 'package:local_vyapari_user/features/favorites/presentation/screens/favorites_screen.dart';
 import 'package:local_vyapari_user/features/home/presentation/screens/home_screen.dart';
+import 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 import 'package:local_vyapari_user/features/offers/presentation/screens/offers_screen.dart';
 import 'package:local_vyapari_user/features/profile/presentation/screens/profile_screen.dart';
 import 'package:local_vyapari_user/features/search/presentation/screens/search_screen.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
-// ── State ─────────────────────────────────────────────────────────────────────
-
-class NavigationIndexNotifier extends Notifier<int> {
-  @override
-  int build() => 0;
-
-  void setIndex(int index) => state = index;
-}
-
-final navigationIndexProvider = NotifierProvider<NavigationIndexNotifier, int>(
-  NavigationIndexNotifier.new,
-);
+export 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 
 // ── Root scaffold ─────────────────────────────────────────────────────────────
 
-class MainNavigationScreen extends ConsumerWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MainNavigationScreen> createState() => _MainNavigationScreenState();
+}
+
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
+  DateTime? _lastBackPressed;
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationIndexProvider);
     void onTap(int i) => ref.read(navigationIndexProvider.notifier).setIndex(i);
 
@@ -39,27 +38,56 @@ class MainNavigationScreen extends ConsumerWidget {
       HomeScreen(onSearchTap: () => onTap(1)),
       const SearchScreen(),
       const OffersScreen(),
+      const FavoritesScreen(),
       const ChatsListScreen(),
       const ProfileScreen(),
     ];
 
-    if (Responsive.useNavRail(context)) {
-      return _TabletScaffold(
-        currentIndex: currentIndex,
-        onTap: onTap,
-        screens: screens,
-        ref: ref,
-      );
-    }
+    final body = Responsive.useNavRail(context)
+        ? _TabletScaffold(
+            currentIndex: currentIndex,
+            onTap: onTap,
+            screens: screens,
+            ref: ref,
+          )
+        : Scaffold(
+            extendBody: true,
+            body: FadeIndexedStack(index: currentIndex, children: screens),
+            bottomNavigationBar: _FloatingPillNav(
+              currentIndex: currentIndex,
+              onTap: onTap,
+              ref: ref,
+            ),
+          );
 
-    return Scaffold(
-      extendBody: true,
-      body: FadeIndexedStack(index: currentIndex, children: screens),
-      bottomNavigationBar: _FloatingPillNav(
-        currentIndex: currentIndex,
-        onTap: onTap,
-        ref: ref,
-      ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+
+        // If not on the home tab, go back to it rather than exiting.
+        if (currentIndex != 0) {
+          ref.read(navigationIndexProvider.notifier).setIndex(0);
+          return;
+        }
+
+        // On home tab: require a second back press within 2 seconds to exit.
+        final now = DateTime.now();
+        if (_lastBackPressed != null &&
+            now.difference(_lastBackPressed!) < const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+          return;
+        }
+        _lastBackPressed = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Press back again to exit'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      child: body,
     );
   }
 }
@@ -125,6 +153,11 @@ class _TabletScaffold extends StatelessWidget {
                 label: Text('Offers'),
               ),
               NavigationRailDestination(
+                icon: Icon(Icons.favorite_outline_rounded),
+                selectedIcon: Icon(Icons.favorite_rounded),
+                label: Text('Favourites'),
+              ),
+              NavigationRailDestination(
                 icon: Icon(Icons.chat_bubble_outline_rounded),
                 selectedIcon: Icon(Icons.chat_bubble_rounded),
                 label: Text('Chats'),
@@ -166,16 +199,22 @@ const _kNavItems = [
     tabIndex: 2,
   ),
   _NavItemData(
+    icon: Icons.favorite_outline_rounded,
+    activeIcon: Icons.favorite_rounded,
+    label: 'Favourites',
+    tabIndex: 3,
+  ),
+  _NavItemData(
     icon: Icons.chat_bubble_outline_rounded,
     activeIcon: Icons.chat_bubble_rounded,
     label: 'Chats',
-    tabIndex: 3,
+    tabIndex: 4,
   ),
   _NavItemData(
     icon: Icons.person_outline_rounded,
     activeIcon: Icons.person_rounded,
     label: 'Profile',
-    tabIndex: 4,
+    tabIndex: 5,
   ),
 ];
 
@@ -230,7 +269,7 @@ class _FloatingPillNav extends ConsumerWidget {
         child: Row(
           children: _kNavItems.map((item) {
             final active = currentIndex == item.tabIndex;
-            final badge = item.tabIndex == 3 && unreadCount > 0 ? unreadCount : 0;
+            final badge = item.tabIndex == 4 && unreadCount > 0 ? unreadCount : 0;
             return _NavButton(
               item: item,
               active: active,

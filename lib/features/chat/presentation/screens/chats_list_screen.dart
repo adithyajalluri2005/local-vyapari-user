@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
@@ -42,7 +43,7 @@ class ChatsListScreen extends ConsumerWidget {
       ),
       body: chatsAsync.when(
         skipLoadingOnReload: true,
-        loading: () => _ShimmerList(),
+        loading: () => const SkeletonListView(),
         error: (err, _) => _ErrorView(message: err.toString()),
         data: (chats) {
           if (chats.isEmpty) return const _EmptyView();
@@ -372,41 +373,3 @@ class _ErrorView extends StatelessWidget {
   }
 }
 
-class _ShimmerList extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Shimmer.fromColors(
-      baseColor: AppColors.border,
-      highlightColor: AppColors.surfaceElevated,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: 6,
-        itemBuilder: (_, _) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              const CircleAvatar(radius: 24, backgroundColor: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(height: 13, width: 120, decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    )),
-                    const SizedBox(height: 6),
-                    Container(height: 11, width: double.infinity, decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    )),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
