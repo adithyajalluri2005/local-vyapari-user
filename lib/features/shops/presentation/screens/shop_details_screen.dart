@@ -550,16 +550,22 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _callShop(context),
-                icon: const Icon(Icons.phone_outlined, size: 18),
-                label: const Text('Call'),
+                icon: const Icon(Icons.phone_outlined, size: 18, color: Colors.white),
+                label: const Text('Call', style: TextStyle(color: Colors.white)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white54),
+                ),
               ),
             ),
             AppSpacing.horizontalMd,
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _launchMaps(context),
-                icon: const Icon(Icons.directions_outlined, size: 18),
-                label: const Text('Directions'),
+                icon: const Icon(Icons.directions_outlined, size: 18, color: Colors.white),
+                label: const Text('Directions', style: TextStyle(color: Colors.white)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.white54),
+                ),
               ),
             ),
           ],

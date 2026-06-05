@@ -6,6 +6,7 @@ import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/features/auth/presentation/screens/splash_screen.dart';
 import 'package:local_vyapari_user/features/auth/presentation/screens/login_screen.dart';
 import 'package:local_vyapari_user/features/auth/presentation/screens/register_screen.dart';
+import 'package:local_vyapari_user/features/auth/presentation/screens/display_name_screen.dart';
 import 'package:local_vyapari_user/features/home/presentation/screens/main_navigation_screen.dart';
 import 'package:local_vyapari_user/features/location/presentation/screens/location_search_screen.dart';
 import 'package:local_vyapari_user/features/shops/presentation/screens/shop_details_screen.dart';
@@ -152,8 +153,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
+      if (authState is NeedsDisplayName) {
+        if (state.matchedLocation == '/display_name') return null;
+        return '/display_name';
+      }
+
       if (authState is Authenticated) {
-        if (isAuthScreen || isGoingToSplash) {
+        if (isAuthScreen || isGoingToSplash || state.matchedLocation == '/display_name') {
           return '/home';
         }
       }
@@ -186,6 +192,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const RegisterScreen(),
           transitionType: TransitionType.slide,
+        ),
+      ),
+      GoRoute(
+        path: '/display_name',
+        pageBuilder: (context, state) => buildPageWithTransition(
+          context: context,
+          state: state,
+          child: const DisplayNameScreen(),
+          transitionType: TransitionType.fade,
         ),
       ),
       GoRoute(

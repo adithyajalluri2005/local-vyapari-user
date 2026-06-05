@@ -76,7 +76,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
         title: title,
         body: body,
         notificationDetails: NotificationDetails(android: androidDetails),
-        payload: isChat ? 'chat:${message.data['shopId'] ?? ''}' : null,
+        payload: isChat ? 'chat:${message.data['shopId'] ?? ''}' : 'offers',
       );
     } catch (e) {
       debugPrint("Error displaying background notification: $e");
@@ -148,8 +148,9 @@ class NotificationService {
             final payload = response.payload ?? '';
             if (payload.startsWith('chat:')) {
               GoRouter.of(context).push('/chats');
+            } else if (payload == 'offers') {
+              GoRouter.of(context).push('/all_offers');
             }
-            // Non-chat notifications: app is already open, no navigation needed.
           } catch (e) {
             debugPrint('Error handling local notification click: $e');
           }
@@ -184,7 +185,7 @@ class NotificationService {
     }
   }
 
-  Future<void> _showNativeNotification(String title, String body) async {
+  Future<void> _showNativeNotification(String title, String body, {String payload = 'offers'}) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'offers_channel_id',
       'Nearby Offers',
@@ -204,6 +205,7 @@ class NotificationService {
         title: title,
         body: body,
         notificationDetails: const NotificationDetails(android: androidDetails),
+        payload: payload,
       );
     } catch (e) {
       debugPrint('Error displaying native notification: $e');
@@ -383,7 +385,18 @@ class NotificationService {
           // background handler fire concurrently.
           // Only show the in-app foreground banner; it silently no-ops when the
           // app is not visible (overlay == null guard inside _showForegroundNotification).
-          _showForegroundNotification(titleStr, bodyStr);
+          _showForegroundNotification(
+            titleStr,
+            bodyStr,
+            icon: Icons.campaign,
+            gradientColors: const [AppTheme.primaryColor, Color(0xFF673AB7)],
+            onTap: () {
+              try {
+                final context = rootNavigatorKey.currentContext;
+                if (context != null) GoRouter.of(context).push('/all_offers');
+              } catch (_) {}
+            },
+          );
         }, onError: (Object e) {
           debugPrint('Offer listener error for shop $shopId: $e');
           _offerSubscriptions.remove(shopId);
@@ -458,9 +471,18 @@ class NotificationService {
           }
         } else if (!rtdbListenersActive) {
           _showNativeNotification(title, body);
-          _showForegroundNotification(title, body,
-              icon: Icons.campaign,
-              gradientColors: const [AppTheme.primaryColor, Color(0xFF673AB7)]);
+          _showForegroundNotification(
+            title,
+            body,
+            icon: Icons.campaign,
+            gradientColors: const [AppTheme.primaryColor, Color(0xFF673AB7)],
+            onTap: () {
+              try {
+                final context = rootNavigatorKey.currentContext;
+                if (context != null) GoRouter.of(context).push('/all_offers');
+              } catch (_) {}
+            },
+          );
         }
         return;
       }
@@ -496,7 +518,18 @@ class NotificationService {
         } else if (!rtdbListenersActive) {
           // RTDB listeners not yet active — use FCM as the fallback.
           _showNativeNotification(title, body);
-          _showForegroundNotification(title, body);
+          _showForegroundNotification(
+            title,
+            body,
+            icon: Icons.campaign,
+            gradientColors: const [AppTheme.primaryColor, Color(0xFF673AB7)],
+            onTap: () {
+              try {
+                final context = rootNavigatorKey.currentContext;
+                if (context != null) GoRouter.of(context).push('/all_offers');
+              } catch (_) {}
+            },
+          );
         }
       }
     });
@@ -520,10 +553,10 @@ class NotificationService {
       if (context == null) return;
 
       if (message.data['type'] == 'chat') {
-        // push preserves the existing back stack (→ /home → /chats)
         GoRouter.of(context).push('/chats');
+      } else {
+        GoRouter.of(context).push('/all_offers');
       }
-      // For non-chat FCM taps, app is already at /home from auth redirect; nothing to do.
     } catch (e) {
       debugPrint('Error handling FCM notification click: $e');
     }

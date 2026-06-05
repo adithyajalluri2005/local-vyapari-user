@@ -71,6 +71,16 @@ class AuthNotifier extends Notifier<AuthState> {
         try {
           final isCustomer = await isCustomerUser(user);
           if (isCustomer) {
+            // Google sign-in users must provide a display name on first sign-in.
+            final isGoogleUser = user.providerData.any((p) => p.providerId == 'google.com');
+            if (isGoogleUser) {
+              final nameSnap = await _rtdb.ref('users/${user.uid}/displayName').get();
+              final savedName = nameSnap.value?.toString().trim() ?? '';
+              if (savedName.isEmpty) {
+                state = NeedsDisplayName(user, user.displayName ?? '');
+                return;
+              }
+            }
             state = Authenticated(user);
             // Lazily initialise notifications now that the user is authenticated
             ref.read(notificationServiceProvider);
@@ -98,6 +108,29 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<bool> isCustomerUser(User user) async {
     return ref.read(sessionValidationProvider)(user, 'customer');
+  }
+
+  Future<void> completeProfile(String displayName) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    ref.read(authLoadingProvider.notifier).setLoading(true);
+    try {
+      final name = displayName.trim();
+      await Future.wait([
+        user.updateDisplayName(name),
+        _rtdb.ref('users/${user.uid}').update({
+          'displayName': name,
+          'email': user.email ?? '',
+          'createdAt': ServerValue.timestamp,
+        }),
+      ]);
+      state = Authenticated(user);
+      ref.read(notificationServiceProvider);
+    } catch (e) {
+      state = AuthFailure(e.toString());
+    } finally {
+      ref.read(authLoadingProvider.notifier).setLoading(false);
+    }
   }
 
   Future<bool> isPhoneRegistered(String phone) async {

@@ -28,6 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passCtrl = TextEditingController();
   bool _obscure = true;
   bool _isEmail = true;
+  bool _socialLoading = false;
 
   @override
   void dispose() {
@@ -70,10 +71,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleSocial(Future<UserCredential?> Function() signIn) async {
+    setState(() => _socialLoading = true);
     try {
       final credential = await signIn();
-      if (credential == null) return;
+      if (credential == null) {
+        setState(() => _socialLoading = false);
+        return;
+      }
+      // Keep _socialLoading true — auth state listener will navigate away
     } catch (e) {
+      setState(() => _socialLoading = false);
       if (mounted) {
         CustomSnackBar.showError(
             context: context, message: '$e', title: 'Sign in failed');
@@ -90,7 +97,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     });
 
-    final isLoading = ref.watch(authProvider) is AuthLoading;
+    final isLoading = ref.watch(authProvider) is AuthLoading || _socialLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -378,7 +385,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Signing you in...',
+                        _socialLoading ? 'Connecting with Google...' : 'Signing you in...',
                         style: GoogleFonts.poppins(
                           fontSize: 15,
                           color: Colors.white.withValues(alpha: 0.85),

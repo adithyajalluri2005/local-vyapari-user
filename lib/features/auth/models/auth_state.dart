@@ -26,3 +26,9 @@ class AuthFailure extends AuthState {
   const AuthFailure(this.message);
 }
 
+class NeedsDisplayName extends AuthState {
+  final User user;
+  final String suggestedName;
+  const NeedsDisplayName(this.user, this.suggestedName);
+}
+
