@@ -139,7 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ref.invalidate(nearbyProductsProvider);
             setState(() { _productsVisible = 10; _nearBottom = false; });
           },
-          color: AppColors.primary,
+          color: Colors.white,
           child: SingleChildScrollView(
             controller: _scrollCtrl,
             physics: const AlwaysScrollableScrollPhysics(),
@@ -228,7 +228,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SectionHeader(title: 'For You'),
+                            SectionHeader(title: 'For You'),
                             const SizedBox(height: 12),
                             _ProductsGrid(isDark: isDark, visibleCount: _productsVisible),
                           ],
@@ -289,7 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: const Icon(
                 Icons.notifications_none_rounded,
                 size: 26,
-                color: AppColors.primary,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 12),
@@ -302,7 +302,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              "You'll be notified when shops launch new offers nearby.",
+              'You\'ll be notified when shops launch new offers nearby.',
               style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
@@ -350,7 +350,7 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           children: [
             const Icon(
               Icons.location_on_rounded,
-              color: AppColors.primary,
+              color: Colors.white,
               size: 22,
             ),
             const SizedBox(width: 6),
@@ -389,7 +389,7 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     const Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 18,
-                      color: AppColors.primary,
+                      color: Colors.white,
                     ),
                   ],
                 ),
@@ -799,7 +799,7 @@ class _StaticBanner extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.72),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 6),
                 GestureDetector(
                   onTap: () => context.push('/radar'),
                   child: Container(
@@ -858,7 +858,7 @@ class _OfferBannerList extends StatelessWidget {
         skipLoadingOnReload: false,
         data: (offers) {
           if (offers.isEmpty) {
-            return const _EmptySection(
+            return _EmptySection(
               icon: Icons.local_offer_outlined,
               message: 'No active offers nearby',
             );
@@ -913,7 +913,7 @@ class _OfferBannerList extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${offer.discountPercentage.toInt()}%\nOFF',
+                                    '${offer.discountPercentage.toInt()}%\n${'OFF'}',
                                     style: GoogleFonts.poppins(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w900,
@@ -1006,7 +1006,7 @@ class _OfferBannerList extends StatelessWidget {
             ),
           ),
         ),
-        error: (_, _) => const _EmptySection(
+        error: (_, _) => _EmptySection(
           icon: Icons.error_outline,
           message: 'Could not load offers',
         ),
@@ -1369,7 +1369,7 @@ class _ShopsListState extends State<_ShopsList> {
           ),
         ),
       ),
-      error: (_, _) => const _EmptySection(
+      error: (_, _) => _EmptySection(
         icon: Icons.error_outline,
         message: 'Could not load shops',
       ),
@@ -1456,7 +1456,7 @@ class _ProductsGrid extends ConsumerWidget {
       skipLoadingOnReload: false,
       data: (products) {
         if (products.isEmpty) {
-          return const _EmptySection(
+          return _EmptySection(
             icon: Icons.inventory_2_outlined,
             message: 'No products found nearby',
           );
@@ -1644,7 +1644,7 @@ class _ProductsGrid extends ConsumerWidget {
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
+                                          color: Colors.white,
                                         ),
                                       ),
                                       if (hasDiscount) ...[
@@ -1698,7 +1698,7 @@ class _ProductsGrid extends ConsumerWidget {
         aspectRatio: 0.70,
         spacing: 10,
       ),
-      error: (_, _) => const _EmptySection(
+      error: (_, _) => _EmptySection(
         icon: Icons.error_outline,
         message: 'Could not load products',
       ),

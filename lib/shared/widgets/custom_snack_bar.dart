@@ -95,12 +95,12 @@ class CustomSnackBar {
   static void showError({
     required BuildContext context,
     required String message,
-    String title = 'Error',
+    String? title,
   }) {
     show(
       context: context,
       message: message,
-      title: title,
+      title: title ?? 'Error',
       accentColor: AppTheme.errorColor,
       icon: Icons.error_outline,
     );
@@ -109,12 +109,12 @@ class CustomSnackBar {
   static void showSuccess({
     required BuildContext context,
     required String message,
-    String title = 'Success',
+    String? title,
   }) {
     show(
       context: context,
       message: message,
-      title: title,
+      title: title ?? 'Success',
       accentColor: AppTheme.successColor,
       icon: Icons.check_circle_outline,
     );
@@ -123,12 +123,12 @@ class CustomSnackBar {
   static void showInfo({
     required BuildContext context,
     required String message,
-    String title = 'Info',
+    String? title,
   }) {
     show(
       context: context,
       message: message,
-      title: title,
+      title: title ?? 'Info',
       accentColor: AppTheme.primaryColor,
       icon: Icons.info_outline,
     );
@@ -137,12 +137,12 @@ class CustomSnackBar {
   static void showWarning({
     required BuildContext context,
     required String message,
-    String title = 'Warning',
+    String? title,
   }) {
     show(
       context: context,
       message: message,
-      title: title,
+      title: title ?? 'Warning',
       accentColor: Colors.amber,
       icon: Icons.warning_amber_outlined,
     );

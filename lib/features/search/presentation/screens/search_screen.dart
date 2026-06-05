@@ -262,20 +262,20 @@ class _CategoryFilterChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.category_rounded, size: 12, color: AppColors.primary),
+          Icon(Icons.category_rounded, size: 12, color: Colors.white),
           const SizedBox(width: 5),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: Colors.white,
             ),
           ),
           const SizedBox(width: 5),
           GestureDetector(
             onTap: onDismiss,
-            child: Icon(Icons.close_rounded, size: 14, color: AppColors.primary),
+            child: Icon(Icons.close_rounded, size: 14, color: Colors.white),
           ),
         ],
       ),
@@ -512,7 +512,7 @@ class _SectionLabel extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: Colors.white,
             ),
           ),
         ),
@@ -730,7 +730,7 @@ class _EmptyState extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -782,7 +782,7 @@ class _ErrorState extends StatelessWidget {
               isLocation
                   ? 'Location required'
                   : isOffline
-                      ? "You're offline"
+                      ? 'You\'re offline'
                       : 'Search failed',
               style: GoogleFonts.poppins(
                 fontSize: 16,
@@ -814,7 +814,7 @@ class _ErrorState extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+                  color: Colors.white,
                 ),
               ),
             ),

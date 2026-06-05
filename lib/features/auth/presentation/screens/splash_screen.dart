@@ -40,7 +40,7 @@ class SplashScreen extends ConsumerWidget {
                         child: const Icon(
                           Icons.storefront_rounded,
                           size: 50,
-                          color: AppColors.primary,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -50,7 +50,7 @@ class SplashScreen extends ConsumerWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: AppColors.primary,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -59,7 +59,7 @@ class SplashScreen extends ConsumerWidget {
                       'Discover · Shop · Support Local',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: AppColors.primaryLight,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -67,7 +67,7 @@ class SplashScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 64),
-              SizedBox(
+              const SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(

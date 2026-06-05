@@ -123,7 +123,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     } else {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Could not open Maps')),
+                          SnackBar(content: const Text('Could not open Maps')),
                         );
                       }
                     }
@@ -185,7 +185,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               ),
               child: Text(
                 product.category,
-                style: AppTextStyles.bodyMedium(context, color: AppTheme.primaryColor, fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodyMedium(context, color: Colors.white, fontWeight: FontWeight.w600),
               ),
             ),
             if (product.isOutOfStock)
@@ -247,7 +247,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           children: [
             Text(
               '₹${product.offerPrice}',
-              style: AppTextStyles.titleLarge(context, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleLarge(context, color: Colors.white, fontWeight: FontWeight.bold),
             ),
             AppSpacing.horizontalSm,
             Text(
@@ -411,11 +411,11 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   context.push('/login');
                 }
               },
-              icon: Icon(Icons.rate_review_outlined, size: 18, color: isAuthenticated ? AppTheme.primaryColor : Colors.grey),
-              label: Text(isAuthenticated ? 'Rate Product' : 'Login to Rate', style: TextStyle(color: isAuthenticated ? AppTheme.primaryColor : Colors.grey)),
+              icon: Icon(Icons.rate_review_outlined, size: 18, color: isAuthenticated ? Colors.white : Colors.grey),
+              label: Text(isAuthenticated ? 'Rate Product' : 'Login to Rate', style: TextStyle(color: isAuthenticated ? Colors.white : Colors.grey)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isAuthenticated ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                foregroundColor: isAuthenticated ? AppTheme.primaryColor : Colors.grey,
+                foregroundColor: isAuthenticated ? Colors.white : Colors.grey,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -472,7 +472,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             );
           },
           loading: () => _buildReviewsShimmer(context),
-          error: (error, _) => Center(child: Text('Failed to load reviews: $error')),
+          error: (error, _) => Center(child: Text('Failed to load reviews: ${error.toString()}')),
         ),
       ],
     );
@@ -545,7 +545,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     final authState = ref.read(authProvider);
     if (authState is! Authenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to submit a review.')),
+        SnackBar(content: const Text('Please log in to submit a review.')),
       );
       return;
     }

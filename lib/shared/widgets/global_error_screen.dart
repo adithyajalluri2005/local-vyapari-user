@@ -27,110 +27,112 @@ class _GlobalErrorScreenState extends State<GlobalErrorScreen> {
       home: Builder(builder: (innerContext) {
         final cs = Theme.of(innerContext).colorScheme;
         return Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 36.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppTheme.errorColor.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 36.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.error_outline_rounded,
+                        color: AppTheme.errorColor,
+                        size: 64,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.error_outline_rounded,
-                      color: AppTheme.errorColor,
-                      size: 64,
+                    const SizedBox(height: 24),
+                    Text(
+                      'An Unexpected Error Occurred',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(innerContext).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: cs.onSurface,
+                          ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'An Unexpected Error Occurred',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(innerContext).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: cs.onSurface,
+                    const SizedBox(height: 8),
+                    Text(
+                      'We\'ve logged this error and are working on fixing it. You can attempt to reload the app or go back.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(innerContext).textTheme.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            try {
+                              Navigator.of(innerContext).popUntil((route) => route.isFirst);
+                            } catch (_) {}
+                          },
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Return to Home'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'We\'ve logged this error and are working on fixing it. You can attempt to reload the app or go back.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(innerContext).textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _showDetails = !_showDetails;
+                        });
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: cs.outline),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                  ),
-                  const SizedBox(height: 32),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          try {
-                            Navigator.of(innerContext).popUntil((route) => route.isFirst);
-                          } catch (_) {}
-                        },
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Return to Home'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _showDetails
+                            ? 'Hide Technical Details'
+                            : 'Show Technical Details',
+                        style: TextStyle(color: cs.onSurfaceVariant),
+                      ),
+                    ),
+                    if (_showDetails) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[900],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: SelectableText(
+                          '${widget.details.exception}\n\n'
+                          'Stacktrace:\n'
+                          '${widget.details.stack}',
+                          style: const TextStyle(
+                            color: Colors.lightGreenAccent,
+                            fontFamily: 'monospace',
+                            fontSize: 12,
                           ),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 32),
-                  OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _showDetails = !_showDetails;
-                      });
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: cs.outline),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Text(
-                      _showDetails ? 'Hide Technical Details' : 'Show Technical Details',
-                      style: TextStyle(color: cs.onSurfaceVariant),
-                    ),
-                  ),
-                  if (_showDetails) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[900],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: SelectableText(
-                        '${widget.details.exception}\n\n'
-                        'Stacktrace:\n'
-                        '${widget.details.stack}',
-                        style: const TextStyle(
-                          color: Colors.lightGreenAccent,
-                          fontFamily: 'monospace',
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
                   ],
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
       }),
     );
   }

@@ -52,7 +52,7 @@ class _ReviewCardState extends State<ReviewCard> {
                   child: Text(
                     widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'U',
                     style: TextStyle(
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -146,8 +146,8 @@ class _ReviewCardState extends State<ReviewCard> {
                           },
                           child: Text(
                             _isExpanded ? 'Show Less' : 'Read More',
-                            style: TextStyle(
-                              color: AppTheme.primaryColor,
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
                             ),

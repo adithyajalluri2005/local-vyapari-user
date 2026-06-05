@@ -12,6 +12,7 @@ import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+import 'package:local_vyapari_user/features/feedback/presentation/widgets/feedback_bottom_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -31,7 +32,7 @@ class ProfileScreen extends ConsumerWidget {
     IconData themeIcon;
     switch (themeMode) {
       case ThemeMode.system:
-        themeModeLabel = 'System';
+        themeModeLabel = 'System default';
         themeIcon = Icons.brightness_auto_outlined;
       case ThemeMode.light:
         themeModeLabel = 'Light';
@@ -75,7 +76,7 @@ class ProfileScreen extends ConsumerWidget {
                               _MenuItem(
                                 icon: Icons.chat_bubble_outline_rounded,
                                 iconColor: const Color(0xFF7C3AED),
-                                label: 'My chats',
+                                label: 'My Chats',
                                 onTap: () => context.push('/chats'),
                               ),
                               _MenuItem(
@@ -108,8 +109,8 @@ class ProfileScreen extends ConsumerWidget {
                               _MenuItem(
                                 icon: themeIcon,
                                 iconColor: isDark
-                                    ? const Color(0xFF8FBAD8)
-                                    : AppColors.primaryLight,
+                                    ? Colors.white
+                                    : Colors.white,
                                 label: 'App theme',
                                 trailing: Text(
                                   themeModeLabel,
@@ -123,7 +124,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               _MenuItem(
                                 icon: Icons.shield_outlined,
-                                iconColor: AppColors.primary,
+                                iconColor: Colors.white,
                                 label: 'Security',
                                 onTap: () => context.push('/security'),
                               ),
@@ -153,6 +154,17 @@ class ProfileScreen extends ConsumerWidget {
                                 iconColor: AppColors.accent,
                                 label: 'Share app',
                                 onTap: () => _showShareSheet(context),
+                              ),
+                              _MenuItem(
+                                icon: Icons.feedback_outlined,
+                                iconColor: const Color(0xFF0EA5E9),
+                                label: 'Send Feedback',
+                                onTap: () => showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (_) => const FeedbackBottomSheet(),
+                                ),
                               ),
                             ],
                           ),
@@ -210,6 +222,11 @@ class ProfileScreen extends ConsumerWidget {
   void _showThemeSheet(BuildContext context, WidgetRef ref) {
     final current = ref.read(themeModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeEntries = [
+      (ThemeMode.system, 'System default', Icons.brightness_auto_outlined),
+      (ThemeMode.light, 'Light', Icons.light_mode_outlined),
+      (ThemeMode.dark, 'Dark', Icons.dark_mode_outlined),
+    ];
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
@@ -238,20 +255,16 @@ class ProfileScreen extends ConsumerWidget {
                 style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700,
                     color: isDark ? Colors.white : AppColors.textPrimary)),
             const SizedBox(height: 12),
-            for (final entry in const [
-              (ThemeMode.system, 'System default', Icons.brightness_auto_outlined),
-              (ThemeMode.light, 'Light', Icons.light_mode_outlined),
-              (ThemeMode.dark, 'Dark', Icons.dark_mode_outlined),
-            ])
+            for (final entry in themeEntries)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(entry.$3, color: AppColors.primary),
+                leading: Icon(entry.$3, color: Colors.white),
                 title: Text(entry.$2,
                     style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : AppColors.textPrimary)),
+                        color: Colors.white)),
                 trailing: current == entry.$1
-                    ? const Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                    ? const Icon(Icons.check_circle_rounded, color: Colors.white)
                     : null,
                 onTap: () {
                   ref.read(themeModeProvider.notifier).setThemeMode(entry.$1);
@@ -263,6 +276,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
     );
   }
+
 
   void _showShareSheet(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -292,7 +306,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.copy_outlined, color: AppColors.primary),
+              leading: const Icon(Icons.copy_outlined, color: Colors.white),
               title: Text('Copy link',
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white : AppColors.textPrimary)),

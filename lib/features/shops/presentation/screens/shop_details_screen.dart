@@ -96,7 +96,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open maps')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open Maps')));
       }
     }
   }
@@ -378,10 +378,10 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
       data: (products) {
         if (products.isEmpty) {
           return [
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: Text('No products available for this shop.')),
+                padding: const EdgeInsets.all(16),
+                child: const Center(child: Text('No products available for this shop.')),
               ),
             ),
           ];
@@ -458,12 +458,12 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
     if (shop.isOpen) {
       timingText = 'OPEN';
       if (shop.closingTime != null && shop.closingTime!.isNotEmpty) {
-        timingText += ' • Closes at ${shop.closingTime}';
+        timingText += ' • Closes at ${shop.closingTime!}';
       }
     } else {
       timingText = 'CLOSED';
       if (shop.openingTime != null && shop.openingTime!.isNotEmpty) {
-        timingText += ' • Opens at ${shop.openingTime}';
+        timingText += ' • Opens at ${shop.openingTime!}';
       }
     }
 
@@ -615,14 +615,14 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_offer_rounded, size: 13, color: AppColors.primary),
+                        const Icon(Icons.local_offer_rounded, size: 13, color: Colors.white),
                         const SizedBox(width: 5),
                         Text(
                           'Active Offers',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -636,7 +636,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      '${offers.length} deal${offers.length == 1 ? '' : 's'}',
+                      offers.length == 1 ? '1 deal' : '${offers.length} deals',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -828,7 +828,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     children: [
                       Text(
                         '₹${product.offerPrice}',
-                        style: AppTextStyles.bodyLarge(context, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.bodyLarge(context, color: Colors.white, fontWeight: FontWeight.bold),
                       ),
                       AppSpacing.horizontalSm,
                       Flexible(
@@ -874,7 +874,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               label: const Text('Rate Shop'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                foregroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -931,7 +931,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             );
           },
           loading: () => _buildReviewsShimmer(context),
-          error: (error, _) => Center(child: Text('Failed to load reviews: $error')),
+          error: (error, _) => Center(child: Text('Failed to load reviews: ${error.toString()}')),
         ),
       ],
     );
@@ -1004,7 +1004,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
     final authState = ref.read(authProvider);
     if (authState is! Authenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to submit a review.')),
+        SnackBar(content: const Text('Please log in to submit a review.')),
       );
       return;
     }

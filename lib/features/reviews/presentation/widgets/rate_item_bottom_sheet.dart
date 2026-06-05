@@ -50,7 +50,7 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
     final authState = ref.read(authProvider);
     if (authState is! Authenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be signed in to submit a review.')),
+        SnackBar(content: const Text('You must be signed in to submit a review.')),
       );
       return;
     }
@@ -92,8 +92,8 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
       if (mounted) {
         Navigator.of(context).pop(true); // Return true to indicate successful submission
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Review submitted successfully!'),
+          SnackBar(
+            content: const Text('Review submitted successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -102,7 +102,7 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to submit review: $e'),
+            content: Text('Failed to submit review: ${e.toString()}'),
             backgroundColor: AppTheme.errorColor,
           ),
         );
@@ -183,9 +183,9 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
             const SizedBox(height: 12),
             Center(
               child: Text(
-                _getRatingText(_rating),
-                style: TextStyle(
-                  color: AppTheme.primaryColor,
+                _getRatingText(context, _rating),
+                style: const TextStyle(
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -246,7 +246,7 @@ class _RateItemBottomSheetState extends ConsumerState<RateItemBottomSheet> {
     );
   }
 
-  String _getRatingText(double rating) {
+  String _getRatingText(BuildContext context, double rating) {
     if (rating >= 4.8) return 'Excellent!';
     if (rating >= 4.0) return 'Very Good';
     if (rating >= 3.0) return 'Good';

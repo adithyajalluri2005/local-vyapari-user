@@ -5,11 +5,10 @@ import 'responsive.dart';
 
 class AppTextStyles {
   static TextStyle displayLarge(BuildContext context, {Color? color, FontWeight? fontWeight}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GoogleFonts.poppins(
       fontSize: Responsive.isTablet(context) ? 36 : 32,
       fontWeight: fontWeight ?? FontWeight.w700,
-      color: color ?? (isDark ? Colors.white : AppColors.textPrimary),
+      color: color ?? Colors.white,
     );
   }
 
@@ -47,11 +46,10 @@ class AppTextStyles {
   }
 
   static TextStyle bodyMedium(BuildContext context, {Color? color, FontWeight? fontWeight, double? height}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GoogleFonts.poppins(
       fontSize: Responsive.isTablet(context) ? 14 : 13,
       fontWeight: fontWeight ?? FontWeight.w400,
-      color: color ?? (isDark ? Colors.white70 : AppColors.textSecondary),
+      color: color ?? Colors.white70,
       height: height ?? 1.5,
     );
   }
@@ -60,7 +58,7 @@ class AppTextStyles {
     return GoogleFonts.poppins(
       fontSize: 13,
       fontWeight: fontWeight ?? FontWeight.w600,
-      color: color ?? AppColors.primary,
+      color: color ?? Colors.white,
     );
   }
 

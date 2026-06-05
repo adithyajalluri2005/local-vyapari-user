@@ -136,7 +136,7 @@ class OfferDetailsScreen extends ConsumerWidget {
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.primary,
+            color: Colors.white,
             letterSpacing: 0.3,
           ),
         ),
@@ -202,7 +202,7 @@ class OfferDetailsScreen extends ConsumerWidget {
                             )
                           : null,
                       child: shop.shopLogo.isEmpty
-                          ? const Icon(Icons.store_rounded, color: AppColors.primary, size: 26)
+                          ? const Icon(Icons.store_rounded, color: Colors.white, size: 26)
                           : null,
                     ),
                     const SizedBox(width: 14),

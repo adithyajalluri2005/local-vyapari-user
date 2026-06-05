@@ -519,7 +519,7 @@ class _AvatarFallback extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 15,
             fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+            color: Colors.white,
           ),
         ),
       ),

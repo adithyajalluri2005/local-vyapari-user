@@ -47,7 +47,7 @@ class SeeAllChip extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: AppColors.primary,
+            color: Colors.white,
           ),
         ),
       ),

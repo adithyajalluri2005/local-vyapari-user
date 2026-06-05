@@ -162,7 +162,7 @@ class _ShopOffersCardState extends ConsumerState<_ShopOffersCard> {
                               : null,
                         ),
                         child: shop.shopLogo.isEmpty
-                            ? const Icon(Icons.storefront_outlined, size: 18, color: AppColors.primary)
+                            ? const Icon(Icons.storefront_outlined, size: 18, color: Colors.white)
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -396,7 +396,7 @@ class _OfferTile extends ConsumerWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.primary,
+                            color: Colors.white,
                           ),
                         ),
                       ],
@@ -606,7 +606,7 @@ class _EmptyView extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Shops update deals regularly — check back soon.',
+              'Check back soon for deals from local shops.',
               style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),

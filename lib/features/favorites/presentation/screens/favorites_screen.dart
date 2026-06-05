@@ -299,7 +299,7 @@ class _ProductFavCard extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                            color: Colors.white,
                           ),
                         ),
                         if (hasDiscount) ...[

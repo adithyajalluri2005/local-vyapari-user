@@ -72,8 +72,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleSocial(Future<UserCredential?> Function() signIn) async {
     try {
       final credential = await signIn();
-      if (credential == null) return; // user cancelled
-      // authStateChanges + the router redirect take it from here.
+      if (credential == null) return;
     } catch (e) {
       if (mounted) {
         CustomSnackBar.showError(
@@ -102,7 +101,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             backgroundColor: AppColors.primary,
             body: Column(
           children: [
-            // ── Brand header ────────────────────────────────────
             SafeArea(
               bottom: false,
               child: Padding(
@@ -150,7 +148,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
 
-            // ── Form sheet ───────────────────────────────────────
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -194,7 +191,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               const SizedBox(height: 24),
 
-                              // ── Mode toggle ─────────────────────
                               _ModeToggle(
                                 isEmail: _isEmail,
                                 onChanged: (v) {
@@ -268,7 +264,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
+                                      color: Colors.white,
                                     ),
                                   ),
                                 ),
@@ -282,7 +278,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                               const SizedBox(height: 20),
 
-                              // ── Social sign-in ──
                               Row(
                                 children: [
                                   const Expanded(child: Divider()),
@@ -323,7 +318,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    "Don't have an account? ",
+                                    'Don\'t have an account? ',
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
                                       color: isDark ? Colors.white70 : AppColors.textSecondary,
@@ -336,7 +331,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       style: GoogleFonts.poppins(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
@@ -479,7 +474,7 @@ class _Tab extends StatelessWidget {
   }
 }
 
-// ── Reset dialog (unchanged logic, refreshed UI) ─────────────────────────────
+// ── Reset dialog ─────────────────────────────────────────────────────────────
 
 class _ResetDialog extends StatefulWidget {
   final WidgetRef ref;

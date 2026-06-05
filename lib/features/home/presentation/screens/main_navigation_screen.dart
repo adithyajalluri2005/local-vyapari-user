@@ -65,13 +65,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
 
-        // If not on the home tab, go back to it rather than exiting.
         if (currentIndex != 0) {
           ref.read(navigationIndexProvider.notifier).setIndex(0);
           return;
         }
 
-        // On home tab: require a second back press within 2 seconds to exit.
         final now = DateTime.now();
         if (_lastBackPressed != null &&
             now.difference(_lastBackPressed!) < const Duration(seconds: 2)) {
@@ -80,15 +78,29 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         }
         _lastBackPressed = now;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Press back again to exit'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: const Text('Press back again to exit'),
+            duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
         );
       },
       child: body,
     );
+  }
+}
+
+// ── Tab index → label ─────────────────────────────────────────────────────────
+
+String _navLabel(BuildContext context, int index) {
+  switch (index) {
+    case 0: return 'Home';
+    case 1: return 'Explore';
+    case 2: return 'Offers';
+    case 3: return 'Favourites';
+    case 4: return 'Chats';
+    case 5: return 'Profile';
+    default: return '';
   }
 }
 
@@ -125,47 +137,47 @@ class _TabletScaffold extends StatelessWidget {
             indicatorShape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            selectedIconTheme: const IconThemeData(color: AppColors.primary, size: 22),
+            selectedIconTheme: const IconThemeData(color: Colors.white, size: 22),
             unselectedIconTheme: const IconThemeData(color: AppColors.textHint, size: 22),
             selectedLabelTextStyle: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: Colors.white,
             ),
             unselectedLabelTextStyle: GoogleFonts.poppins(
               fontSize: 12,
               color: AppColors.textHint,
             ),
-            destinations: const [
+            destinations: [
               NavigationRailDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: Text('Home'),
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home_rounded),
+                label: Text(_navLabel(context, 0)),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.search_outlined),
-                selectedIcon: Icon(Icons.search_rounded),
-                label: Text('Explore'),
+                icon: const Icon(Icons.search_outlined),
+                selectedIcon: const Icon(Icons.search_rounded),
+                label: Text(_navLabel(context, 1)),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.local_offer_outlined),
-                selectedIcon: Icon(Icons.local_offer_rounded),
-                label: Text('Offers'),
+                icon: const Icon(Icons.local_offer_outlined),
+                selectedIcon: const Icon(Icons.local_offer_rounded),
+                label: Text(_navLabel(context, 2)),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.favorite_outline_rounded),
-                selectedIcon: Icon(Icons.favorite_rounded),
-                label: Text('Favourites'),
+                icon: const Icon(Icons.favorite_outline_rounded),
+                selectedIcon: const Icon(Icons.favorite_rounded),
+                label: Text(_navLabel(context, 3)),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.chat_bubble_outline_rounded),
-                selectedIcon: Icon(Icons.chat_bubble_rounded),
-                label: Text('Chats'),
+                icon: const Icon(Icons.chat_bubble_outline_rounded),
+                selectedIcon: const Icon(Icons.chat_bubble_rounded),
+                label: Text(_navLabel(context, 4)),
               ),
               NavigationRailDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: Text('Profile'),
+                icon: const Icon(Icons.person_outline_rounded),
+                selectedIcon: const Icon(Icons.person_rounded),
+                label: Text(_navLabel(context, 5)),
               ),
             ],
           ),
@@ -180,53 +192,21 @@ class _TabletScaffold extends StatelessWidget {
 // ── Floating pill bottom nav ───────────────────────────────────────────────────
 
 const _kNavItems = [
-  _NavItemData(
-    icon: Icons.home_outlined,
-    activeIcon: Icons.home_rounded,
-    label: 'Home',
-    tabIndex: 0,
-  ),
-  _NavItemData(
-    icon: Icons.search_outlined,
-    activeIcon: Icons.search_rounded,
-    label: 'Explore',
-    tabIndex: 1,
-  ),
-  _NavItemData(
-    icon: Icons.local_offer_outlined,
-    activeIcon: Icons.local_offer_rounded,
-    label: 'Offers',
-    tabIndex: 2,
-  ),
-  _NavItemData(
-    icon: Icons.favorite_outline_rounded,
-    activeIcon: Icons.favorite_rounded,
-    label: 'Favourites',
-    tabIndex: 3,
-  ),
-  _NavItemData(
-    icon: Icons.chat_bubble_outline_rounded,
-    activeIcon: Icons.chat_bubble_rounded,
-    label: 'Chats',
-    tabIndex: 4,
-  ),
-  _NavItemData(
-    icon: Icons.person_outline_rounded,
-    activeIcon: Icons.person_rounded,
-    label: 'Profile',
-    tabIndex: 5,
-  ),
+  _NavItemData(icon: Icons.home_outlined,             activeIcon: Icons.home_rounded,             tabIndex: 0),
+  _NavItemData(icon: Icons.search_outlined,           activeIcon: Icons.search_rounded,           tabIndex: 1),
+  _NavItemData(icon: Icons.local_offer_outlined,      activeIcon: Icons.local_offer_rounded,      tabIndex: 2),
+  _NavItemData(icon: Icons.favorite_outline_rounded,  activeIcon: Icons.favorite_rounded,         tabIndex: 3),
+  _NavItemData(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded,    tabIndex: 4),
+  _NavItemData(icon: Icons.person_outline_rounded,    activeIcon: Icons.person_rounded,           tabIndex: 5),
 ];
 
 class _NavItemData {
   final IconData icon;
   final IconData activeIcon;
-  final String label;
   final int tabIndex;
   const _NavItemData({
     required this.icon,
     required this.activeIcon,
-    required this.label,
     required this.tabIndex,
   });
 }
@@ -355,11 +335,11 @@ class _NavButton extends StatelessWidget {
                   ? Padding(
                       padding: const EdgeInsets.only(top: 3),
                       child: Text(
-                        item.label,
+                        _navLabel(context, item.tabIndex),
                         style: GoogleFonts.poppins(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                          color: Colors.white,
                         ),
                       ),
                     )

@@ -84,7 +84,7 @@ class ChatsListScreen extends ConsumerWidget {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
         ),
         content: Text(
-          'Your chat with ${shopName.isNotEmpty ? shopName : "this shop"} will be removed from your list.',
+          'Your chat with ${shopName.isNotEmpty ? shopName : 'Shop'} will be removed from your list.',
           style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary),
         ),
         actions: [
@@ -219,7 +219,7 @@ class _ChatTile extends StatelessWidget {
                       time,
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: session.unread ? AppColors.primary : AppColors.textHint,
+                        color: session.unread ? Colors.white : AppColors.textHint,
                         fontWeight: session.unread ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
@@ -302,7 +302,7 @@ class _Fallback extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.primary,
+            color: Colors.white,
           ),
         ),
       ),

@@ -99,66 +99,68 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             final codeCtrl = TextEditingController();
             bool verifying = false;
             return StatefulBuilder(
-              builder: (ctx, setS) => AlertDialog(
-                title: Text('Verify Phone',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Enter the 6-digit OTP sent to $phone.',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: Theme.of(ctx).brightness == Brightness.dark
-                              ? Colors.white70
-                              : AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: codeCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '6-digit OTP',
-                        prefixIcon: Icon(Icons.lock_outline_rounded),
+              builder: (ctx, setS) {
+                return AlertDialog(
+                  title: Text('Verify Phone',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enter the 6-digit OTP sent to $phone.',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Theme.of(ctx).brightness == Brightness.dark
+                                ? Colors.white70
+                                : AppColors.textSecondary),
                       ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [LengthLimitingTextInputFormatter(6)],
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: codeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: '6-digit OTP',
+                          prefixIcon: Icon(Icons.lock_outline_rounded),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [LengthLimitingTextInputFormatter(6)],
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: verifying ? null : () => Navigator.pop(dialogCtx),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: verifying
+                          ? null
+                          : () async {
+                              if (codeCtrl.text.trim().length != 6) return;
+                              setS(() => verifying = true);
+                              final ok = await notifier.registerWithPhoneOtp(
+                                verificationId: verificationId,
+                                code: codeCtrl.text.trim(),
+                                email: email,
+                                password: password,
+                                phone: phone,
+                              );
+                              if (ctx.mounted) {
+                                setS(() => verifying = false);
+                                Navigator.pop(dialogCtx, ok);
+                              }
+                            },
+                      child: verifying
+                          ? const SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Verify & Create'),
                     ),
                   ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: verifying ? null : () => Navigator.pop(dialogCtx),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: verifying
-                        ? null
-                        : () async {
-                            if (codeCtrl.text.trim().length != 6) return;
-                            setS(() => verifying = true);
-                            final ok = await notifier.registerWithPhoneOtp(
-                              verificationId: verificationId,
-                              code: codeCtrl.text.trim(),
-                              email: email,
-                              password: password,
-                              phone: phone,
-                            );
-                            if (ctx.mounted) {
-                              setS(() => verifying = false);
-                              Navigator.pop(dialogCtx, ok);
-                            }
-                          },
-                    child: verifying
-                        ? const SizedBox(
-                            width: 16, height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Verify & Create'),
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -168,27 +170,29 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         if (error.contains('already registered')) {
           showDialog(
             context: context,
-            builder: (dialogCtx) => AlertDialog(
-              title: Text('Account exists',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-              content: Text(
-                'This phone is already registered. Sign in with your password.',
-                style: GoogleFonts.poppins(fontSize: 13),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('Cancel'),
+            builder: (dialogCtx) {
+              return AlertDialog(
+                title: Text('Account exists',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+                content: Text(
+                  'This phone is already registered. Sign in with your password.',
+                  style: GoogleFonts.poppins(fontSize: 13),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(dialogCtx);
-                    context.pop();
-                  },
-                  child: const Text('Sign in'),
-                ),
-              ],
-            ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(dialogCtx);
+                      context.pop();
+                    },
+                    child: const Text('Sign in'),
+                  ),
+                ],
+              );
+            },
           );
         } else {
           CustomSnackBar.showError(
@@ -225,7 +229,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 }
 
-// ── Shared form body (StatefulWidget for password toggle state) ───────────────
+// ── Shared form body ──────────────────────────────────────────────────────────
 
 class _FormBody extends StatefulWidget {
   final GlobalKey<FormState> formKey;
@@ -379,7 +383,7 @@ class _FormBodyState extends State<_FormBody> {
                         style: GoogleFonts.poppins(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -394,8 +398,7 @@ class _FormBodyState extends State<_FormBody> {
   }
 }
 
-// ── Layout 1: Portrait phone ──────────────────────────────────────────────────
-// Navy header (back + title) + white rounded sheet
+// ── Portrait layout ───────────────────────────────────────────────────────────
 
 class _PortraitLayout extends StatelessWidget {
   final VoidCallback onBack;
@@ -471,8 +474,7 @@ class _PortraitLayout extends StatelessWidget {
   }
 }
 
-// ── Layout 2: Tablet (portrait) ───────────────────────────────────────────────
-// Left fixed-width navy brand panel | Right scrollable form
+// ── Tablet layout ─────────────────────────────────────────────────────────────
 
 class _TabletLayout extends StatelessWidget {
   final VoidCallback onBack;
@@ -490,7 +492,6 @@ class _TabletLayout extends StatelessWidget {
       child: Scaffold(
         body: Row(
           children: [
-            // Left: navy brand panel
             SizedBox(
               width: leftWidth,
               child: Container(
@@ -575,7 +576,6 @@ class _TabletLayout extends StatelessWidget {
                   : AppColors.border,
             ),
 
-            // Right: form panel
             Expanded(
               child: Container(
                 color: isDark ? AppColors.darkScaffold : AppColors.background,
@@ -589,7 +589,7 @@ class _TabletLayout extends StatelessWidget {
   }
 }
 
-// ── Shared back button ────────────────────────────────────────────────────────
+// ── Back button ───────────────────────────────────────────────────────────────
 
 class _BackButton extends StatelessWidget {
   final VoidCallback onTap;

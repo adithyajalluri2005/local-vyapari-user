@@ -20,8 +20,7 @@ class _SecuritySettingsScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out everywhere?'),
-        content: const Text(
-            'This signs out all other devices. You will stay signed in here.'),
+        content: const Text('This signs out all other devices. You will stay signed in here.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -64,9 +63,9 @@ class _SecuritySettingsScreenState
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (_, _) => const ListTile(
-              leading: Icon(Icons.error_outline),
-              title: Text('Could not load devices'),
+            error: (_, _) => ListTile(
+              leading: const Icon(Icons.error_outline),
+              title: const Text('Could not load devices'),
             ),
             data: (devices) {
               if (devices.isEmpty) {
@@ -79,7 +78,7 @@ class _SecuritySettingsScreenState
                       leading: const Icon(Icons.devices),
                       title: Text(d.userAgent ?? 'Unknown device'),
                       subtitle: Text(
-                          d.lastSeen != null ? 'Last active: ${d.lastSeen}' : ''),
+                          d.lastSeen != null ? 'Last active: ${d.lastSeen.toString()}' : ''),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline),
                         tooltip: 'Remove',

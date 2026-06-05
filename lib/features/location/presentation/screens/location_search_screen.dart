@@ -95,9 +95,9 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Select Location',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,
       ),
@@ -123,7 +123,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: 'Search city, town, or area...',
-                  prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor),
+                  prefixIcon: const Icon(Icons.search, color: Colors.white),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(Icons.clear, color: hintColor),
@@ -168,13 +168,13 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                             )
-                          : const Icon(Icons.my_location, color: AppTheme.primaryColor, size: 20),
+                          : const Icon(Icons.my_location, color: Colors.white, size: 20),
                     ),
-                    title: const Text(
+                    title: Text(
                       'Use Current GPS Location',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                     subtitle: const Text('Uses device GPS to find nearby shops'),
                     trailing: Icon(Icons.chevron_right, color: hintColor),
@@ -185,7 +185,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 32.0),
                       child: Center(
-                        child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                        child: CircularProgressIndicator(color: Colors.white),
                       ),
                     )
                   else if (_searchController.text.isNotEmpty && _searchResults.isEmpty)
