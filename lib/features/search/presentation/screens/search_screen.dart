@@ -262,20 +262,20 @@ class _CategoryFilterChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.category_rounded, size: 12, color: Colors.white),
+          Icon(Icons.category_rounded, size: 12, color: AppColors.primary),
           const SizedBox(width: 5),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 5),
           GestureDetector(
             onTap: onDismiss,
-            child: Icon(Icons.close_rounded, size: 14, color: Colors.white),
+            child: Icon(Icons.close_rounded, size: 14, color: AppColors.primary),
           ),
         ],
       ),
@@ -512,7 +512,7 @@ class _SectionLabel extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.primary,
             ),
           ),
         ),
@@ -730,7 +730,7 @@ class _EmptyState extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : AppColors.primary,
                   ),
                 ),
               ),
@@ -814,7 +814,7 @@ class _ErrorState extends StatelessWidget {
                 style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: isDark ? Colors.white : AppColors.primary,
                 ),
               ),
             ),

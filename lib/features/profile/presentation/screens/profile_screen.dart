@@ -108,9 +108,7 @@ class ProfileScreen extends ConsumerWidget {
                             items: [
                               _MenuItem(
                                 icon: themeIcon,
-                                iconColor: isDark
-                                    ? Colors.white
-                                    : Colors.white,
+                                iconColor: AppColors.primary,
                                 label: 'App theme',
                                 trailing: Text(
                                   themeModeLabel,
@@ -124,7 +122,7 @@ class ProfileScreen extends ConsumerWidget {
                               ),
                               _MenuItem(
                                 icon: Icons.shield_outlined,
-                                iconColor: Colors.white,
+                                iconColor: AppColors.primary,
                                 label: 'Security',
                                 onTap: () => context.push('/security'),
                               ),
@@ -258,13 +256,13 @@ class ProfileScreen extends ConsumerWidget {
             for (final entry in themeEntries)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(entry.$3, color: Colors.white),
+                leading: Icon(entry.$3, color: isDark ? Colors.white : AppColors.textPrimary),
                 title: Text(entry.$2,
                     style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
-                        color: Colors.white)),
+                        color: isDark ? Colors.white : AppColors.textPrimary)),
                 trailing: current == entry.$1
-                    ? const Icon(Icons.check_circle_rounded, color: Colors.white)
+                    ? Icon(Icons.check_circle_rounded, color: isDark ? Colors.white : AppColors.primary)
                     : null,
                 onTap: () {
                   ref.read(themeModeProvider.notifier).setThemeMode(entry.$1);
@@ -306,7 +304,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.copy_outlined, color: Colors.white),
+              leading: Icon(Icons.copy_outlined, color: isDark ? Colors.white : AppColors.textPrimary),
               title: Text('Copy link',
                   style: GoogleFonts.poppins(fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white : AppColors.textPrimary)),

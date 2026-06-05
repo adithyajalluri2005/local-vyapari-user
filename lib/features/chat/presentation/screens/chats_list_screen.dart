@@ -219,7 +219,7 @@ class _ChatTile extends StatelessWidget {
                       time,
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: session.unread ? Colors.white : AppColors.textHint,
+                        color: session.unread ? (isDark ? Colors.white : AppColors.primary) : AppColors.textHint,
                         fontWeight: session.unread ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
@@ -302,7 +302,7 @@ class _Fallback extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: AppColors.primary,
           ),
         ),
       ),

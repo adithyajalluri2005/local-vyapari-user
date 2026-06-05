@@ -123,7 +123,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                 autofocus: true,
                 decoration: InputDecoration(
                   hintText: 'Search city, town, or area...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.white),
+                  prefixIcon: Icon(Icons.search, color: isDark ? Colors.white70 : AppColors.textHint),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: Icon(Icons.clear, color: hintColor),
@@ -165,16 +165,16 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: _isLocatingGPS
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                             )
-                          : const Icon(Icons.my_location, color: Colors.white, size: 20),
+                          : const Icon(Icons.my_location, color: AppColors.primary, size: 20),
                     ),
                     title: Text(
                       'Use Current GPS Location',
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppColors.textPrimary),
                     ),
                     subtitle: const Text('Uses device GPS to find nearby shops'),
                     trailing: Icon(Icons.chevron_right, color: hintColor),
@@ -185,7 +185,7 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 32.0),
                       child: Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                        child: CircularProgressIndicator(color: AppColors.primary),
                       ),
                     )
                   else if (_searchController.text.isNotEmpty && _searchResults.isEmpty)

@@ -141,7 +141,7 @@ class AppTheme {
       bodyLarge: t.bodyLarge?.copyWith(color: text, fontSize: 15, fontWeight: FontWeight.w400, height: 1.5),
       bodyMedium: t.bodyMedium?.copyWith(color: muted, fontSize: 13, fontWeight: FontWeight.w400, height: 1.5),
       bodySmall: t.bodySmall?.copyWith(color: const Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w400),
-      labelLarge: t.labelLarge?.copyWith(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+      labelLarge: t.labelLarge?.copyWith(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 
@@ -230,14 +230,14 @@ class AppTheme {
       indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: Colors.white, size: 22);
+          return const IconThemeData(color: AppColors.primary, size: 22);
         }
         return const IconThemeData(color: AppColors.textHint, size: 22);
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return GoogleFonts.poppins(
-          color: selected ? Colors.white : AppColors.textHint,
+          color: selected ? AppColors.primary : AppColors.textHint,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           fontSize: 10,
         );

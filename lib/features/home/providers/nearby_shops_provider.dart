@@ -76,14 +76,51 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
       FirebaseFirestore.instance.collection('searchable_shops'),
     );
 
-    final geoDocs = await geoRef.fetchWithin(
-      center: GeoFirePoint(GeoPoint(sortingLat, sortingLng)),
-      radiusInKm: 15,
-      field: 'geo',
-      geopointFrom: (data) =>
-          (data['geo'] as Map<String, dynamic>)['geopoint'] as GeoPoint,
-      strictMode: true,
-    );
+    // App Check token may not be ready on the first attempt (race at startup);
+    // one retry after a short delay resolves the transient permission-denied.
+    Future<List<DocumentSnapshot<Map<String, dynamic>>>> fetchWithRetry() async {
+      try {
+        return await geoRef.fetchWithin(
+          center: GeoFirePoint(GeoPoint(sortingLat, sortingLng)),
+          radiusInKm: 15,
+          field: 'geo',
+          geopointFrom: (data) {
+            try {
+              final geo = data['geo'];
+              if (geo is Map) {
+                final geopoint = geo['geopoint'];
+                if (geopoint is GeoPoint) return geopoint;
+              }
+            } catch (_) {}
+            return const GeoPoint(0, 0);
+          },
+          strictMode: true,
+        );
+      } on FirebaseException catch (e) {
+        if (e.code == 'permission-denied') {
+          await Future.delayed(const Duration(seconds: 2));
+          return geoRef.fetchWithin(
+            center: GeoFirePoint(GeoPoint(sortingLat, sortingLng)),
+            radiusInKm: 15,
+            field: 'geo',
+            geopointFrom: (data) {
+              try {
+                final geo = data['geo'];
+                if (geo is Map) {
+                  final geopoint = geo['geopoint'];
+                  if (geopoint is GeoPoint) return geopoint;
+                }
+              } catch (_) {}
+              return const GeoPoint(0, 0);
+            },
+            strictMode: true,
+          );
+        }
+        rethrow;
+      }
+    }
+
+    final geoDocs = await fetchWithRetry();
 
     final shopIds = geoDocs.map((doc) => doc.id).toList();
     if (shopIds.isEmpty) {
@@ -150,12 +187,25 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
       subscriptions.add(sub);
     }
 
-    ref.onDispose(() {
+    void cleanup() {
       for (final sub in subscriptions) { sub.cancel(); }
       if (!controller.isClosed) controller.close();
+    }
+
+    // Guard: if the provider was disposed while fetchWithRetry awaited,
+    // clean up immediately and stop — calling ref.onDispose after disposal throws.
+    if (!ref.mounted) { cleanup(); return; }
+    ref.onDispose(cleanup);
+
+    // Force an emission after 10 s if RTDB hasn't responded yet, so the UI
+    // shows an empty state instead of loading indefinitely.
+    Future.delayed(const Duration(seconds: 10), () {
+      if (!controller.isClosed && !hasYielded) {
+        controller.add(buildSorted());
+      }
     });
 
-    // Stream and yield live shop lists as RTDB pushes changes
+    // Stream and yield live shop lists as RTDB pushes changes.
     var firstEmission = true;
     await for (final shops in controller.stream) {
       if (firstEmission) {
@@ -168,8 +218,8 @@ final nearbyShopsProvider = StreamProvider<List<Shop>>((ref) async* {
       yield shops;
       hasYielded = true;
     }
-  } catch (e) {
-    debugPrint('Error in nearbyShopsProvider: $e');
+  } catch (e, st) {
+    debugPrint('Error in nearbyShopsProvider [${e.runtimeType}]: $e\n$st');
     if (!hasYielded) rethrow;
   }
 });

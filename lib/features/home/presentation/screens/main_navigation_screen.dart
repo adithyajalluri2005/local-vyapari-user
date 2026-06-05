@@ -13,6 +13,8 @@ import 'package:local_vyapari_user/features/home/providers/navigation_provider.d
 import 'package:local_vyapari_user/features/offers/presentation/screens/offers_screen.dart';
 import 'package:local_vyapari_user/features/profile/presentation/screens/profile_screen.dart';
 import 'package:local_vyapari_user/features/search/presentation/screens/search_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:local_vyapari_user/core/providers/notification_route_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
 export 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
@@ -28,6 +30,19 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   DateTime? _lastBackPressed;
+
+  @override
+  void initState() {
+    super.initState();
+    // Consume any pending notification route captured before auth completed.
+    // addPostFrameCallback ensures the navigator is fully mounted before pushing.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final route = ref.read(pendingNotificationRouteProvider);
+      if (route == null || !mounted) return;
+      ref.read(pendingNotificationRouteProvider.notifier).set(null);
+      context.push(route);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,12 +152,12 @@ class _TabletScaffold extends StatelessWidget {
             indicatorShape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            selectedIconTheme: const IconThemeData(color: Colors.white, size: 22),
+            selectedIconTheme: IconThemeData(color: isDark ? Colors.white : AppColors.primary, size: 22),
             unselectedIconTheme: const IconThemeData(color: AppColors.textHint, size: 22),
             selectedLabelTextStyle: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: isDark ? Colors.white : AppColors.primary,
             ),
             unselectedLabelTextStyle: GoogleFonts.poppins(
               fontSize: 12,
@@ -278,6 +293,7 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -339,7 +355,7 @@ class _NavButton extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : AppColors.primary,
                         ),
                       ),
                     )

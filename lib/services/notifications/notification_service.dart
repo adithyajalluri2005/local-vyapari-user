@@ -16,6 +16,7 @@ import 'package:local_vyapari_user/firebase_options.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/router/app_router.dart';
+import 'package:local_vyapari_user/core/providers/notification_route_provider.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
@@ -112,13 +113,14 @@ class NotificationService {
   // Per-shop real-time offer listeners, keyed by shopId.
   final Map<String, StreamSubscription<DatabaseEvent>> _offerSubscriptions = {};
 
-  NotificationService(Ref _);
+  final Ref _ref;
+  NotificationService(this._ref);
 
   void init() {
     if (_initialized) return;
     _initialized = true;
 
-    _initLocalNotifications();
+    _initLocalNotifications().then((_) => _handleLaunchFromLocalNotification());
     _initFirebaseMessaging();
 
     FirebaseAuth.instance.authStateChanges().listen((user) {
@@ -141,19 +143,11 @@ class NotificationService {
       await _localNotifications.initialize(
         settings: const InitializationSettings(android: initSettingsAndroid),
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          try {
-            final context = rootNavigatorKey.currentContext;
-            if (context == null) return;
-
-            final payload = response.payload ?? '';
-            if (payload.startsWith('chat:')) {
-              GoRouter.of(context).push('/chats');
-            } else if (payload == 'offers') {
-              GoRouter.of(context).push('/all_offers');
-            }
-          } catch (e) {
-            debugPrint('Error handling local notification click: $e');
-          }
+          // App is in background (not terminated) — navigator is already mounted.
+          final route = _routeForPayload(response.payload ?? '');
+          if (route == null) return;
+          final context = rootNavigatorKey.currentContext;
+          if (context != null) GoRouter.of(context).push(route);
         },
       );
 
@@ -182,6 +176,29 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('Error initializing local notifications: $e');
+    }
+  }
+
+  String? _routeForPayload(String payload) {
+    if (payload.startsWith('chat:')) return '/chats';
+    if (payload == 'offers') return '/all_offers';
+    return null;
+  }
+
+  // App was TERMINATED and user tapped a local notification.
+  // onDidReceiveNotificationResponse does not fire in that scenario.
+  // Store the route in the provider — MainNavigationScreen.initState consumes it.
+  Future<void> _handleLaunchFromLocalNotification() async {
+    try {
+      final details = await _localNotifications.getNotificationAppLaunchDetails();
+      if (details?.didNotificationLaunchApp == true) {
+        final route = _routeForPayload(details!.notificationResponse?.payload ?? '');
+        if (route != null) {
+          _ref.read(pendingNotificationRouteProvider.notifier).set(route);
+        }
+      }
+    } catch (e) {
+      debugPrint('getNotificationAppLaunchDetails error: $e');
     }
   }
 
@@ -534,32 +551,10 @@ class NotificationService {
       }
     });
 
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
-
-    messaging.getInitialMessage().then((RemoteMessage? message) {
-      if (message != null) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _handleNotificationClick(message);
-        });
-      }
-    });
+    // onMessageOpenedApp and getInitialMessage are handled in main.dart before
+    // runApp so they are never missed due to auth latency. See main.dart.
 
     messaging.onTokenRefresh.listen((_) => _syncDeviceRegistration());
-  }
-
-  void _handleNotificationClick(RemoteMessage message) {
-    try {
-      final context = rootNavigatorKey.currentContext;
-      if (context == null) return;
-
-      if (message.data['type'] == 'chat') {
-        GoRouter.of(context).push('/chats');
-      } else {
-        GoRouter.of(context).push('/all_offers');
-      }
-    } catch (e) {
-      debugPrint('Error handling FCM notification click: $e');
-    }
   }
 
   Future<void> _syncDeviceRegistration({LocationResult? location}) async {

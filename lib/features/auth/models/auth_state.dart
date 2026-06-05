@@ -29,6 +29,7 @@ class AuthFailure extends AuthState {
 class NeedsDisplayName extends AuthState {
   final User user;
   final String suggestedName;
-  const NeedsDisplayName(this.user, this.suggestedName);
+  final bool needsPhone;
+  const NeedsDisplayName(this.user, this.suggestedName, {this.needsPhone = false});
 }
 

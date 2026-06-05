@@ -122,7 +122,7 @@ class _ShopAvatar extends StatelessWidget {
         child: Icon(
           Icons.storefront_outlined,
           size: radius,
-          color: Colors.white,
+          color: AppColors.primary,
         ),
       );
     }

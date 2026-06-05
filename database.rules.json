@@ -52,8 +52,8 @@
 
     "chats": {
       "$ownerId": {
+        ".read": "auth != null && auth.uid === $ownerId",
         "$peerId": {
-          ".read": "auth != null && (auth.uid === $ownerId || data.child('customerId').val() === auth.uid || data.child('vendorId').val() === auth.uid)",
           ".write": "auth != null && (auth.uid === $ownerId || newData.child('customerId').val() === auth.uid || data.child('customerId').val() === auth.uid)"
         }
       }

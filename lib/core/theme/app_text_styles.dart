@@ -8,7 +8,7 @@ class AppTextStyles {
     return GoogleFonts.poppins(
       fontSize: Responsive.isTablet(context) ? 36 : 32,
       fontWeight: fontWeight ?? FontWeight.w700,
-      color: color ?? Colors.white,
+      color: color ?? AppColors.textPrimary,
     );
   }
 
@@ -49,7 +49,7 @@ class AppTextStyles {
     return GoogleFonts.poppins(
       fontSize: Responsive.isTablet(context) ? 14 : 13,
       fontWeight: fontWeight ?? FontWeight.w400,
-      color: color ?? Colors.white70,
+      color: color ?? AppColors.textSecondary,
       height: height ?? 1.5,
     );
   }
@@ -58,7 +58,7 @@ class AppTextStyles {
     return GoogleFonts.poppins(
       fontSize: 13,
       fontWeight: fontWeight ?? FontWeight.w600,
-      color: color ?? Colors.white,
+      color: color ?? AppColors.primary,
     );
   }
 

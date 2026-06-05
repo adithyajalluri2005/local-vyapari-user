@@ -58,7 +58,7 @@ class OfferCard extends StatelessWidget {
                             child: const Icon(
                               Icons.storefront_outlined,
                               size: 10,
-                              color: Colors.white,
+                              color: AppColors.primary,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -107,7 +107,7 @@ class OfferCard extends StatelessWidget {
                       child: OutlinedButton(
                         onPressed: onTap,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.primary,
                           side: const BorderSide(color: AppColors.primary, width: 1),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           shape: RoundedRectangleBorder(
@@ -143,7 +143,7 @@ class _OfferImage extends StatelessWidget {
         height: 140,
         color: AppColors.primary.withValues(alpha: 0.08),
         child: const Center(
-          child: Icon(Icons.local_offer_outlined, size: 40, color: Colors.white),
+          child: Icon(Icons.local_offer_outlined, size: 40, color: AppColors.primary),
         ),
       );
     }

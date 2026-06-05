@@ -9,6 +9,7 @@ import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/shared/utils/input_sanitizer.dart';
+import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
 import 'package:local_vyapari_user/shared/widgets/primary_button.dart';
 
@@ -276,118 +277,146 @@ class _FormBodyState extends State<_FormBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Get started',
-                  style: GoogleFonts.poppins(
-                    fontSize: isSmall ? 19 : 22,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Create your Local Vyapari account',
-                  style: GoogleFonts.poppins(
-                    fontSize: isSmall ? 12 : 13,
-                    color: AppColors.textHint,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                TextFormField(
-                  controller: widget.emailCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Email address',
-                    prefixIcon: Icon(Icons.mail_outline_rounded),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Email is required' : null,
-                ),
-                const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: widget.phoneCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone number',
-                    prefixText: '+91 ',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [LengthLimitingTextInputFormatter(10)],
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Phone is required';
-                    if (v.length != 10) return 'Enter 10 digits';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: widget.passCtrl,
-                  obscureText: _obscurePass,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: GestureDetector(
-                      onTap: () => setState(() => _obscurePass = !_obscurePass),
-                      child: Icon(_obscurePass
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
-                    ),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Password is required' : null,
-                ),
-                const SizedBox(height: 14),
-
-                TextFormField(
-                  controller: widget.confirmCtrl,
-                  obscureText: _obscureConfirm,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => widget.onSubmit(),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm password',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    suffixIcon: GestureDetector(
-                      onTap: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
-                      child: Icon(_obscureConfirm
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
-                    ),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Please confirm password' : null,
-                ),
-                const SizedBox(height: 24),
-
-                PrimaryButton(label: 'Create Account', onPressed: widget.onSubmit),
-                const SizedBox(height: 20),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Already have an account? ',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary),
-                    ),
-                    GestureDetector(
-                      onTap: widget.onSignIn,
-                      child: Text(
-                        'Sign in',
+                FadeInSlide(
+                  slideOffset: 30,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Get started',
                         style: GoogleFonts.poppins(
-                          fontSize: 13,
+                          fontSize: isSmall ? 19 : 22,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: isDark ? Colors.white : AppColors.textPrimary,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Create your Local Vyapari account',
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmall ? 12 : 13,
+                          color: AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 150),
+                  child: TextFormField(
+                    controller: widget.emailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Email address',
+                      prefixIcon: Icon(Icons.mail_outline_rounded),
                     ),
-                  ],
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Email is required' : null,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 230),
+                  child: TextFormField(
+                    controller: widget.phoneCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone number',
+                      prefixText: '+91 ',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Phone is required';
+                      if (v.length != 10) return 'Enter 10 digits';
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 310),
+                  child: TextFormField(
+                    controller: widget.passCtrl,
+                    obscureText: _obscurePass,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: GestureDetector(
+                        onTap: () => setState(() => _obscurePass = !_obscurePass),
+                        child: Icon(_obscurePass
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Password is required' : null,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 390),
+                  child: TextFormField(
+                    controller: widget.confirmCtrl,
+                    obscureText: _obscureConfirm,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => widget.onSubmit(),
+                    decoration: InputDecoration(
+                      labelText: 'Confirm password',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: GestureDetector(
+                        onTap: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
+                        child: Icon(_obscureConfirm
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Please confirm password' : null,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 470),
+                  child: ScaleOnTap(
+                    child: PrimaryButton(label: 'Create Account', onPressed: widget.onSubmit),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 550),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Already have an account? ',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13, color: isDark ? Colors.white70 : AppColors.textSecondary),
+                      ),
+                      GestureDetector(
+                        onTap: widget.onSignIn,
+                        child: Text(
+                          'Sign in',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -424,25 +453,28 @@ class _PortraitLayout extends StatelessWidget {
                   children: [
                     _BackButton(onTap: onBack),
                     const Spacer(),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Create Account',
-                          style: GoogleFonts.poppins(
-                            fontSize: isSmall ? 17 : 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                    FadeInSlide(
+                      slideOffset: 30,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Create Account',
+                            style: GoogleFonts.poppins(
+                              fontSize: isSmall ? 17 : 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'Customer Portal',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.6),
+                          Text(
+                            'Customer Portal',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: Colors.white.withValues(alpha: 0.6),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

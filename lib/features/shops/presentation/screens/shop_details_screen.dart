@@ -621,14 +621,14 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_offer_rounded, size: 13, color: Colors.white),
+                        const Icon(Icons.local_offer_rounded, size: 13, color: AppColors.primary),
                         const SizedBox(width: 5),
                         Text(
                           'Active Offers',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: AppColors.primary,
                           ),
                         ),
                       ],
@@ -834,7 +834,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     children: [
                       Text(
                         '₹${product.offerPrice}',
-                        style: AppTextStyles.bodyLarge(context, color: Colors.white, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.bodyLarge(context, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                       AppSpacing.horizontalSm,
                       Flexible(
@@ -880,7 +880,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               label: const Text('Rate Shop'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),

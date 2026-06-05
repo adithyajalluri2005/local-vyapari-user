@@ -11,6 +11,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:go_router/go_router.dart';
+import 'package:local_vyapari_user/core/providers/notification_route_provider.dart';
 import 'package:local_vyapari_user/core/router/app_router.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/theme_provider.dart';
@@ -76,10 +78,39 @@ void main() {
     // Register background handler for push notifications when the app is closed/backgrounded
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
+    // ── Capture FCM notification tap intent BEFORE runApp ──────────────────
+    // getInitialMessage: app was TERMINATED and user tapped a FCM notification.
+    // Must be called here — by the time auth completes the message is gone.
+    String? initialNotificationRoute;
+    try {
+      final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
+      if (initialMsg != null) {
+        initialNotificationRoute = _fcmRoute(initialMsg);
+      }
+    } catch (e) {
+      debugPrint('getInitialMessage error: $e');
+    }
+
+    // onMessageOpenedApp: app was BACKGROUNDED and user tapped a FCM notification.
+    // The app is already running so the navigator is mounted — navigate directly.
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
+      final route = _fcmRoute(msg);
+      if (route == null) return;
+      final context = rootNavigatorKey.currentContext;
+      // ignore: use_build_context_synchronously
+      if (context != null) GoRouter.of(context).push(route);
+    });
+
     FlutterNativeSplash.remove();
     runApp(
-      const ProviderScope(
-        child: LocalVyapariApp(),
+      ProviderScope(
+        overrides: [
+          if (initialNotificationRoute != null)
+            pendingNotificationRouteProvider.overrideWith(
+              () => PendingNotificationRouteNotifier(initialNotificationRoute),
+            ),
+        ],
+        child: const LocalVyapariApp(),
       ),
     );
   }, (error, stackTrace) {
@@ -89,6 +120,12 @@ void main() {
       FirebaseCrashlytics.instance.recordError(error, stackTrace, fatal: true);
     }
   });
+}
+
+String? _fcmRoute(RemoteMessage msg) {
+  if (msg.data['type'] == 'chat') return '/chats';
+  if (msg.data.isNotEmpty) return '/all_offers';
+  return null;
 }
 
 class LocalVyapariApp extends ConsumerWidget {

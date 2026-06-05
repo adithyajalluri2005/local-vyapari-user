@@ -162,7 +162,7 @@ class _ShopOffersCardState extends ConsumerState<_ShopOffersCard> {
                               : null,
                         ),
                         child: shop.shopLogo.isEmpty
-                            ? const Icon(Icons.storefront_outlined, size: 18, color: Colors.white)
+                            ? const Icon(Icons.storefront_outlined, size: 18, color: AppColors.primary)
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -396,7 +396,7 @@ class _OfferTile extends ConsumerWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: isDark ? Colors.white : AppColors.primary,
                           ),
                         ),
                       ],

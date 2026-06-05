@@ -71,13 +71,21 @@ class AuthNotifier extends Notifier<AuthState> {
         try {
           final isCustomer = await isCustomerUser(user);
           if (isCustomer) {
-            // Google sign-in users must provide a display name on first sign-in.
+            // Google sign-in users must provide display name + phone on first sign-in.
             final isGoogleUser = user.providerData.any((p) => p.providerId == 'google.com');
             if (isGoogleUser) {
-              final nameSnap = await _rtdb.ref('users/${user.uid}/displayName').get();
-              final savedName = nameSnap.value?.toString().trim() ?? '';
-              if (savedName.isEmpty) {
-                state = NeedsDisplayName(user, user.displayName ?? '');
+              final results = await Future.wait([
+                _rtdb.ref('users/${user.uid}/displayName').get(),
+                _rtdb.ref('users/${user.uid}/phone').get(),
+              ]);
+              final savedName = results[0].value?.toString().trim() ?? '';
+              final savedPhone = results[1].value?.toString().trim() ?? '';
+              if (savedName.isEmpty || savedPhone.isEmpty) {
+                state = NeedsDisplayName(
+                  user,
+                  user.displayName ?? '',
+                  needsPhone: savedPhone.isEmpty,
+                );
                 return;
               }
             }
@@ -634,6 +642,67 @@ class AuthNotifier extends Notifier<AuthState> {
     } finally {
       ref.read(authLoadingProvider.notifier).setLoading(false);
     }
+  }
+
+  // ── Profile-setup helpers for Google sign-in users ──────────────────────────
+  // These do NOT touch auth state on failure — the caller shows errors locally
+  // so the NeedsDisplayName flow stays intact.
+
+  Future<void> sendPhoneOtpForProfileSetup(
+    String phone, {
+    required Function(String verificationId) onCodeSent,
+    required Function(String error) onFailed,
+  }) async {
+    ref.read(authLoadingProvider.notifier).setLoading(true);
+    try {
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) throw Exception('User not signed in');
+
+      final existing = await _rtdb.ref('phones').child(phone).get();
+      if (existing.exists && existing.value != uid) {
+        onFailed('This phone number is already linked to another account');
+        return;
+      }
+
+      await sendFirebaseOtp(
+        phone: phone,
+        onCodeSent: (verificationId, _) => onCodeSent(verificationId),
+        onFailed: (e) => onFailed(e.message ?? 'Verification failed'),
+      );
+    } catch (e) {
+      onFailed(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      ref.read(authLoadingProvider.notifier).setLoading(false);
+    }
+  }
+
+  Future<void> verifyPhoneForProfileSetup(
+    String verificationId,
+    String smsCode,
+    String phone,
+  ) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('User not signed in');
+
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+
+    try {
+      await user.linkWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      // Already linked to this account → treat as success and continue saving.
+      if (e.code != 'credential-already-in-use' && e.code != 'provider-already-linked') {
+        rethrow;
+      }
+    }
+
+    await _rtdb.ref('users/${user.uid}').update({
+      'phone': phone,
+      'verified': true,
+    });
+    await _rtdb.ref('phones').child(phone).set(user.uid);
   }
 
   Future<void> logout() async {

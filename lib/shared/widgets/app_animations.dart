@@ -105,18 +105,25 @@ class _ScaleOnTapState extends State<ScaleOnTap>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _ctrl.forward(),
-      onTapUp: (_) {
-        _ctrl.reverse();
-        widget.onTap?.call();
-      },
-      onTapCancel: () => _ctrl.reverse(),
-      child: AnimatedBuilder(
-        animation: _anim,
-        builder: (_, child) => Transform.scale(scale: _anim.value, child: child),
-        child: widget.child,
-      ),
+    final scaled = AnimatedBuilder(
+      animation: _anim,
+      builder: (_, child) => Transform.scale(scale: _anim.value, child: child),
+      child: widget.child,
+    );
+    // Use Listener (pointer-level) so we observe presses without blocking the
+    // inner widget's own gesture recognizers (e.g. ElevatedButton's InkWell).
+    return Listener(
+      onPointerDown: (_) => _ctrl.forward(),
+      onPointerUp: (_) => _ctrl.reverse(),
+      onPointerCancel: (_) => _ctrl.reverse(),
+      behavior: HitTestBehavior.translucent,
+      child: widget.onTap != null
+          ? GestureDetector(
+              onTap: widget.onTap,
+              behavior: HitTestBehavior.opaque,
+              child: scaled,
+            )
+          : scaled,
     );
   }
 }

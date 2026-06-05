@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
@@ -23,6 +22,9 @@ import 'package:local_vyapari_user/shared/widgets/section_header.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/widgets/shop_card.dart';
 import 'package:shimmer/shimmer.dart';
+
+const _kShimmerDark = Color(0xFF2A2A3E);
+const _kShimmerDarkHL = Color(0xFF3A3A4E);
 
 // ── Home Screen ───────────────────────────────────────────────────────────────
 
@@ -79,11 +81,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final locationAsync = ref.watch(activeBrowsingLocationProvider);
     final shopsAsync = ref.watch(nearbyShopsProvider);
     final offersAsync = ref.watch(nearbyOffersProvider);
+    final shopsById = {
+      for (final s in (shopsAsync.value ?? <Shop>[]))
+        s.id: s
+    };
 
-    // Split offers so carousel and Hot Deals never show the same item.
-    // Featured offers go to the carousel; non-featured go to Hot Deals.
-    // If no vendor has marked any offer as featured, the carousel shows its
-    // static banner fallback and Hot Deals shows the full list.
+    // Split offers so the spotlight and Hot Deals never show the same item.
+    // If no vendor has marked an offer as featured, the spotlight is hidden.
     final featuredOffersAsync = offersAsync.whenData(
       (offers) => offers.where((o) => o.isFeatured).toList(),
     );
@@ -152,22 +156,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                    // ── Promo banner carousel ──────────────────────
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: hp),
-                      child: FadeInSlide(
-                        duration: const Duration(milliseconds: 500),
-                        child: _PromoBannerCarousel(
-                          offersAsync: featuredOffersAsync,
-                          isDark: isDark,
-                          onOfferTap: (offer) =>
-                              _navigateToShopForOffer(context, offer),
-                        ),
+                    // Featured spotlight
+                    FadeInSlide(
+                      duration: const Duration(milliseconds: 400),
+                      child: _FeaturedSpotlightSection(
+                        offersAsync: featuredOffersAsync,
+                        shopsById: shopsById,
+                        userLatitude: locationAsync.value?.latitude,
+                        userLongitude: locationAsync.value?.longitude,
+                        hp: hp,
+                        isDark: isDark,
+                        onOfferTap: (offer) =>
+                            _navigateToShopForOffer(context, offer),
                       ),
                     ),
-                    const SizedBox(height: 22),
 
                     // ── Hot deals ──────────────────────────────────
                     FadeInSlide(
@@ -348,9 +352,9 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.location_on_rounded,
-              color: Colors.white,
+              color: textColor,
               size: 22,
             ),
             const SizedBox(width: 6),
@@ -386,10 +390,10 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const Icon(
+                    Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 18,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                   ],
                 ),
@@ -448,380 +452,466 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-// ── Promo banner carousel ─────────────────────────────────────────────────────
+// Featured spotlight
 
-class _PromoBannerCarousel extends StatefulWidget {
+class _FeaturedSpotlightSection extends StatelessWidget {
   final AsyncValue<List<Offer>> offersAsync;
+  final Map<String, Shop> shopsById;
+  final double? userLatitude;
+  final double? userLongitude;
+  final double hp;
   final bool isDark;
   final void Function(Offer) onOfferTap;
-  const _PromoBannerCarousel({
+
+  const _FeaturedSpotlightSection({
     required this.offersAsync,
+    required this.shopsById,
+    required this.userLatitude,
+    required this.userLongitude,
+    required this.hp,
     required this.isDark,
     required this.onOfferTap,
   });
 
   @override
-  State<_PromoBannerCarousel> createState() => _PromoBannerCarouselState();
-}
-
-class _PromoBannerCarouselState extends State<_PromoBannerCarousel> {
-  final _controller = PageController();
-  int _currentPage = 0;
-  Timer? _timer;
-  bool _timerStarted = false;
-
-  static const _gradients = [
-    [Color(0xFF3D1A78), Color(0xFF6A35B8)],
-    [Color(0xFF0D4F5C), Color(0xFF1A8FA8)],
-    [Color(0xFF7F1D4D), Color(0xFFBE3D7A)],
-    [Color(0xFF064E3B), Color(0xFF059669)],
-    [Color(0xFF7C4A00), Color(0xFFD97706)],
-  ];
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _startTimer(int count) {
-    if (count <= 1) return;
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted) return;
-      final next = (_currentPage + 1) % count;
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return widget.offersAsync.when(
+    return offersAsync.when(
       skipLoadingOnReload: false,
       data: (offers) {
-        if (offers.isEmpty) return const _StaticBanner();
-        final pages = offers.take(5).toList();
-        if (!_timerStarted) {
-          _timerStarted = true;
-          Future.microtask(() => _startTimer(pages.length));
-        }
-        return Column(
-          children: [
-            SizedBox(
-              height: 184,
-              child: PageView.builder(
-                controller: _controller,
-                itemCount: pages.length,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                itemBuilder: (_, i) => _BannerPage(
-                  offer: pages[i],
-                  gradient: _gradients[i % _gradients.length],
-                  onTap: () => widget.onOfferTap(pages[i]),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(pages.length, (i) {
-                final active = i == _currentPage;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: active ? 20 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.primary : AppColors.border,
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                );
-              }),
-            ),
-          ],
+        if (offers.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: EdgeInsets.fromLTRB(hp, 0, hp, 20),
+          child: _HeroSpotlightCard(
+            offers: offers,
+            shopsById: shopsById,
+            userLatitude: userLatitude,
+            userLongitude: userLongitude,
+            onOfferTap: onOfferTap,
+          ),
         );
       },
-      loading: () => Shimmer.fromColors(
-        baseColor: widget.isDark ? const Color(0xFF2A2A3E) : Colors.grey.shade300,
-        highlightColor: widget.isDark ? const Color(0xFF3A3A4E) : Colors.grey.shade100,
-        child: Container(
-          height: 184,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.xl),
+      loading: () => Padding(
+        padding: EdgeInsets.fromLTRB(hp, 0, hp, 20),
+        child: Shimmer.fromColors(
+          baseColor: isDark ? _kShimmerDark : Colors.grey.shade300,
+          highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
+          child: Container(
+            height: 204,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+            ),
           ),
         ),
       ),
-      error: (_, _) => const _StaticBanner(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }
 
-class _BannerPage extends StatelessWidget {
-  final Offer offer;
-  final List<Color> gradient;
-  final VoidCallback onTap;
-  const _BannerPage({
-    required this.offer,
-    required this.gradient,
-    required this.onTap,
+class _HeroSpotlightCard extends StatefulWidget {
+  final List<Offer> offers;
+  final Map<String, Shop> shopsById;
+  final double? userLatitude;
+  final double? userLongitude;
+  final void Function(Offer) onOfferTap;
+
+  const _HeroSpotlightCard({
+    required this.offers,
+    required this.shopsById,
+    required this.userLatitude,
+    required this.userLongitude,
+    required this.onOfferTap,
+  });
+
+  @override
+  State<_HeroSpotlightCard> createState() => _HeroSpotlightCardState();
+}
+
+class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  int _index = 0;
+
+  // Gradient pairs: [start, end] — each maps to a unique card palette
+  static const _gradients = [
+    [Color(0xFF7C3AED), Color(0xFF4338CA)], // violet → indigo
+    [Color(0xFFDC2626), Color(0xFFC2410C)], // crimson → orange
+    [Color(0xFF0369A1), Color(0xFF0E7490)], // sky → cyan
+    [Color(0xFF065F46), Color(0xFF0F766E)], // emerald → teal
+    [Color(0xFF92400E), Color(0xFFB45309)], // amber → warm
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 5))
+      ..addStatusListener(_onProgress);
+    _start();
+  }
+
+  void _onProgress(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    setState(() => _index = (_index + 1) % widget.offers.length);
+    _start();
+  }
+
+  void _start() {
+    _ctrl.reset();
+    if (widget.offers.length > 1) _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HeroSpotlightCard old) {
+    super.didUpdateWidget(old);
+    if (_index >= widget.offers.length) _index = 0;
+    if (old.offers.length != widget.offers.length) _start();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final offer = widget.offers[_index];
+    final shop = widget.shopsById[offer.shopId];
+    final shopName = shop?.shopName.isNotEmpty == true
+        ? shop!.shopName
+        : offer.shopName.isNotEmpty
+            ? offer.shopName
+            : offer.title;
+    final logoUrl = shop?.shopLogo ?? '';
+    final rating = shop?.rating;
+    final distance = _distanceLabel(shop, widget.userLatitude, widget.userLongitude);
+    final discount = offer.discountPercentage.toInt();
+    final colors = _gradients[_index % _gradients.length];
+
+    return ScaleOnTap(
+      onTap: () => widget.onOfferTap(offer),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 380),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: Container(
+          key: ValueKey('hero-$_index-${offer.id}'),
+          height: 204,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [colors[0], colors[1]],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            boxShadow: [
+              BoxShadow(
+                color: colors[0].withValues(alpha: 0.36),
+                blurRadius: 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              // Decorative background circles
+              Positioned(
+                right: -50,
+                top: -50,
+                child: Container(
+                  width: 190,
+                  height: 190,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.07),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 24,
+                bottom: -36,
+                child: Container(
+                  width: 108,
+                  height: 108,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+              ),
+              // Main content
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top row: FEATURED tag + rating / distance metas
+                    Row(
+                      children: [
+                        const _HeroTag(),
+                        const Spacer(),
+                        if (rating != null && rating > 0)
+                          _HeroMeta(icon: Icons.star_rounded, label: rating.toStringAsFixed(1)),
+                        if (rating != null && rating > 0 && distance != null)
+                          const SizedBox(width: 10),
+                        if (distance != null)
+                          _HeroMeta(icon: Icons.place_rounded, label: distance),
+                      ],
+                    ),
+                    const Spacer(),
+                    // Bottom content: badge + name + logo
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _HeroBadge(discount: discount, fallback: offer.title),
+                              const SizedBox(height: 10),
+                              Text(
+                                shopName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  height: 1.1,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (discount > 0 && offer.title.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  offer.title,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.white70,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        _HeroLogo(logoUrl: logoUrl, name: shopName),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    // Story-style progress bars
+                    _StoryProgressBars(
+                      total: widget.offers.length,
+                      current: _index,
+                      controller: _ctrl,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String? _distanceLabel(Shop? shop, double? userLat, double? userLng) {
+  if (shop == null || userLat == null || userLng == null) return null;
+  final meters = Geolocator.distanceBetween(
+    userLat, userLng,
+    shop.location.latitude,
+    shop.location.longitude,
+  );
+  if (meters < 1000) return '${meters.round()} m';
+  return '${(meters / 1000).toStringAsFixed(1)} km';
+}
+
+class _StoryProgressBars extends StatelessWidget {
+  final int total;
+  final int current;
+  final AnimationController controller;
+
+  const _StoryProgressBars({
+    required this.total,
+    required this.current,
+    required this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
-    final discPct = offer.discountPercentage.toInt();
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // Large watermark number for visual depth
-          Positioned(
-            right: -6,
-            bottom: -14,
-            child: Text(
-              '$discPct',
-              style: GoogleFonts.poppins(
-                fontSize: 136,
-                fontWeight: FontWeight.w900,
-                color: Colors.white.withValues(alpha: 0.09),
-                height: 1,
+    if (total <= 1) return const SizedBox.shrink();
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) => Row(
+        children: List.generate(total, (i) {
+          final double value;
+          if (i < current) {
+            value = 1.0;
+          } else if (i == current) {
+            value = controller.value;
+          } else {
+            value = 0.0;
+          }
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i < total - 1 ? 4 : 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: value,
+                  backgroundColor: Colors.white.withValues(alpha: 0.28),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  minHeight: 2.5,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Label chip
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'HOT DEAL',
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                // Big bold discount
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$discPct%',
-                      style: GoogleFonts.poppins(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 7),
-                      child: Text(
-                        'OFF',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white.withValues(alpha: 0.8),
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  offer.title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.88),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                // Shop name + white CTA button
-                Row(
-                  children: [
-                    if (offer.shopName.isNotEmpty) ...[
-                      const Icon(
-                        Icons.storefront_rounded,
-                        size: 13,
-                        color: Colors.white70,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          offer.shopName,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.5,
-                            color: Colors.white.withValues(alpha: 0.75),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ] else
-                      const Spacer(),
-                    GestureDetector(
-                      onTap: onTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                        child: Text(
-                          'Shop Now',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: gradient[0],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          );
+        }),
       ),
-    ),
     );
   }
 }
 
-class _StaticBanner extends StatelessWidget {
-  const _StaticBanner();
+class _HeroTag extends StatelessWidget {
+  const _HeroTag();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 184,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3D1A78), Color(0xFF6A35B8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28), width: 0.8),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned(
-            right: -10,
-            bottom: -18,
-            child: Text(
-              '★',
-              style: TextStyle(
-                fontSize: 160,
-                color: Colors.white.withValues(alpha: 0.06),
-                height: 1,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                  child: Text(
-                    'LOCAL VYAPARI',
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Best Deals\nNear You',
-                  style: GoogleFonts.poppins(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Shop local, save more every day',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.72),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: () => context.push('/radar'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                    ),
-                    child: Text(
-                      'Explore Shops',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF3D1A78),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          const Icon(Icons.bolt_rounded, size: 11, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            'FEATURED',
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.5,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeroMeta extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _HeroMeta({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: Colors.white70),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroBadge extends StatelessWidget {
+  final int discount;
+  final String fallback;
+
+  const _HeroBadge({required this.discount, required this.fallback});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = discount > 0
+        ? '$discount% OFF'
+        : fallback.isNotEmpty
+            ? fallback
+            : 'DEAL';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 0.8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroLogo extends StatelessWidget {
+  final String logoUrl;
+  final String name;
+
+  const _HeroLogo({required this.logoUrl, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: logoUrl.isNotEmpty
+          ? CachedNetworkImage(
+              imageUrl: logoUrl,
+              fit: BoxFit.cover,
+              cacheManager: AppCacheManager(),
+              errorWidget: (_, _, _) => _HeroInitial(initial: initial),
+            )
+          : _HeroInitial(initial: initial),
+    );
+  }
+}
+
+class _HeroInitial extends StatelessWidget {
+  final String initial;
+
+  const _HeroInitial({required this.initial});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        initial,
+        style: GoogleFonts.poppins(
+          fontSize: 26,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -913,7 +1003,7 @@ class _OfferBannerList extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${offer.discountPercentage.toInt()}%\n${'OFF'}',
+                                    '${offer.discountPercentage.toInt()}%\nOFF',
                                     style: GoogleFonts.poppins(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w900,
@@ -993,8 +1083,8 @@ class _OfferBannerList extends StatelessWidget {
           itemBuilder: (_, i) => Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Shimmer.fromColors(
-              baseColor: isDark ? const Color(0xFF2A2A3E) : Colors.grey.shade300,
-              highlightColor: isDark ? const Color(0xFF3A3A4E) : Colors.grey.shade100,
+              baseColor: isDark ? _kShimmerDark : Colors.grey.shade300,
+              highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
               child: Container(
                 width: 180,
                 height: 150,
@@ -1356,8 +1446,8 @@ class _ShopsListState extends State<_ShopsList> {
         children: List.generate(
           3,
           (_) => Shimmer.fromColors(
-            baseColor: isDark ? const Color(0xFF2A2A3E) : Colors.grey.shade300,
-            highlightColor: isDark ? const Color(0xFF3A3A4E) : Colors.grey.shade100,
+            baseColor: isDark ? _kShimmerDark : Colors.grey.shade300,
+            highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
             child: Container(
               height: 80,
               margin: const EdgeInsets.only(bottom: 8),
@@ -1644,7 +1734,7 @@ class _ProductsGrid extends ConsumerWidget {
                                         style: GoogleFonts.poppins(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w700,
-                                          color: Colors.white,
+                                          color: isDark ? Colors.white : AppColors.primary,
                                         ),
                                       ),
                                       if (hasDiscount) ...[
@@ -1690,8 +1780,8 @@ class _ProductsGrid extends ConsumerWidget {
               rowCount: 1,
             ),
           ),
-          ], // Column children
-        ); // Column
+        ],
+      );
       },
       loading: () => SkeletonProductGrid(
         crossAxisCount: cols,
