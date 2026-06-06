@@ -34,18 +34,26 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
-    // Consume any pending notification route captured before auth completed.
-    // addPostFrameCallback ensures the navigator is fully mounted before pushing.
+    // Consume any pending notification captured before auth completed.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final route = ref.read(pendingNotificationRouteProvider);
-      if (route == null || !mounted) return;
+      final pending = ref.read(pendingNotificationRouteProvider);
+      if (pending == null || !mounted) return;
       ref.read(pendingNotificationRouteProvider.notifier).set(null);
-      context.push(route);
+      context.push(pending.route, extra: pending.extra);
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Also react to notifications set AFTER this screen mounts (e.g. background tap
+    // while the screen is already on screen). ref.listen fires on every state change.
+    ref.listen<PendingNotification?>(pendingNotificationRouteProvider, (_, pending) {
+      if (pending == null || !mounted) return;
+      ref.read(pendingNotificationRouteProvider.notifier).set(null);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.push(pending.route, extra: pending.extra);
+      });
+    });
     final currentIndex = ref.watch(navigationIndexProvider);
     void onTap(int i) => ref.read(navigationIndexProvider.notifier).setIndex(i);
 

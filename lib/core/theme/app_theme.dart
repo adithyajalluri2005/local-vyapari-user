@@ -58,15 +58,15 @@ class AppTheme {
     return base.copyWith(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.background,
-      textTheme: _textTheme(base.textTheme, AppColors.textPrimary, AppColors.textSecondary),
-      primaryTextTheme: _textTheme(base.primaryTextTheme, AppColors.textPrimary, AppColors.textSecondary),
+      textTheme: _textTheme(base.textTheme, AppColors.textPrimary, AppColors.textSecondary, AppColors.primary),
+      primaryTextTheme: _textTheme(base.primaryTextTheme, AppColors.textPrimary, AppColors.textSecondary, AppColors.primary),
       appBarTheme: _appBarTheme(AppColors.surface, AppColors.textPrimary),
       elevatedButtonTheme: _elevatedButtonTheme(AppColors.primary, Colors.white),
       filledButtonTheme: _filledButtonTheme(AppColors.primary, Colors.white),
       outlinedButtonTheme: _outlinedButtonTheme(AppColors.primary, AppColors.border),
       textButtonTheme: _textButtonTheme(AppColors.primary),
-      navigationBarTheme: _navBarTheme(AppColors.surface, AppColors.textPrimary, AppColors.border),
-      inputDecorationTheme: _inputTheme(AppColors.surfaceElevated, AppColors.border, AppColors.textHint),
+      navigationBarTheme: _navBarTheme(AppColors.surface, AppColors.primary, AppColors.border),
+      inputDecorationTheme: _inputTheme(AppColors.surfaceElevated, AppColors.border, AppColors.textHint, AppColors.primary),
       cardTheme: _cardTheme(AppColors.surface, AppColors.border),
       chipTheme: _chipTheme(AppColors.surfaceElevated, AppColors.textPrimary, AppColors.border),
       dividerTheme: const DividerThemeData(
@@ -106,15 +106,15 @@ class AppTheme {
     return base.copyWith(
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.darkScaffold,
-      textTheme: _textTheme(base.textTheme, Colors.white, const Color(0xB3FFFFFF)),
-      primaryTextTheme: _textTheme(base.primaryTextTheme, Colors.white, const Color(0xB3FFFFFF)),
+      textTheme: _textTheme(base.textTheme, Colors.white, const Color(0xB3FFFFFF), AppColors.primaryLight),
+      primaryTextTheme: _textTheme(base.primaryTextTheme, Colors.white, const Color(0xB3FFFFFF), AppColors.primaryLight),
       appBarTheme: _appBarTheme(AppColors.darkScaffold, Colors.white),
       elevatedButtonTheme: _elevatedButtonTheme(AppColors.primaryLight, const Color(0xFF050F1C)),
       filledButtonTheme: _filledButtonTheme(AppColors.primaryLight, const Color(0xFF050F1C)),
       outlinedButtonTheme: _outlinedButtonTheme(AppColors.primaryLight, const Color(0x1AFFFFFF)),
       textButtonTheme: _textButtonTheme(AppColors.primaryLight),
-      navigationBarTheme: _navBarTheme(AppColors.darkSurface, Colors.white, const Color(0x1AFFFFFF)),
-      inputDecorationTheme: _inputTheme(AppColors.darkElevated, const Color(0x1AFFFFFF), const Color(0xFF94A3B8)),
+      navigationBarTheme: _navBarTheme(AppColors.darkSurface, AppColors.primaryLight, const Color(0x1AFFFFFF)),
+      inputDecorationTheme: _inputTheme(AppColors.darkElevated, const Color(0x1AFFFFFF), const Color(0xFF94A3B8), AppColors.primaryLight),
       cardTheme: _cardTheme(AppColors.darkSurface, const Color(0x1AFFFFFF)),
       chipTheme: _chipTheme(AppColors.darkElevated, Colors.white, const Color(0x1AFFFFFF)),
       dividerTheme: const DividerThemeData(
@@ -131,7 +131,7 @@ class AppTheme {
   // =========================================================================
   // Component builders
   // =========================================================================
-  static TextTheme _textTheme(TextTheme base, Color text, Color muted) {
+  static TextTheme _textTheme(TextTheme base, Color text, Color muted, Color primary) {
     final t = GoogleFonts.poppinsTextTheme(base);
     return t.copyWith(
       displayLarge: t.displayLarge?.copyWith(color: text, fontSize: 32, fontWeight: FontWeight.w700),
@@ -141,7 +141,7 @@ class AppTheme {
       bodyLarge: t.bodyLarge?.copyWith(color: text, fontSize: 15, fontWeight: FontWeight.w400, height: 1.5),
       bodyMedium: t.bodyMedium?.copyWith(color: muted, fontSize: 13, fontWeight: FontWeight.w400, height: 1.5),
       bodySmall: t.bodySmall?.copyWith(color: const Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w400),
-      labelLarge: t.labelLarge?.copyWith(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
+      labelLarge: t.labelLarge?.copyWith(color: primary, fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 
@@ -219,10 +219,10 @@ class AppTheme {
     );
   }
 
-  static NavigationBarThemeData _navBarTheme(Color bg, Color ink, Color border) {
+  static NavigationBarThemeData _navBarTheme(Color bg, Color primaryColor, Color border) {
     return NavigationBarThemeData(
       backgroundColor: bg,
-      indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+      indicatorColor: primaryColor.withValues(alpha: 0.1),
       elevation: 0,
       height: 62,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -230,14 +230,14 @@ class AppTheme {
       indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: AppColors.primary, size: 22);
+          return IconThemeData(color: primaryColor, size: 22);
         }
         return const IconThemeData(color: AppColors.textHint, size: 22);
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return GoogleFonts.poppins(
-          color: selected ? AppColors.primary : AppColors.textHint,
+          color: selected ? primaryColor : AppColors.textHint,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
           fontSize: 10,
         );
@@ -245,7 +245,7 @@ class AppTheme {
     );
   }
 
-  static InputDecorationTheme _inputTheme(Color fill, Color border, Color hint) {
+  static InputDecorationTheme _inputTheme(Color fill, Color border, Color hint, Color primary) {
     OutlineInputBorder b(Color c, [double w = 0]) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
@@ -260,7 +260,7 @@ class AppTheme {
         borderRadius: BorderRadius.circular(AppRadius.md),
         borderSide: BorderSide(color: border, width: 0.7),
       ),
-      focusedBorder: b(AppColors.primary, 1.5),
+      focusedBorder: b(primary, 1.5),
       errorBorder: b(AppColors.error, 1.0),
       focusedErrorBorder: b(AppColors.error, 1.5),
     );

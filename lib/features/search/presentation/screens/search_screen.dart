@@ -247,35 +247,37 @@ class _CategoryFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.primaryLight : AppColors.primary;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.full),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.5),
+          color: primaryColor.withValues(alpha: 0.5),
           width: 0.8,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.category_rounded, size: 12, color: AppColors.primary),
+          Icon(Icons.category_rounded, size: 12, color: primaryColor),
           const SizedBox(width: 5),
           Text(
             label,
             style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: primaryColor,
             ),
           ),
           const SizedBox(width: 5),
           GestureDetector(
             onTap: onDismiss,
-            child: Icon(Icons.close_rounded, size: 14, color: AppColors.primary),
+            child: Icon(Icons.close_rounded, size: 14, color: primaryColor),
           ),
         ],
       ),
@@ -490,6 +492,7 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.primaryLight : AppColors.primary;
     return Row(
       children: [
         Text(
@@ -504,7 +507,7 @@ class _SectionLabel extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: primaryColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppRadius.full),
           ),
           child: Text(
@@ -512,7 +515,7 @@ class _SectionLabel extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: primaryColor,
             ),
           ),
         ),

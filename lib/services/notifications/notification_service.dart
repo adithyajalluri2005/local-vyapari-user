@@ -25,63 +25,79 @@ import 'package:local_vyapari_user/shared/models/shop.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint("Handling a background message: ${message.messageId}");
+  debugPrint('[NotifSvc-BG] Background message received — id=${message.messageId} type=${message.data['type']} hasNotification=${message.notification != null} dataKeys=${message.data.keys.toList()}');
 
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint("Failed to load .env file in background isolate: $e");
+    debugPrint('[NotifSvc-BG] Failed to load .env: $e');
   }
 
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    debugPrint('[NotifSvc-BG] Firebase initialized');
   } catch (e) {
-    debugPrint("Firebase already initialized or failed in background: $e");
+    debugPrint('[NotifSvc-BG] Firebase init skipped or failed: $e');
   }
 
-  if (message.notification == null && message.data.isNotEmpty) {
-    final type = message.data['type'] ?? '';
-    final isChat = type == 'chat';
+  if (message.notification != null) {
+    debugPrint('[NotifSvc-BG] Has notification payload — Android will show it automatically; skipping local show');
+    return;
+  }
 
-    final title = message.data['title'] ?? (isChat ? 'New message' : 'New Offer!');
-    final body = message.data['body'] ?? (isChat ? 'You have a new message.' : 'Check out the new offer nearby!');
-    final channelId = isChat ? 'chat_channel_id' : 'offers_channel_id';
-    final channelName = isChat ? 'Chat Messages' : 'Nearby Offers';
-    final channelDesc = isChat
-        ? 'Notifications for new messages from shops'
-        : 'Notifications for new offers in nearby shops';
+  if (message.data.isEmpty) {
+    debugPrint('[NotifSvc-BG] No data payload — nothing to show');
+    return;
+  }
 
-    final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
-    const AndroidInitializationSettings initSettings =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+  final type = message.data['type'] ?? '';
+  final isChat = type == 'chat';
+  debugPrint('[NotifSvc-BG] Data-only message — type=$type isChat=$isChat');
 
-    try {
-      await localNotifications.initialize(
-        settings: const InitializationSettings(android: initSettings),
-      );
+  final title = message.data['title'] ?? (isChat ? 'New message' : 'New Offer!');
+  final body = message.data['body'] ?? (isChat ? 'You have a new message.' : 'Check out the new offer nearby!');
+  final channelId = isChat ? 'chat_channel_id' : 'offers_channel_id';
+  final channelName = isChat ? 'Chat Messages' : 'Nearby Offers';
+  final channelDesc = isChat
+      ? 'Notifications for new messages from shops'
+      : 'Notifications for new offers in nearby shops';
 
-      final androidDetails = AndroidNotificationDetails(
-        channelId,
-        channelName,
-        channelDescription: channelDesc,
-        importance: Importance.max,
-        priority: Priority.high,
-        showWhen: true,
-        playSound: true,
-        color: const Color(0xFF112E51),
-      );
+  debugPrint('[NotifSvc-BG] Showing local notification — channel=$channelId title="$title"');
 
-      final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      await localNotifications.show(
-        id: id,
-        title: title,
-        body: body,
-        notificationDetails: NotificationDetails(android: androidDetails),
-        payload: isChat ? 'chat:${message.data['shopId'] ?? ''}' : 'offers',
-      );
-    } catch (e) {
-      debugPrint("Error displaying background notification: $e");
-    }
+  final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
+  const AndroidInitializationSettings initSettings =
+      AndroidInitializationSettings('@mipmap/launcher_icon');
+
+  try {
+    await localNotifications.initialize(
+      settings: const InitializationSettings(android: initSettings),
+    );
+    debugPrint('[NotifSvc-BG] FlutterLocalNotifications initialized');
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      channelDescription: channelDesc,
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      playSound: true,
+      color: const Color(0xFF112E51),
+    );
+
+    final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await localNotifications.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(android: androidDetails),
+      payload: isChat
+          ? json.encode({'type': 'chat', 'shopId': message.data['shopId'] ?? '', 'shopName': message.data['shopName'] ?? ''})
+          : json.encode({'type': 'offer'}),
+    );
+    debugPrint('[NotifSvc-BG] Local notification shown — id=$id');
+  } catch (e) {
+    debugPrint('[NotifSvc-BG] Error displaying background notification: $e');
   }
 }
 
@@ -119,15 +135,21 @@ class NotificationService {
   void init() {
     if (_initialized) return;
     _initialized = true;
+    debugPrint('[NotifSvc] init() called');
 
-    _initLocalNotifications().then((_) => _handleLaunchFromLocalNotification());
+    _initLocalNotifications().then((_) {
+      debugPrint('[NotifSvc] Local notifications initialized');
+      _handleLaunchFromLocalNotification();
+    });
     _initFirebaseMessaging();
 
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
+        debugPrint('[NotifSvc] Auth state: signed in uid=${user.uid}');
         _syncDeviceRegistration();
         _listenForChatMessages();
       } else {
+        debugPrint('[NotifSvc] Auth state: signed out — cancelling chat listener');
         _chatSubscription?.cancel();
         _chatSubscription = null;
         _lastChatNotifyTs.clear();
@@ -143,20 +165,20 @@ class NotificationService {
       await _localNotifications.initialize(
         settings: const InitializationSettings(android: initSettingsAndroid),
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          // App is in background (not terminated) — navigator is already mounted.
-          final route = _routeForPayload(response.payload ?? '');
-          if (route == null) return;
-          final context = rootNavigatorKey.currentContext;
-          if (context != null) GoRouter.of(context).push(route);
+          final rawPayload = response.payload ?? '';
+          debugPrint('[NotifSvc] onDidReceiveNotificationResponse — payload=$rawPayload');
+          _handleLocalNotificationTap(rawPayload);
         },
       );
+      debugPrint('[NotifSvc] FlutterLocalNotifications plugin initialized');
 
       final AndroidFlutterLocalNotificationsPlugin? androidImpl =
           _localNotifications.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImpl != null) {
-        await androidImpl.requestNotificationsPermission();
+        final granted = await androidImpl.requestNotificationsPermission();
+        debugPrint('[NotifSvc] Notification permission granted=$granted');
 
         await androidImpl.createNotificationChannel(const AndroidNotificationChannel(
           'offers_channel_id',
@@ -165,6 +187,7 @@ class NotificationService {
           importance: Importance.max,
           playSound: true,
         ));
+        debugPrint('[NotifSvc] offers_channel_id created');
 
         await androidImpl.createNotificationChannel(const AndroidNotificationChannel(
           'chat_channel_id',
@@ -173,36 +196,72 @@ class NotificationService {
           importance: Importance.high,
           playSound: true,
         ));
+        debugPrint('[NotifSvc] chat_channel_id created');
+      } else {
+        debugPrint('[NotifSvc] androidImpl is null — not on Android?');
       }
     } catch (e) {
-      debugPrint('Error initializing local notifications: $e');
+      debugPrint('[NotifSvc] Error initializing local notifications: $e');
     }
   }
 
-  String? _routeForPayload(String payload) {
-    if (payload.startsWith('chat:')) return '/chats';
-    if (payload == 'offers') return '/all_offers';
-    return null;
+  /// Decodes a JSON notification payload into a [PendingNotification].
+  /// Falls back gracefully for legacy `chat:shopId` / `offers` string payloads.
+  PendingNotification _pendingFromPayload(String payload) {
+    if (payload.isEmpty) return const PendingNotification('/all_offers');
+    try {
+      final data = Map<String, dynamic>.from(json.decode(payload) as Map);
+      final type = data['type'] as String? ?? '';
+      if (type == 'chat') {
+        final shopId = data['shopId'] as String? ?? '';
+        final shopName = data['shopName'] as String? ?? 'Shop';
+        if (shopId.isNotEmpty) {
+          return PendingNotification('/chat', extra: {'shopId': shopId, 'shopName': shopName, 'shopLogo': ''});
+        }
+        return const PendingNotification('/chats');
+      }
+      return const PendingNotification('/all_offers');
+    } catch (_) {
+      // Legacy fallback for plain-string payloads written by previous builds.
+      if (payload.startsWith('chat:')) return const PendingNotification('/chats');
+      return const PendingNotification('/all_offers');
+    }
+  }
+
+  /// Navigates immediately when the navigator is available (app foregrounded),
+  /// or stashes into the provider for MainNavigationScreen to consume.
+  void _handleLocalNotificationTap(String payload) {
+    debugPrint('[NotifSvc] _handleLocalNotificationTap — payload=$payload');
+    final pending = _pendingFromPayload(payload);
+    debugPrint('[NotifSvc] Resolved → route=${pending.route} extra=${pending.extra}');
+    final context = rootNavigatorKey.currentContext;
+    if (context != null) {
+      GoRouter.of(context).push(pending.route, extra: pending.extra);
+    } else {
+      debugPrint('[NotifSvc] Navigator not ready — storing pending notification');
+      _ref.read(pendingNotificationRouteProvider.notifier).set(pending);
+    }
   }
 
   // App was TERMINATED and user tapped a local notification.
   // onDidReceiveNotificationResponse does not fire in that scenario.
-  // Store the route in the provider — MainNavigationScreen.initState consumes it.
+  // Store the resolved route+extra in the provider — MainNavigationScreen.initState consumes it.
   Future<void> _handleLaunchFromLocalNotification() async {
     try {
       final details = await _localNotifications.getNotificationAppLaunchDetails();
       if (details?.didNotificationLaunchApp == true) {
-        final route = _routeForPayload(details!.notificationResponse?.payload ?? '');
-        if (route != null) {
-          _ref.read(pendingNotificationRouteProvider.notifier).set(route);
-        }
+        final rawPayload = details!.notificationResponse?.payload ?? '';
+        debugPrint('[NotifSvc] _handleLaunchFromLocalNotification — payload=$rawPayload');
+        final pending = _pendingFromPayload(rawPayload);
+        debugPrint('[NotifSvc] Resolved → route=${pending.route} extra=${pending.extra}');
+        _ref.read(pendingNotificationRouteProvider.notifier).set(pending);
       }
     } catch (e) {
-      debugPrint('getNotificationAppLaunchDetails error: $e');
+      debugPrint('[NotifSvc] getNotificationAppLaunchDetails error: $e');
     }
   }
 
-  Future<void> _showNativeNotification(String title, String body, {String payload = 'offers'}) async {
+  Future<void> _showNativeNotification(String title, String body, {String payload = '{"type":"offer"}'}) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'offers_channel_id',
       'Nearby Offers',
@@ -216,6 +275,7 @@ class NotificationService {
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+    debugPrint('[NotifSvc] _showNativeNotification — id=$id channel=offers_channel_id title="$title" payload="$payload"');
     try {
       await _localNotifications.show(
         id: id,
@@ -224,8 +284,9 @@ class NotificationService {
         notificationDetails: const NotificationDetails(android: androidDetails),
         payload: payload,
       );
+      debugPrint('[NotifSvc] _showNativeNotification shown — id=$id');
     } catch (e) {
-      debugPrint('Error displaying native notification: $e');
+      debugPrint('[NotifSvc] Error displaying native notification: $e');
     }
   }
 
@@ -247,28 +308,34 @@ class NotificationService {
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+    final chatPayload = json.encode({'type': 'chat', 'shopId': shopId, 'shopName': shopName});
+    debugPrint('[NotifSvc] _showChatNativeNotification — id=$id shopId=$shopId shopName="$shopName" msg="${messageText.isEmpty ? '<empty>' : messageText}"');
     try {
       await _localNotifications.show(
         id: id,
         title: 'New message from $shopName',
         body: messageText.isEmpty ? 'Sent you a message' : messageText,
         notificationDetails: const NotificationDetails(android: androidDetails),
-        payload: 'chat:$shopId',
+        payload: chatPayload,
       );
+      debugPrint('[NotifSvc] _showChatNativeNotification shown — id=$id');
     } catch (e) {
-      debugPrint('Error displaying chat notification: $e');
+      debugPrint('[NotifSvc] Error displaying chat notification: $e');
     }
   }
 
   void _listenForChatMessages() {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      debugPrint('[NotifSvc] _listenForChatMessages: no current user — aborting');
+      return;
+    }
 
     final userId = user.uid;
+    debugPrint('[NotifSvc] _listenForChatMessages: uid=$userId');
     _chatSubscription?.cancel();
     _lastChatNotifyTs.clear();
 
-    // Seed current timestamps so we don't re-fire for already-unread messages on startup
     FirebaseDatabase.instance.ref('chats/$userId').once().then((snapshot) {
       if (snapshot.snapshot.exists && snapshot.snapshot.value != null) {
         final map = snapshot.snapshot.value as Map<dynamic, dynamic>;
@@ -280,35 +347,59 @@ class NotificationService {
             }
           }
         });
+        debugPrint('[NotifSvc] Seeded ${_lastChatNotifyTs.length} chat timestamps: ${_lastChatNotifyTs.keys.toList()}');
+      } else {
+        debugPrint('[NotifSvc] No existing chats to seed for uid=$userId');
       }
 
-      // Subscribe to child changes after seeding
+      debugPrint('[NotifSvc] Subscribing to chats/$userId onChildChanged');
       _chatSubscription = FirebaseDatabase.instance
           .ref('chats/$userId')
           .onChildChanged
           .listen((event) async {
             final shopId = event.snapshot.key;
-            if (shopId == null) return;
+            debugPrint('[NotifSvc] Chat onChildChanged — shopId=$shopId snapshotType=${event.snapshot.value?.runtimeType}');
+
+            if (shopId == null) {
+              debugPrint('[NotifSvc] Chat event has null key — skipping');
+              return;
+            }
 
             final sessionValue = event.snapshot.value;
-            if (sessionValue is! Map) return;
+            if (sessionValue is! Map) {
+              debugPrint('[NotifSvc] Chat event value is not a Map (got ${sessionValue?.runtimeType}) — skipping');
+              return;
+            }
 
             final lastMsg = sessionValue['lastMessage'] as Map?;
-            if (lastMsg == null) return;
+            if (lastMsg == null) {
+              debugPrint('[NotifSvc] No lastMessage in chat session — skipping');
+              return;
+            }
 
             final unread = lastMsg['unread'] == true;
             final senderId = lastMsg['senderId']?.toString();
             final messageText = lastMsg['text']?.toString() ?? '';
             final timestamp = lastMsg['timestamp'] is int ? lastMsg['timestamp'] as int : 0;
 
-            // Only notify for messages from vendor (not current user) that are unread
-            if (!unread || senderId == userId) return;
-            // Skip if already notified for this exact message
-            if (_lastChatNotifyTs[shopId] == timestamp) return;
+            debugPrint('[NotifSvc] Chat message — shopId=$shopId unread=$unread senderId=$senderId timestamp=$timestamp text="${messageText.isEmpty ? '<empty>' : messageText}"');
+
+            if (!unread) {
+              debugPrint('[NotifSvc] Message is not unread — skipping');
+              return;
+            }
+            if (senderId == userId) {
+              debugPrint('[NotifSvc] Message sent by current user — skipping');
+              return;
+            }
+            if (_lastChatNotifyTs[shopId] == timestamp) {
+              debugPrint('[NotifSvc] Already notified for timestamp=$timestamp shopId=$shopId — skipping');
+              return;
+            }
 
             _lastChatNotifyTs[shopId] = timestamp;
-
             final shopName = sessionValue['shopName']?.toString() ?? 'Shop';
+            debugPrint('[NotifSvc] Firing chat notification — shopId=$shopId shopName="$shopName"');
 
             await _showChatNativeNotification(
               shopId: shopId,
@@ -327,9 +418,12 @@ class NotificationService {
                 } catch (_) {}
               },
             );
+          }, onError: (Object e) {
+            debugPrint('[NotifSvc] Chat onChildChanged error: $e');
           });
+      debugPrint('[NotifSvc] Chat listener active for uid=$userId');
     }).catchError((e) {
-      debugPrint('Error seeding chat notify timestamps: $e');
+      debugPrint('[NotifSvc] Error seeding chat notify timestamps: $e');
     });
   }
 
@@ -340,51 +434,64 @@ class NotificationService {
   /// immediately — no polling required.
   void updateNearbyShops(List<Shop> shops) {
     final shopIds = shops.map((s) => s.id).toSet();
+    debugPrint('[NotifSvc] updateNearbyShops — ${shops.length} shops: $shopIds');
     _updateOfferListeners(shopIds);
   }
 
   Future<void> _updateOfferListeners(Set<String> newShopIds) async {
-    // Cancel listeners for shops that are no longer nearby.
     final toRemove = Set<String>.from(_offerSubscriptions.keys).difference(newShopIds);
     for (final shopId in toRemove) {
+      debugPrint('[NotifSvc] Cancelling offer listener for removed shop=$shopId');
       await _offerSubscriptions[shopId]?.cancel();
       _offerSubscriptions.remove(shopId);
     }
 
-    // Set up listeners for newly nearby shops.
-    for (final shopId in newShopIds.difference(_offerSubscriptions.keys.toSet())) {
+    final toAdd = newShopIds.difference(_offerSubscriptions.keys.toSet());
+    debugPrint('[NotifSvc] Setting up offer listeners for ${toAdd.length} new shops: $toAdd');
+    for (final shopId in toAdd) {
       await _setupShopOfferListener(shopId);
     }
   }
 
   Future<void> _setupShopOfferListener(String shopId) async {
-    // 1. Seed existing offer IDs so we never re-notify for offers that
-    //    were already posted before the listener was attached.
+    debugPrint('[NotifSvc] _setupShopOfferListener — shopId=$shopId');
     try {
       final snapshot = await FirebaseDatabase.instance.ref('offers/$shopId').get();
       if (snapshot.exists && snapshot.value is Map) {
+        final count = (snapshot.value as Map).length;
         (snapshot.value as Map).forEach((key, _) => _seenOfferIds.add(key.toString()));
+        debugPrint('[NotifSvc] Seeded $count existing offer IDs for shopId=$shopId');
+      } else {
+        debugPrint('[NotifSvc] No existing offers to seed for shopId=$shopId');
       }
     } catch (e) {
-      debugPrint('Error seeding offer IDs for shop $shopId: $e');
+      debugPrint('[NotifSvc] Error seeding offer IDs for shop $shopId: $e');
     }
 
-    // 2. Listen for new children. onChildAdded fires for all existing children
-    //    first (they are already in _seenOfferIds from step 1 → skipped),
-    //    then fires for every genuinely new offer.
+    debugPrint('[NotifSvc] Subscribing to offers/$shopId onChildAdded');
     _offerSubscriptions[shopId] = FirebaseDatabase.instance
         .ref('offers/$shopId')
         .onChildAdded
         .listen((event) async {
           final offerId = event.snapshot.key;
+          debugPrint('[NotifSvc] Offer onChildAdded — shopId=$shopId offerId=$offerId alreadySeen=${offerId != null && _seenOfferIds.contains(offerId)}');
+
           if (offerId == null || _seenOfferIds.contains(offerId)) return;
           _seenOfferIds.add(offerId);
 
           final raw = event.snapshot.value;
-          if (raw is! Map) return;
+          if (raw is! Map) {
+            debugPrint('[NotifSvc] Offer value is not a Map (${raw?.runtimeType}) — skipping');
+            return;
+          }
           final offerData = Map<String, dynamic>.from(raw);
 
-          if (offerData['isActive'] != true) return;
+          final isActive = offerData['isActive'];
+          debugPrint('[NotifSvc] Offer isActive=$isActive offerId=$offerId shopId=$shopId');
+          if (offerData['isActive'] != true) {
+            debugPrint('[NotifSvc] Offer not active — skipping notification');
+            return;
+          }
 
           final title = offerData['title']?.toString() ?? 'New Offer!';
           final storedName = offerData['shopName']?.toString();
@@ -395,13 +502,7 @@ class NotificationService {
 
           final titleStr = 'New Offer at $shopName!';
           final bodyStr = '$title - Get $discount% OFF!';
-          // Native notifications for offers come from FCM (foreground: onMessage,
-          // background: firebaseMessagingBackgroundHandler). Calling
-          // _showNativeNotification here too would produce a duplicate whenever
-          // the app is backgrounded, because both this RTDB listener and the FCM
-          // background handler fire concurrently.
-          // Only show the in-app foreground banner; it silently no-ops when the
-          // app is not visible (overlay == null guard inside _showForegroundNotification).
+          debugPrint('[NotifSvc] Showing offer foreground notification — "$titleStr" | "$bodyStr"');
           _showForegroundNotification(
             titleStr,
             bodyStr,
@@ -415,9 +516,10 @@ class NotificationService {
             },
           );
         }, onError: (Object e) {
-          debugPrint('Offer listener error for shop $shopId: $e');
+          debugPrint('[NotifSvc] Offer listener error for shop $shopId: $e');
           _offerSubscriptions.remove(shopId);
         });
+    debugPrint('[NotifSvc] Offer listener active for shopId=$shopId');
   }
 
   Future<String> _getShopName(String shopId) async {
@@ -437,6 +539,7 @@ class NotificationService {
   }
 
   Future<void> _initFirebaseMessaging() async {
+    debugPrint('[NotifSvc] _initFirebaseMessaging start');
     final messaging = FirebaseMessaging.instance;
 
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -447,29 +550,35 @@ class NotificationService {
         badge: true,
         sound: true,
       );
-      debugPrint('User granted permission: ${settings.authorizationStatus}');
+      debugPrint('[NotifSvc] FCM permission status: ${settings.authorizationStatus}');
     } catch (e) {
-      debugPrint('Error requesting notification permissions: $e');
+      debugPrint('[NotifSvc] Error requesting FCM permissions: $e');
+    }
+
+    try {
+      final token = await messaging.getToken();
+      debugPrint('[NotifSvc] FCM token: $token');
+    } catch (e) {
+      debugPrint('[NotifSvc] Error fetching FCM token: $e');
     }
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('[NotifSvc] onMessage (foreground) — messageId=${message.messageId} type=${message.data['type']} hasNotification=${message.notification != null} dataKeys=${message.data.keys.toList()}');
+
       final notification = message.notification;
       final isChat = message.data['type'] == 'chat';
       final shopId = message.data['shopId'] ?? '';
-
-      // onMessage fires ONLY in the foreground. Offer notifications are already
-      // handled by the per-shop RTDB onChildAdded listeners when those are active.
-      // Showing them here too would produce a duplicate for every new offer.
-      // Skip non-chat FCM notifications when RTDB listeners are live; fall back
-      // to FCM only when no listeners exist yet (location not resolved).
       final rtdbListenersActive = _offerSubscriptions.isNotEmpty;
 
-      // Notification-payload message (rare on Android when app is foreground)
+      debugPrint('[NotifSvc] onMessage — isChat=$isChat shopId=$shopId rtdbListenersActive=$rtdbListenersActive');
+
       if (notification != null) {
+        debugPrint('[NotifSvc] onMessage has notification payload — title="${notification.title}"');
         final title = notification.title ?? 'New Offer!';
         final body = notification.body ?? 'Check out the new offer nearby!';
 
         if (isChat) {
+          debugPrint('[NotifSvc] onMessage: showing chat notification (notification payload)');
           _showNativeNotification(title, body);
           _showForegroundNotification(
             title,
@@ -487,6 +596,7 @@ class NotificationService {
             _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
           }
         } else if (!rtdbListenersActive) {
+          debugPrint('[NotifSvc] onMessage: showing offer notification via FCM (no RTDB listeners yet)');
           _showNativeNotification(title, body);
           _showForegroundNotification(
             title,
@@ -500,18 +610,22 @@ class NotificationService {
               } catch (_) {}
             },
           );
+        } else {
+          debugPrint('[NotifSvc] onMessage: non-chat FCM notification skipped — RTDB listeners are active');
         }
         return;
       }
 
-      // Data-only message — the common path for Cloud Function–sent notifications.
+      // Data-only message
       if (message.data.isNotEmpty) {
+        debugPrint('[NotifSvc] onMessage: data-only message — isChat=$isChat');
         final title = message.data['title'] ?? (isChat ? 'New message' : 'New Offer!');
         final body = message.data['body'] ??
             (isChat ? 'You have a new message.' : 'Check out the new offer nearby!');
 
         if (isChat) {
           final shopName = message.data['shopName'] ?? 'Shop';
+          debugPrint('[NotifSvc] onMessage: showing chat notification (data-only) shopId=$shopId shopName="$shopName"');
           _showChatNativeNotification(
             shopId: shopId.isNotEmpty ? shopId : 'unknown',
             shopName: shopName,
@@ -533,7 +647,7 @@ class NotificationService {
             _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
           }
         } else if (!rtdbListenersActive) {
-          // RTDB listeners not yet active — use FCM as the fallback.
+          debugPrint('[NotifSvc] onMessage: showing offer notification via FCM fallback (data-only)');
           _showNativeNotification(title, body);
           _showForegroundNotification(
             title,
@@ -547,23 +661,37 @@ class NotificationService {
               } catch (_) {}
             },
           );
+        } else {
+          debugPrint('[NotifSvc] onMessage: non-chat data-only FCM skipped — RTDB listeners active');
         }
+      } else {
+        debugPrint('[NotifSvc] onMessage: empty data and no notification — nothing to show');
       }
     });
 
-    // onMessageOpenedApp and getInitialMessage are handled in main.dart before
-    // runApp so they are never missed due to auth latency. See main.dart.
+    messaging.onTokenRefresh.listen((token) {
+      debugPrint('[NotifSvc] FCM token refreshed: $token');
+      _syncDeviceRegistration();
+    });
 
-    messaging.onTokenRefresh.listen((_) => _syncDeviceRegistration());
+    debugPrint('[NotifSvc] _initFirebaseMessaging complete');
   }
 
   Future<void> _syncDeviceRegistration({LocationResult? location}) async {
+    debugPrint('[NotifSvc] _syncDeviceRegistration start');
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        debugPrint('[NotifSvc] _syncDeviceRegistration: no user — skipping');
+        return;
+      }
 
       final token = await FirebaseMessaging.instance.getToken();
-      if (token == null) return;
+      debugPrint('[NotifSvc] _syncDeviceRegistration: uid=${user.uid} token=${token ?? '<null>'}');
+      if (token == null) {
+        debugPrint('[NotifSvc] _syncDeviceRegistration: FCM token is null — cannot register');
+        return;
+      }
 
       final dbRef = FirebaseDatabase.instance.ref('users_devices/${user.uid}/customer');
 
@@ -582,8 +710,9 @@ class NotificationService {
       }
 
       await dbRef.update(data);
+      debugPrint('[NotifSvc] _syncDeviceRegistration: wrote to users_devices/${user.uid}/customer — lat=${data['latitude']} lon=${data['longitude']} geohash=${data['geohash']}');
     } catch (e) {
-      debugPrint('Error syncing device registration: $e');
+      debugPrint('[NotifSvc] Error syncing device registration: $e');
     }
   }
 
@@ -648,7 +777,11 @@ class NotificationService {
     VoidCallback? onTap,
   }) {
     final overlay = rootNavigatorKey.currentState?.overlay;
-    if (overlay == null) return;
+    debugPrint('[NotifSvc] _showForegroundNotification — overlayAvailable=${overlay != null} title="$title"');
+    if (overlay == null) {
+      debugPrint('[NotifSvc] Overlay is null — app not in foreground or navigator not ready; skipping banner');
+      return;
+    }
 
     late OverlayEntry entry;
     entry = OverlayEntry(

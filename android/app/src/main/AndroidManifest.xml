@@ -35,6 +35,11 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Required by flutter_local_notifications to handle notification tap intents -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
             <!-- Custom URL scheme for Customer App -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

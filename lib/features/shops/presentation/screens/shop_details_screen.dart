@@ -168,7 +168,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                       AppSpacing.verticalMd,
                       Text(
                         shop.description,
-                        style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
+                        style: AppTextStyles.bodyLarge(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                       AppSpacing.verticalMd,
                       _buildAddressAndContact(context),
@@ -294,7 +294,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                   AppSpacing.verticalMd,
                   Text(
                     shop.description,
-                    style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
+                    style: AppTextStyles.bodyLarge(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   AppSpacing.verticalMd,
                   _buildAddressAndContact(context),
@@ -515,12 +515,12 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.location_on_outlined, color: AppTheme.inkMuted, size: 18),
+              Icon(Icons.location_on_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
               AppSpacing.horizontalSm,
               Expanded(
                 child: Text(
                   shop.location.address.isNotEmpty ? shop.location.address : shop.location.city,
-                  style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
+                  style: AppTextStyles.bodyLarge(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -529,11 +529,11 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
           AppSpacing.verticalSm,
           Row(
             children: [
-              const Icon(Icons.phone_outlined, color: AppTheme.inkMuted, size: 18),
+              Icon(Icons.phone_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
               AppSpacing.horizontalSm,
               Text(
                 shop.phone,
-                style: AppTextStyles.bodyLarge(context, color: AppTheme.inkMuted),
+                style: AppTextStyles.bodyLarge(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -550,10 +550,10 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _callShop(context),
-                icon: const Icon(Icons.phone_outlined, size: 18, color: Colors.white),
-                label: const Text('Call', style: TextStyle(color: Colors.white)),
+                icon: const Icon(Icons.phone_outlined, size: 18),
+                label: const Text('Call'),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white54),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),
             ),
@@ -561,10 +561,10 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _launchMaps(context),
-                icon: const Icon(Icons.directions_outlined, size: 18, color: Colors.white),
-                label: const Text('Directions', style: TextStyle(color: Colors.white)),
+                icon: const Icon(Icons.directions_outlined, size: 18),
+                label: const Text('Directions'),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white54),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),
             ),
@@ -655,7 +655,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 140,
+              height: 175,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.only(left: padding, right: padding / 2),
@@ -676,6 +676,9 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
   Widget _buildShopOfferCard(BuildContext context, dynamic offer, int index, bool isDark) {
     final colors = _offerCardGradients[index % _offerCardGradients.length];
     final cardBg = isDark ? AppColors.darkSurface : AppColors.surface;
+    final DateTime? endDate = offer.endDate as DateTime?;
+    final int? daysLeft = endDate?.difference(DateTime.now()).inDays;
+    final String description = (offer.description as String?) ?? '';
 
     return Padding(
       padding: const EdgeInsets.only(right: 12),
@@ -734,7 +737,6 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       offer.title,
@@ -746,17 +748,39 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (offer.endDate != null)
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: isDark ? Colors.white54 : AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    const Spacer(),
+                    if (daysLeft != null)
                       Row(
                         children: [
-                          Icon(Icons.access_time_rounded, size: 10, color: colors[0]),
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 10,
+                            color: daysLeft <= 1 ? AppColors.error : colors[0],
+                          ),
                           const SizedBox(width: 3),
                           Flexible(
                             child: Text(
-                              'Until ${offer.endDate!.day}/${offer.endDate!.month}/${offer.endDate!.year}',
+                              daysLeft == 0
+                                  ? 'Ends today'
+                                  : daysLeft < 0
+                                      ? 'Expired'
+                                      : '$daysLeft days left',
                               style: GoogleFonts.poppins(
                                 fontSize: 9.5,
-                                color: colors[0],
+                                fontWeight: FontWeight.w600,
+                                color: daysLeft <= 1 ? AppColors.error : colors[0],
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -826,7 +850,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     productId: product.id,
                     initialRating: product.rating,
                     initialTotalReviews: product.totalReviews,
-                    style: AppTextStyles.bodyMedium(context, color: AppTheme.inkMuted),
+                    style: AppTextStyles.bodyMedium(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     iconSize: 12,
                   ),
                   const SizedBox(height: 4),
@@ -834,7 +858,13 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                     children: [
                       Text(
                         '₹${product.offerPrice}',
-                        style: AppTextStyles.bodyLarge(context, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.primary, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.bodyLarge(
+                          context,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       AppSpacing.horizontalSm,
                       Flexible(
@@ -879,8 +909,8 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
               icon: const Icon(Icons.rate_review_outlined, size: 18),
               label: const Text('Rate Shop'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
-                foregroundColor: AppColors.primary,
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                foregroundColor: Theme.of(context).colorScheme.primary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),

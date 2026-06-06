@@ -126,14 +126,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
-      appBar: _HomeAppBar(
-        locationName: locationName,
-        locationLoading: locationAsync.isLoading,
-        isDark: isDark,
-        onLocationTap: () => context.push('/location_search'),
-        onNotificationTap: () => _showNotifications(context),
-        onSearchTap: widget.onSearchTap,
-      ),
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
@@ -144,105 +136,119 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             setState(() { _productsVisible = 10; _nearBottom = false; });
           },
           color: Colors.white,
-          child: SingleChildScrollView(
+          child: CustomScrollView(
             controller: _scrollCtrl,
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(
-              bottom: 90 + MediaQuery.of(context).padding.bottom,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-
-                    // Featured spotlight
-                    FadeInSlide(
-                      duration: const Duration(milliseconds: 400),
-                      child: _FeaturedSpotlightSection(
-                        offersAsync: featuredOffersAsync,
-                        shopsById: shopsById,
-                        userLatitude: locationAsync.value?.latitude,
-                        userLongitude: locationAsync.value?.longitude,
-                        hp: hp,
-                        isDark: isDark,
-                        onOfferTap: (offer) =>
-                            _navigateToShopForOffer(context, offer),
-                      ),
-                    ),
-
-                    // ── Hot deals ──────────────────────────────────
-                    FadeInSlide(
-                      duration: const Duration(milliseconds: 450),
-                      delay: const Duration(milliseconds: 160),
+            slivers: [
+              _HomeSliverAppBar(
+                locationName: locationName,
+                locationLoading: locationAsync.isLoading,
+                isDark: isDark,
+                onLocationTap: () => context.push('/location_search'),
+                onNotificationTap: () => _showNotifications(context),
+                onSearchTap: widget.onSearchTap,
+              ),
+              SliverPadding(
+                padding: EdgeInsets.only(
+                  bottom: 90 + MediaQuery.of(context).padding.bottom,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: hp),
-                            child: SectionHeader(
-                              title: 'Hot Deals',
-                              trailing: SeeAllChip(onTap: () => context.push('/all_offers')),
+                          const SizedBox(height: 12),
+
+                          // Featured spotlight
+                          FadeInSlide(
+                            duration: const Duration(milliseconds: 400),
+                            child: _FeaturedSpotlightSection(
+                              offersAsync: featuredOffersAsync,
+                              shopsById: shopsById,
+                              userLatitude: locationAsync.value?.latitude,
+                              userLongitude: locationAsync.value?.longitude,
+                              hp: hp,
+                              isDark: isDark,
+                              onOfferTap: (offer) =>
+                                  _navigateToShopForOffer(context, offer),
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          _OfferBannerList(
-                            offersAsync: dealsOffersAsync,
-                            hp: hp,
-                            isDark: isDark,
-                            onOfferTap: (offer) =>
-                                _navigateToShopForOffer(context, offer),
+
+                          // ── Hot deals ──────────────────────────────────
+                          FadeInSlide(
+                            duration: const Duration(milliseconds: 450),
+                            delay: const Duration(milliseconds: 160),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: hp),
+                                  child: SectionHeader(
+                                    title: 'Hot Deals',
+                                    trailing: SeeAllChip(onTap: () => context.push('/all_offers')),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _OfferBannerList(
+                                  offersAsync: dealsOffersAsync,
+                                  hp: hp,
+                                  isDark: isDark,
+                                  onOfferTap: (offer) =>
+                                      _navigateToShopForOffer(context, offer),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+
+                          // ── Shops near you ─────────────────────────────
+                          FadeInSlide(
+                            duration: const Duration(milliseconds: 450),
+                            delay: const Duration(milliseconds: 220),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: hp),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SectionHeader(
+                                    title: 'Shops Near You',
+                                    trailing: SeeAllChip(
+                                      onTap: () => context.push('/radar'),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _ShopsList(shopsAsync: shopsAsync),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+
+                          // ── For you ────────────────────────────────────
+                          FadeInSlide(
+                            duration: const Duration(milliseconds: 450),
+                            delay: const Duration(milliseconds: 280),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: hp),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SectionHeader(title: 'For You'),
+                                  const SizedBox(height: 4),
+                                  _ProductsGrid(isDark: isDark, visibleCount: _productsVisible),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 26),
-
-                    // ── Shops near you ─────────────────────────────
-                    FadeInSlide(
-                      duration: const Duration(milliseconds: 450),
-                      delay: const Duration(milliseconds: 220),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: hp),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SectionHeader(
-                              title: 'Shops Near You',
-                              trailing: SeeAllChip(
-                                onTap: () => context.push('/radar'),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            _ShopsList(shopsAsync: shopsAsync),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-
-                    // ── For you ────────────────────────────────────
-                    FadeInSlide(
-                      duration: const Duration(milliseconds: 450),
-                      delay: const Duration(milliseconds: 280),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: hp),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SectionHeader(title: 'For You'),
-                            const SizedBox(height: 12),
-                            _ProductsGrid(isDark: isDark, visibleCount: _productsVisible),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -321,7 +327,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
 // ── App bar ───────────────────────────────────────────────────────────────────
 
-class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+class _HomeSliverAppBar extends StatelessWidget {
   final String locationName;
   final bool locationLoading;
   final bool isDark;
@@ -329,7 +335,7 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onNotificationTap;
   final VoidCallback? onSearchTap;
 
-  const _HomeAppBar({
+  const _HomeSliverAppBar({
     required this.locationName,
     required this.locationLoading,
     required this.isDark,
@@ -339,14 +345,17 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 56);
-
-  @override
   Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
-    return AppBar(
+    return SliverAppBar(
       automaticallyImplyLeading: false,
       titleSpacing: 16,
+      floating: true,
+      snap: true,
+      pinned: false,
+      backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
       title: GestureDetector(
         onTap: onLocationTap,
         child: Row(
@@ -412,7 +421,15 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(56),
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isDark ? Colors.white.withValues(alpha: 0.06) : AppColors.border.withValues(alpha: 0.5),
+                width: 1,
+              ),
+            ),
+          ),
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: GestureDetector(
             onTap: onSearchTap,
@@ -496,7 +513,7 @@ class _FeaturedSpotlightSection extends StatelessWidget {
           baseColor: isDark ? _kShimmerDark : Colors.grey.shade300,
           highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
           child: Container(
-            height: 204,
+            height: 224,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -535,11 +552,11 @@ class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
 
   // Gradient pairs: [start, end] — each maps to a unique card palette
   static const _gradients = [
-    [Color(0xFF7C3AED), Color(0xFF4338CA)], // violet → indigo
-    [Color(0xFFDC2626), Color(0xFFC2410C)], // crimson → orange
-    [Color(0xFF0369A1), Color(0xFF0E7490)], // sky → cyan
-    [Color(0xFF065F46), Color(0xFF0F766E)], // emerald → teal
-    [Color(0xFF92400E), Color(0xFFB45309)], // amber → warm
+    [Color(0xFF112E51), Color(0xFF2C5E8A)], // Brand Navy → Slate Blue
+    [Color(0xFF0B1F38), Color(0xFF1E436D)], // Dark Navy → Steel Blue
+    [Color(0xFF16355C), Color(0xFF31639C)], // Indigo Navy → Bright Slate
+    [Color(0xFF0D233E), Color(0xFF214670)], // Ink Blue → Airforce Blue
+    [Color(0xFF1A3960), Color(0xFF386CA3)], // Cobalt Navy → Blue
   ];
 
   @override
@@ -597,7 +614,7 @@ class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
         switchOutCurve: Curves.easeIn,
         child: Container(
           key: ValueKey('hero-$_index-${offer.id}'),
-          height: 204,
+          height: 190,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [colors[0], colors[1]],
@@ -643,7 +660,7 @@ class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
               ),
               // Main content
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -670,11 +687,11 @@ class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _HeroBadge(discount: discount, fallback: offer.title),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 6),
                               Text(
                                 shopName,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   height: 1.1,
@@ -687,8 +704,20 @@ class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
                                 Text(
                                   offer.title,
                                   style: GoogleFonts.poppins(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     color: Colors.white70,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                              if (offer.description.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  offer.description,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    color: Colors.white.withValues(alpha: 0.55),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -697,11 +726,11 @@ class _HeroSpotlightCardState extends State<_HeroSpotlightCard>
                             ],
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 12),
                         _HeroLogo(logoUrl: logoUrl, name: shopName),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
                     // Story-style progress bars
                     _StoryProgressBars(
                       total: widget.offers.length,
@@ -877,8 +906,8 @@ class _HeroLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Container(
-      width: 60,
-      height: 60,
+      width: 64,
+      height: 64,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -908,7 +937,7 @@ class _HeroInitial extends StatelessWidget {
       child: Text(
         initial,
         style: GoogleFonts.poppins(
-          fontSize: 26,
+          fontSize: 22,
           fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
@@ -943,7 +972,7 @@ class _OfferBannerList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 150,
+      height: 180,
       child: offersAsync.when(
         skipLoadingOnReload: false,
         data: (offers) {
@@ -962,6 +991,7 @@ class _OfferBannerList extends StatelessWidget {
               final offer = offers[i];
               final colors = _cardColors[i % _cardColors.length];
               final cardBg = isDark ? AppColors.darkSurface : Colors.white;
+              final daysLeft = offer.endDate?.difference(DateTime.now()).inDays;
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: FadeInSlide(
@@ -1020,13 +1050,12 @@ class _OfferBannerList extends StatelessWidget {
                               ],
                             ),
                           ),
-                          // White/surface bottom with title + arrow
+                          // White/surface bottom with title + description + expiry + arrow
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     offer.title,
@@ -1040,6 +1069,46 @@ class _OfferBannerList extends StatelessWidget {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (offer.description.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      offer.description,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        color: AppColors.textHint,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                  const Spacer(),
+                                  if (daysLeft != null && daysLeft >= 0) ...[
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time_outlined,
+                                          size: 10,
+                                          color: daysLeft <= 1
+                                              ? AppColors.error
+                                              : colors[0].withValues(alpha: 0.8),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          daysLeft == 0
+                                              ? 'Ends today'
+                                              : '$daysLeft days left',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: daysLeft <= 1
+                                                ? AppColors.error
+                                                : colors[0].withValues(alpha: 0.85),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                  ],
                                   Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
@@ -1087,7 +1156,7 @@ class _OfferBannerList extends StatelessWidget {
               highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
               child: Container(
                 width: 180,
-                height: 150,
+                height: 180,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -1112,7 +1181,7 @@ class _OfferPopupSheet extends StatelessWidget {
   final VoidCallback onGrabTap;
   const _OfferPopupSheet({required this.offer, required this.onGrabTap});
 
-  static const _popupGradient = [Color(0xFF6D28D9), Color(0xFF8B5CF6)];
+  static const _popupGradient = [AppColors.primary, AppColors.primaryLight];
 
   @override
   Widget build(BuildContext context) {
@@ -1171,19 +1240,13 @@ class _OfferPopupSheet extends StatelessWidget {
                       ),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close_rounded,
-                        size: 16,
-                        color: Colors.white,
-                      ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    color: Colors.white,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      padding: const EdgeInsets.all(6),
                     ),
                   ),
                 ],
@@ -1206,7 +1269,7 @@ class _OfferPopupSheet extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 76,
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFF6D28D9),
+                            color: AppColors.primary,
                             height: 1,
                           ),
                         ),
@@ -1215,7 +1278,7 @@ class _OfferPopupSheet extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 38,
                             fontWeight: FontWeight.w900,
-                            color: const Color(0xFF6D28D9),
+                            color: AppColors.primary,
                             height: 1,
                           ),
                         ),
@@ -1227,7 +1290,7 @@ class _OfferPopupSheet extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF8B5CF6),
+                      color: AppColors.primaryLight,
                       letterSpacing: 5,
                     ),
                   ),
@@ -1280,7 +1343,7 @@ class _OfferPopupSheet extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onGrabTap,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6D28D9),
+                        backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -1294,14 +1357,15 @@ class _OfferPopupSheet extends StatelessWidget {
                       child: const Text('Grab This Deal'),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
                     child: Text(
                       'Maybe Later',
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         color: AppColors.textHint,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -1557,6 +1621,7 @@ class _ProductsGrid extends ConsumerWidget {
           children: [
         GridView.builder(
           shrinkWrap: true,
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: cols,

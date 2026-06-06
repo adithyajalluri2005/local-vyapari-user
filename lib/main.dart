@@ -21,6 +21,10 @@ import 'package:local_vyapari_user/services/notifications/notification_service.d
 import 'package:local_vyapari_user/shared/widgets/global_error_screen.dart';
 import 'package:local_vyapari_user/shared/widgets/connectivity_banner.dart';
 
+// Holds a pending navigation that arrived from onMessageOpenedApp when the navigator was not
+// yet ready. MainNavigationScreen reads and clears it via pendingNotificationRouteProvider.
+PendingNotification? _pendingFcm;
+
 void main() {
   runZonedGuarded(() async {
     final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -81,33 +85,41 @@ void main() {
     // ── Capture FCM notification tap intent BEFORE runApp ──────────────────
     // getInitialMessage: app was TERMINATED and user tapped a FCM notification.
     // Must be called here — by the time auth completes the message is gone.
-    String? initialNotificationRoute;
+    PendingNotification? initialNotification;
     try {
       final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
       if (initialMsg != null) {
-        initialNotificationRoute = _fcmRoute(initialMsg);
+        initialNotification = _pendingFcmFrom(initialMsg);
+        debugPrint('[Main] getInitialMessage — type=${initialMsg.data['type']} route=${initialNotification.route} extra=${initialNotification.extra}');
       }
     } catch (e) {
-      debugPrint('getInitialMessage error: $e');
+      debugPrint('[Main] getInitialMessage error: $e');
     }
 
     // onMessageOpenedApp: app was BACKGROUNDED and user tapped a FCM notification.
-    // The app is already running so the navigator is mounted — navigate directly.
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
-      final route = _fcmRoute(msg);
-      if (route == null) return;
+      debugPrint('[Main] onMessageOpenedApp — type=${msg.data['type']} shopId=${msg.data['shopId']} shopName=${msg.data['shopName']}');
       final context = rootNavigatorKey.currentContext;
-      // ignore: use_build_context_synchronously
-      if (context != null) GoRouter.of(context).push(route);
+      if (context != null) {
+        // ignore: use_build_context_synchronously
+        _pushFcmRoute(context, msg);
+      } else {
+        // Navigator not yet mounted (e.g. activity recreated). MainNavigationScreen will consume it.
+        final pending = _pendingFcmFrom(msg);
+        debugPrint('[Main] onMessageOpenedApp — context null, storing pending: route=${pending.route} extra=${pending.extra}');
+        _pendingFcm = pending;
+      }
     });
 
     FlutterNativeSplash.remove();
+    final startupNotification = initialNotification ?? _pendingFcm;
+    _pendingFcm = null;
     runApp(
       ProviderScope(
         overrides: [
-          if (initialNotificationRoute != null)
+          if (startupNotification != null)
             pendingNotificationRouteProvider.overrideWith(
-              () => PendingNotificationRouteNotifier(initialNotificationRoute),
+              () => PendingNotificationRouteNotifier(startupNotification),
             ),
         ],
         child: const LocalVyapariApp(),
@@ -122,10 +134,31 @@ void main() {
   });
 }
 
-String? _fcmRoute(RemoteMessage msg) {
-  if (msg.data['type'] == 'chat') return '/chats';
-  if (msg.data.isNotEmpty) return '/all_offers';
-  return null;
+/// Builds the correct route + GoRouter extras from an FCM message, choosing the
+/// most specific destination available given the payload fields.
+PendingNotification _pendingFcmFrom(RemoteMessage msg) {
+  final type = msg.data['type'] ?? '';
+  if (type == 'chat') {
+    final shopId = msg.data['shopId'] ?? '';
+    final shopName = msg.data['shopName'] ?? 'Shop';
+    if (shopId.isNotEmpty) {
+      return PendingNotification(
+        '/chat',
+        extra: {'shopId': shopId, 'shopName': shopName, 'shopLogo': msg.data['shopLogo'] ?? ''},
+      );
+    }
+    return const PendingNotification('/chats');
+  }
+  if (type == 'offer' || msg.data.isNotEmpty) return const PendingNotification('/all_offers');
+  // No data payload — fall back on notification channel ID.
+  final channelId = msg.notification?.android?.channelId ?? '';
+  return PendingNotification(channelId.contains('chat') ? '/chats' : '/all_offers');
+}
+
+/// Pushes the correct screen for an FCM tap when a navigator context is available.
+void _pushFcmRoute(BuildContext context, RemoteMessage msg) {
+  final pending = _pendingFcmFrom(msg);
+  GoRouter.of(context).push(pending.route, extra: pending.extra);
 }
 
 class LocalVyapariApp extends ConsumerWidget {

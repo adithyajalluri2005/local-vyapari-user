@@ -149,8 +149,6 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text('Chat with Shop'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                   ),
@@ -180,12 +178,16 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.xs),
               ),
               child: Text(
                 product.category,
-                style: AppTextStyles.bodyMedium(context, color: Colors.white, fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodyMedium(
+                  context,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             if (product.isOutOfStock)
@@ -247,7 +249,13 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           children: [
             Text(
               '₹${product.offerPrice}',
-              style: AppTextStyles.titleLarge(context, color: Colors.white, fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleLarge(
+                context,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             AppSpacing.horizontalSm,
             Text(
@@ -390,6 +398,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     final distribution = ref.watch(productRatingDistributionProvider(product.id));
     final authState = ref.watch(authProvider);
     final isAuthenticated = authState is Authenticated;
+    final rateBtnColor = isAuthenticated
+        ? Theme.of(context).colorScheme.primary
+        : AppColors.textHint;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,11 +422,14 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   context.push('/login');
                 }
               },
-              icon: Icon(Icons.rate_review_outlined, size: 18, color: isAuthenticated ? Colors.white : Colors.grey),
-              label: Text(isAuthenticated ? 'Rate Product' : 'Login to Rate', style: TextStyle(color: isAuthenticated ? Colors.white : Colors.grey)),
+              icon: Icon(Icons.rate_review_outlined, size: 18, color: rateBtnColor),
+              label: Text(
+                isAuthenticated ? 'Rate Product' : 'Login to Rate',
+                style: TextStyle(color: rateBtnColor),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isAuthenticated ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                foregroundColor: isAuthenticated ? Colors.white : Colors.grey,
+                backgroundColor: rateBtnColor.withValues(alpha: 0.1),
+                foregroundColor: rateBtnColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
