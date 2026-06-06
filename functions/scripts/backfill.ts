@@ -1,6 +1,6 @@
 /**
  * One-time backfill script — reads all shops and products from RTDB
- * and indexes them into Algolia.
+ * and indexes them into Algolia AND Firestore (searchable_shops collection).
  *
  * Usage:
  *   cd functions
@@ -95,7 +95,78 @@ async function backfillShops() {
   });
 
   await shopsIndex.saveObjects(records);
-  console.log(`Indexed ${records.length} shops.`);
+  console.log(`Indexed ${records.length} shops into Algolia.`);
+}
+
+async function backfillFirestoreShops() {
+  console.log("Backfilling Firestore searchable_shops...");
+  const snap = await admin.database().ref("/shop").get();
+  if (!snap.exists()) { console.log("No shops found."); return; }
+
+  // Collect all entries first so we can batch-write with proper awaits
+  type Entry = { shopId: string; s: Record<string, unknown> };
+  const entries: Entry[] = [];
+  snap.forEach((child) => {
+    entries.push({ shopId: child.key!, s: child.val() as Record<string, unknown> });
+  });
+
+  const db = admin.firestore();
+  const BATCH_SIZE = 400; // Firestore limit is 500 writes per batch
+
+  for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+    const slice = entries.slice(i, i + BATCH_SIZE);
+    const batch = db.batch();
+
+    for (const { shopId, s } of slice) {
+      let city = (s.city as string) ?? "";
+      if (!city && typeof s.address === "string") {
+        const parts = s.address.split(",").map((p: string) => p.trim());
+        city = parts.length >= 3 ? parts[2] : (parts[parts.length - 1] ?? "");
+      }
+
+      const lat = Number(s.latitude ?? 0);
+      const lng = Number(s.longitude ?? 0);
+      const geohash = String(s.geohash ?? "");
+      const shopName = String(s.name ?? s.shopName ?? "");
+
+      batch.set(db.collection("searchable_shops").doc(shopId), {
+        shopName,
+        ownerId: String(s.ownerId ?? ""),
+        description: String(s.description ?? ""),
+        phone: String(s.phone ?? ""),
+        shopLogo: String(s.logoUrl ?? s.shopLogo ?? ""),
+        shopBanner: String(s.bannerUrl ?? s.shopBanner ?? ""),
+        isVerified: Boolean(s.isVerified ?? false),
+        isOpen: Boolean(s.isOpen ?? false),
+        openingTime: (s.openingTime as string) ?? null,
+        closingTime: (s.closingTime as string) ?? null,
+        rating: Number(s.rating ?? 0),
+        totalReviews: Number(s.totalReviews ?? 0),
+        createdAt: s.createdAt != null
+          ? admin.firestore.Timestamp.fromMillis(Number(s.createdAt))
+          : null,
+        location: {
+          latitude: lat,
+          longitude: lng,
+          geohash,
+          address: String(s.address ?? ""),
+          city,
+          state: String(s.state ?? ""),
+          pincode: String(s.pincode ?? ""),
+          placeId: String(s.placeId ?? ""),
+        },
+        geo: {
+          geopoint: new admin.firestore.GeoPoint(lat, lng),
+          geohash,
+        },
+      });
+    }
+
+    await batch.commit();
+    console.log(`  Committed ${slice.length} shops (${i + slice.length}/${entries.length})`);
+  }
+
+  console.log(`Firestore backfill complete: ${entries.length} shops written to searchable_shops.`);
 }
 
 async function backfillProducts() {
@@ -170,6 +241,7 @@ async function backfillProducts() {
 (async () => {
   try {
     await backfillShops();
+    await backfillFirestoreShops();
     await backfillProducts();
     console.log("Backfill complete.");
     process.exit(0);

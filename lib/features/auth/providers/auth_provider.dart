@@ -56,7 +56,12 @@ final authLoadingProvider = NotifierProvider<AuthLoadingNotifier, bool>(AuthLoad
 
 class AuthNotifier extends Notifier<AuthState> {
   StreamSubscription<User?>? _authStateSubscription;
-  
+  // When we sign out because a user failed role validation or an error occurred,
+  // the authStateChanges stream fires null and would overwrite our AuthFailure
+  // state with Unauthenticated before the UI can show the error. This flag
+  // suppresses that one null emission.
+  bool _suppressNextSignOutTransition = false;
+
   FirebaseDatabase get _rtdb => ref.read(firebaseDatabaseProvider);
   FirebaseAuth get _auth => ref.read(firebaseAuthProvider);
   FirebaseFunctions get _functions => ref.read(firebaseFunctionsProvider);
@@ -93,16 +98,24 @@ class AuthNotifier extends Notifier<AuthState> {
             // Lazily initialise notifications now that the user is authenticated
             ref.read(notificationServiceProvider);
           } else {
+            _suppressNextSignOutTransition = true;
             await auth.signOut();
             state = const AuthFailure('Access Denied: Unauthorized role.');
           }
         } catch (e) {
+          _suppressNextSignOutTransition = true;
           await auth.signOut();
           state = AuthFailure(e.toString());
         }
       } else {
-        // Clear sensitive cache when signing out/unauthenticated
+        // Always clear sensitive cache on every sign-out.
         await DataCacheService.clearCache();
+        // If we triggered this sign-out ourselves after setting an AuthFailure,
+        // don't overwrite that error with Unauthenticated.
+        if (_suppressNextSignOutTransition) {
+          _suppressNextSignOutTransition = false;
+          return;
+        }
         state = const Unauthenticated();
       }
     });

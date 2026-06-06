@@ -149,10 +149,15 @@ class NotificationService {
         _syncDeviceRegistration();
         _listenForChatMessages();
       } else {
-        debugPrint('[NotifSvc] Auth state: signed out — cancelling chat listener');
+        debugPrint('[NotifSvc] Auth state: signed out — cancelling chat and offer listeners');
         _chatSubscription?.cancel();
         _chatSubscription = null;
         _lastChatNotifyTs.clear();
+        for (final sub in _offerSubscriptions.values) {
+          sub.cancel();
+        }
+        _offerSubscriptions.clear();
+        _seenOfferIds.clear();
       }
     });
   }

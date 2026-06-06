@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
@@ -40,135 +39,62 @@ class FirebaseShopRepository implements ShopRepository {
     final geoRef = GeoCollectionReference<Map<String, dynamic>>(
       _firestore.collection('searchable_shops'),
     );
+    final center = GeoFirePoint(GeoPoint(latitude, longitude));
 
-    Future<List<DocumentSnapshot<Map<String, dynamic>>>> fetchWithRetry() async {
+    GeoPoint geopointFrom(Map<String, dynamic> data) {
       try {
-        return await geoRef.fetchWithin(
-          center: GeoFirePoint(GeoPoint(latitude, longitude)),
+        final geo = data['geo'];
+        if (geo is Map) {
+          final geopoint = geo['geopoint'];
+          if (geopoint is GeoPoint) return geopoint;
+        }
+      } catch (_) {}
+      return const GeoPoint(0, 0);
+    }
+
+    Stream<List<Shop>> buildStream() => geoRef
+        .subscribeWithin(
+          center: center,
           radiusInKm: radiusInKm,
           field: 'geo',
-          geopointFrom: (data) {
-            try {
-              final geo = data['geo'];
-              if (geo is Map) {
-                final geopoint = geo['geopoint'];
-                if (geopoint is GeoPoint) return geopoint;
-              }
-            } catch (_) {}
-            return const GeoPoint(0, 0);
-          },
+          geopointFrom: geopointFrom,
           strictMode: true,
-        );
-      } on FirebaseException catch (e) {
-        if (e.code == 'permission-denied') {
-          await Future.delayed(const Duration(seconds: 2));
-          return geoRef.fetchWithin(
-            center: GeoFirePoint(GeoPoint(latitude, longitude)),
-            radiusInKm: radiusInKm,
-            field: 'geo',
-            geopointFrom: (data) {
-              try {
-                final geo = data['geo'];
-                if (geo is Map) {
-                  final geopoint = geo['geopoint'];
-                  if (geopoint is GeoPoint) return geopoint;
-                }
-              } catch (_) {}
-              return const GeoPoint(0, 0);
-            },
-            strictMode: true,
-          );
-        }
+        )
+        .map((docs) {
+          final shops = <Shop>[];
+          for (final doc in docs) {
+            if (doc.data() == null) continue;
+            try {
+              shops.add(Shop.fromFirestore(doc));
+            } catch (e) {
+              debugPrint('Error parsing shop ${doc.id}: $e');
+            }
+          }
+          shops.sort((a, b) {
+            final dA = Geolocator.distanceBetween(
+              latitude, longitude,
+              a.location.latitude, a.location.longitude,
+            );
+            final dB = Geolocator.distanceBetween(
+              latitude, longitude,
+              b.location.latitude, b.location.longitude,
+            );
+            return dA.compareTo(dB);
+          });
+          return shops;
+        });
+
+    // App Check token may not be ready at startup; retry once on permission-denied.
+    try {
+      yield* buildStream();
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        await Future.delayed(const Duration(seconds: 2));
+        yield* buildStream();
+      } else {
         rethrow;
       }
     }
-
-    List<DocumentSnapshot<Map<String, dynamic>>> geoDocs;
-    try {
-      geoDocs = await fetchWithRetry();
-    } catch (e) {
-      debugPrint('Failed to fetch nearby shop geoDocs: $e');
-      yield <Shop>[];
-      return;
-    }
-
-    final shopIds = geoDocs.map((doc) => doc.id).toList();
-    if (shopIds.isEmpty) {
-      yield <Shop>[];
-      return;
-    }
-
-    final Map<String, Shop> shopMap = {};
-    final controller = StreamController<List<Shop>>();
-    final subscriptions = <StreamSubscription>[];
-
-    List<Shop> buildSorted() {
-      final list = shopMap.values.toList();
-      list.sort((a, b) {
-        final dA = Geolocator.distanceBetween(
-          latitude, longitude,
-          a.location.latitude, a.location.longitude,
-        );
-        final dB = Geolocator.distanceBetween(
-          latitude, longitude,
-          b.location.latitude, b.location.longitude,
-        );
-        return dA.compareTo(dB);
-      });
-      return list;
-    }
-
-    for (final id in shopIds) {
-      final sub = _database.ref('shop/$id').onValue.listen(
-        (event) {
-          if (event.snapshot.exists && event.snapshot.value != null) {
-            try {
-              final shop = Shop.fromRTDB(
-                id,
-                Map<dynamic, dynamic>.from(event.snapshot.value as Map),
-              );
-              final d = Geolocator.distanceBetween(
-                latitude, longitude,
-                shop.location.latitude, shop.location.longitude,
-              );
-              if (d <= radiusInKm * 1000.0) {
-                shopMap[id] = shop;
-              } else {
-                shopMap.remove(id);
-              }
-            } catch (e) {
-              debugPrint('Error parsing shop $id: $e');
-            }
-          } else {
-            shopMap.remove(id);
-          }
-
-          if (!controller.isClosed) {
-            controller.add(buildSorted());
-          }
-        },
-        onError: (e) => debugPrint('RTDB stream error for $id: $e'),
-      );
-      subscriptions.add(sub);
-    }
-
-    // Force an emission after 10 s if RTDB hasn't responded yet, so the UI
-    // shows an empty/cached state instead of loading indefinitely.
-    final timeoutTimer = Timer(const Duration(seconds: 10), () {
-      if (!controller.isClosed) {
-        controller.add(buildSorted());
-      }
-    });
-
-    controller.onCancel = () {
-      timeoutTimer.cancel();
-      for (final sub in subscriptions) {
-        sub.cancel();
-      }
-      controller.close();
-    };
-
-    yield* controller.stream;
   }
 
   @override

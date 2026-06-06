@@ -50,9 +50,9 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
 
     _debounceTimer?.cancel();
     _searchSubscription?.cancel();
-    state = const AsyncValue.loading();
 
     _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      state = const AsyncValue.loading();
       try {
         final locationResult = ref.read(activeBrowsingLocationProvider).value;
         if (locationResult == null) {
