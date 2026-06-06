@@ -46,7 +46,7 @@
     "phones": {
       "$phone": {
         ".read": "auth != null",
-        ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+        ".write": "auth != null && auth.token.phone_number === $phone && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
       }
     },
 
@@ -54,7 +54,33 @@
       "$ownerId": {
         ".read": "auth != null && auth.uid === $ownerId",
         "$peerId": {
-          ".write": "auth != null && (auth.uid === $ownerId || newData.child('customerId').val() === auth.uid || data.child('customerId').val() === auth.uid)"
+          ".write": "auth != null && auth.uid === $ownerId",
+          "messages": {
+            "$messageId": {
+              ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && (!data.exists() && newData.exists() && newData.child('senderId').val() === auth.uid)"
+            }
+          },
+          "lastMessage": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && (newData.child('senderId').val() === auth.uid || (auth.uid === $ownerId && newData.child('unread').val() === false))"
+          },
+          "vendorId": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && !data.exists()"
+          },
+          "customerId": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && !data.exists()"
+          },
+          "shopId": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && !data.exists()"
+          },
+          "shopName": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId)"
+          },
+          "shopLogo": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId)"
+          },
+          "userName": {
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId)"
+          }
         }
       }
     },
@@ -69,7 +95,24 @@
     "analytics": {
       "$vendorUid": {
         ".read": "auth != null && auth.uid === $vendorUid",
-        ".write": "auth != null && auth.uid === $vendorUid"
+        "totals": {
+          "views": {
+            ".write": "auth != null && (!data.exists() && newData.val() === 1 || newData.val() === data.val() + 1)"
+          },
+          "clicks": {
+            ".write": "auth != null && (!data.exists() && newData.val() === 1 || newData.val() === data.val() + 1)"
+          }
+        },
+        "daily": {
+          "$date": {
+            "views": {
+              ".write": "auth != null && (!data.exists() && newData.val() === 1 || newData.val() === data.val() + 1)"
+            },
+            "clicks": {
+              ".write": "auth != null && (!data.exists() && newData.val() === 1 || newData.val() === data.val() + 1)"
+            }
+          }
+        }
       }
     }
   }

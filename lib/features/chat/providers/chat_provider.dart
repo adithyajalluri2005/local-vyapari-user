@@ -123,7 +123,7 @@ class ChatService {
           'shopId': shopId,
           'unread': true,
         },
-        'chats/$shopId/$userId/userName': user?.email ?? 'Customer',
+        'chats/$shopId/$userId/userName': user?.displayName != null && user!.displayName!.isNotEmpty ? user.displayName! : 'Customer',
       };
 
       if (shopName != null && shopName.isNotEmpty) {

@@ -58,7 +58,7 @@ service cloud.firestore {
         && request.resource.data.message.size() <= 500
         && request.resource.data.type in ['bug', 'feature', 'general'];
       allow read, update: if request.auth != null
-        && request.auth.token.email == "theadminduovex@gmail.com";
+        && (request.auth.token.email == "theadminduovex@gmail.com" || request.auth.token.admin == true);
       allow delete: if false;
     }
 

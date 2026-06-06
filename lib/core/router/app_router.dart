@@ -223,39 +223,49 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/shop_details',
-        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
-          final shop = state.extra as Shop;
+          final shop = state.extra as Shop?;
+          final shopId = state.uri.queryParameters['shopId'] ?? state.uri.queryParameters['id'];
           return buildPageWithTransition(
             context: context,
             state: state,
-            child: ShopDetailsScreen(shop: shop),
+            child: ShopDetailsScreen(shop: shop, shopId: shopId),
             transitionType: TransitionType.slide,
           );
         },
       ),
       GoRoute(
         path: '/product_details',
-        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
-          final product = state.extra as Product;
+          final product = state.extra as Product?;
+          final productId = state.uri.queryParameters['productId'] ?? state.uri.queryParameters['id'];
+          final shopId = state.uri.queryParameters['shopId'];
           return buildPageWithTransition(
             context: context,
             state: state,
-            child: ProductDetailsScreen(product: product),
+            child: ProductDetailsScreen(
+              product: product,
+              productId: productId,
+              shopId: shopId,
+            ),
             transitionType: TransitionType.slide,
           );
         },
       ),
       GoRoute(
         path: '/offer_details',
-        redirect: (context, state) => state.extra == null ? '/home' : null,
         pageBuilder: (context, state) {
-          final offer = state.extra as Offer;
+          final offer = state.extra as Offer?;
+          final offerId = state.uri.queryParameters['offerId'] ?? state.uri.queryParameters['id'];
+          final shopId = state.uri.queryParameters['shopId'];
           return buildPageWithTransition(
             context: context,
             state: state,
-            child: OfferDetailsScreen(offer: offer),
+            child: OfferDetailsScreen(
+              offer: offer,
+              offerId: offerId,
+              shopId: shopId,
+            ),
             transitionType: TransitionType.slide,
           );
         },

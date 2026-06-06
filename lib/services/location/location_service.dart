@@ -19,7 +19,7 @@ class ActiveBrowsingLocationNotifier extends Notifier<AsyncValue<LocationResult?
   AsyncValue<LocationResult?> build() {
     final service = ref.watch(locationServiceProvider);
     
-    service.streamActiveBrowsingLocation().listen((location) async {
+    final subscription = service.streamActiveBrowsingLocation().listen((location) async {
       if (location == null) {
         try {
           final gpsLoc = await service.getGPSLocationResult();
@@ -37,6 +37,10 @@ class ActiveBrowsingLocationNotifier extends Notifier<AsyncValue<LocationResult?
       }
     }, onError: (err, stack) {
       state = AsyncValue.error(err, stack);
+    });
+
+    ref.onDispose(() {
+      subscription.cancel();
     });
 
     return const AsyncValue.loading();
@@ -78,6 +82,11 @@ final recentLocationsStreamProvider = StreamProvider<List<LocationResult>>((ref)
 });
 
 class LocationService {
+  final http.Client? _client;
+  LocationService({http.Client? client}) : _client = client;
+
+  http.Client get _httpClient => _client ?? http.Client();
+
   final _activeLocationController = StreamController<LocationResult?>.broadcast();
   final _recentLocationsController = StreamController<List<LocationResult>>.broadcast();
 
@@ -96,7 +105,7 @@ class LocationService {
     );
 
     try {
-      final response = await http.get(url).timeout(const Duration(seconds: 5));
+      final response = await _getWithRetry(url);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final features = data['features'] as List? ?? [];
@@ -182,13 +191,17 @@ class LocationService {
         final url = Uri.parse(
           'https://api.geoapify.com/v1/geocode/reverse?lat=${position.latitude}&lon=${position.longitude}&apiKey=$_apiKey',
         );
-        final response = await http.get(url).timeout(const Duration(seconds: 5));
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          final features = data['features'] as List? ?? [];
-          if (features.isNotEmpty) {
-            return LocationResult.fromGeoapify(features.first['properties'] ?? {});
+        try {
+          final response = await _getWithRetry(url);
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            final features = data['features'] as List? ?? [];
+            if (features.isNotEmpty) {
+              return LocationResult.fromGeoapify(features.first['properties'] ?? {});
+            }
           }
+        } catch (e) {
+          debugPrint('Reverse geocoding failed, falling back to raw coordinates: $e');
         }
       }
 
@@ -207,4 +220,30 @@ class LocationService {
       return null;
     }
   }
+
+  // HTTP request helper with exponential backoff retry for Geoapify requests
+  Future<http.Response> _getWithRetry(Uri url, {int maxRetries = 3, Duration initialDelay = const Duration(milliseconds: 500)}) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        final response = await _httpClient.get(url).timeout(const Duration(seconds: 5));
+
+        // Return immediately if status is 200, or a client error other than 429 (retry won't fix authorization or bad requests)
+        if (response.statusCode == 200 || (response.statusCode >= 400 && response.statusCode < 500 && response.statusCode != 429)) {
+          return response;
+        }
+
+        throw http.ClientException('HTTP Status ${response.statusCode}', url);
+      } catch (e) {
+        attempt++;
+        if (attempt > maxRetries) {
+          rethrow;
+        }
+        final delay = initialDelay * (1 << (attempt - 1));
+        debugPrint('Geoapify request failed (attempt $attempt/$maxRetries): $e. Retrying in ${delay.inMilliseconds}ms...');
+        await Future.delayed(delay);
+      }
+    }
+  }
 }
+

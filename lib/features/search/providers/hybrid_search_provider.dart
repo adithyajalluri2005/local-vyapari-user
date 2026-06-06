@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:string_similarity/string_similarity.dart';
 
 import 'package:local_vyapari_user/shared/models/product.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
-import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
 
 class HybridSearchResult {
   final List<Product> products;
@@ -66,88 +63,63 @@ class HybridSearchNotifier extends Notifier<AsyncValue<HybridSearchResult>> {
         final double centerLat = locationResult.latitude;
         final double centerLng = locationResult.longitude;
 
-        final nearbyShops = ref.read(nearbyShopsProvider).value ?? [];
-        if (nearbyShops.isEmpty) {
+        final callable = FirebaseFunctions.instanceFor(region: 'asia-south1')
+            .httpsCallable('hyperlocalSearch');
+        final response = await callable.call({
+          'query': trimmedQuery,
+          'category': category,
+          'latitude': centerLat,
+          'longitude': centerLng,
+          'radiusKm': searchRadiusKm,
+        });
+
+        final data = response.data;
+        if (data is! Map) {
           state = const AsyncValue.data(HybridSearchResult());
           return;
         }
 
-        final Map<String, double> shopDistances = {};
-        for (final shop in nearbyShops) {
-          shopDistances[shop.id] = Geolocator.distanceBetween(
-            centerLat, centerLng,
-            shop.location.latitude, shop.location.longitude,
-          );
-        }
+        final List<Product> products = [];
+        final List<Shop> shops = [];
+        final bool isCapped = data['isCapped'] as bool? ?? false;
 
-        final bool isCapped = nearbyShops.length > 10;
-        final closestShops = nearbyShops.take(10).toList();
-
-        // Fetch products for nearby shops in parallel
-        final futures = closestShops.map(
-          (shop) => FirebaseDatabase.instance.ref('products/${shop.id}').get(),
-        );
-        final snapshots = await Future.wait(futures);
-
-        final List<Product> nearbyProducts = [];
-        for (int i = 0; i < snapshots.length; i++) {
-          final snap = snapshots[i];
-          final shopId = closestShops[i].id;
-          if (snap.exists && snap.value != null) {
-            final map = snap.value as Map<dynamic, dynamic>;
-            map.forEach((key, value) {
-              if (value is Map) {
-                try {
-                  final p = Product.fromRTDB(
-                    key.toString(), shopId, Map<dynamic, dynamic>.from(value));
-                  if (p.isActive) nearbyProducts.add(p);
-                } catch (e) {
-                  debugPrint('Error parsing product: $e');
-                }
+        if (data['products'] is List) {
+          for (final item in data['products']) {
+            if (item is Map) {
+              try {
+                final id = item['id']?.toString() ?? '';
+                final shopId = item['shopId']?.toString() ?? '';
+                products.add(Product.fromRTDB(
+                  id,
+                  shopId,
+                  Map<dynamic, dynamic>.from(item),
+                ));
+              } catch (e) {
+                debugPrint('Error parsing product from search result: $e');
               }
-            });
+            }
           }
         }
 
-        final normalizedQuery = trimmedQuery.toLowerCase();
-
-        // ── Product filtering ───────────────────────────────────────
-        // Category is an exact match; text is fuzzy on name + description + searchKeywords.
-        final filteredProducts = nearbyProducts.where((p) {
-          if (hasCategory && p.category.toLowerCase() != category.toLowerCase()) return false;
-          if (!hasQuery) return true;
-          final keywords = p.searchKeywords.join(' ').toLowerCase();
-          final text = '${p.name} ${p.description} $keywords'.toLowerCase();
-          return text.contains(normalizedQuery) ||
-              text.similarityTo(normalizedQuery) > 0.4 ||
-              normalizedQuery.similarityTo(p.name.toLowerCase()) > 0.3;
-        }).toList();
-
-        filteredProducts.sort((a, b) {
-          final dA = shopDistances[a.shopId] ?? double.infinity;
-          final dB = shopDistances[b.shopId] ?? double.infinity;
-          return dA.compareTo(dB);
-        });
-
-        // ── Shop filtering ──────────────────────────────────────────
-        // Text search: fuzzy match on shop name + description.
-        // Category-only: show shops that carry matching products.
-        List<Shop> filteredShops;
-        if (hasQuery) {
-          filteredShops = nearbyShops.where((s) {
-            final text = '${s.shopName} ${s.description}'.toLowerCase();
-            return text.contains(normalizedQuery) ||
-                text.similarityTo(normalizedQuery) > 0.4 ||
-                normalizedQuery.similarityTo(s.shopName.toLowerCase()) > 0.3;
-          }).take(15).toList();
-        } else {
-          final shopIds = filteredProducts.map((p) => p.shopId).toSet();
-          filteredShops = nearbyShops.where((s) => shopIds.contains(s.id)).toList();
+        if (data['shops'] is List) {
+          for (final item in data['shops']) {
+            if (item is Map) {
+              try {
+                final id = item['id']?.toString() ?? '';
+                shops.add(Shop.fromRTDB(
+                  id,
+                  Map<dynamic, dynamic>.from(item),
+                ));
+              } catch (e) {
+                debugPrint('Error parsing shop from search result: $e');
+              }
+            }
+          }
         }
 
         state = AsyncValue.data(HybridSearchResult(
-          products: filteredProducts.take(30).toList(),
-          shops: filteredShops,
+          products: products,
+          shops: shops,
           isCapped: isCapped,
         ));
       } catch (e, st) {

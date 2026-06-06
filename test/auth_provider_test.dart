@@ -14,13 +14,24 @@ class FakeUser implements User {
   final String uid;
   @override
   final String? email;
+  @override
+  final String? displayName;
+  @override
+  final List<UserInfo> providerData;
   
-  FakeUser({required this.uid, this.email});
+  FakeUser({
+    required this.uid,
+    this.email,
+    this.displayName,
+    this.providerData = const [],
+  });
   
   @override
   dynamic noSuchMethod(Invocation invocation) {
     if (invocation.memberName == #uid) return uid;
     if (invocation.memberName == #email) return email;
+    if (invocation.memberName == #displayName) return displayName;
+    if (invocation.memberName == #providerData) return providerData;
     return super.noSuchMethod(invocation);
   }
 }

@@ -287,21 +287,23 @@ final favoriteShopsProvider = FutureProvider<List<Shop>>((ref) async {
   final favoritesState = favoritesStateAsync.value;
   if (favoritesState == null || favoritesState.shopIds.isEmpty) return [];
 
-  final List<Shop> shops = [];
   final rtdb = FirebaseDatabase.instance.ref();
   
-  for (final shopId in favoritesState.shopIds) {
-    final snapshot = await rtdb.child('shop/$shopId').get();
-    if (snapshot.value is Map) {
-      try {
-        shops.add(Shop.fromRTDB(
+  final futures = favoritesState.shopIds.map((shopId) async {
+    try {
+      final snapshot = await rtdb.child('shop/$shopId').get();
+      if (snapshot.value is Map) {
+        return Shop.fromRTDB(
           shopId,
           Map<dynamic, dynamic>.from(snapshot.value as Map),
-        ));
-      } catch (e) {
-        debugPrint('Error parsing favorite shop $shopId: $e');
+        );
       }
+    } catch (e) {
+      debugPrint('Error fetching/parsing favorite shop $shopId: $e');
     }
-  }
-  return shops;
+    return null;
+  });
+
+  final results = await Future.wait(futures);
+  return results.whereType<Shop>().toList();
 });

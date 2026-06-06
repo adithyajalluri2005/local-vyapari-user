@@ -1,19 +1,26 @@
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider.dart';
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
+import 'package:local_vyapari_user/repositories/offer_repository.dart';
 
 final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) async* {
-  final shops = ref.watch(nearbyShopsProvider).value ?? [];
+  // Watch only the concatenated list of shop IDs. This avoids re-fetching all offers
+  // if shop details change, but the set of nearby shops remains same.
+  final shopIdsString = ref.watch(nearbyShopsProvider.select(
+    (val) => val.value?.map((s) => s.id).join(',') ?? '',
+  ));
 
-  if (shops.isEmpty) {
+  if (shopIdsString.isEmpty) {
     yield <Offer>[];
     return;
   }
 
-  final shopIds = shops.map((s) => s.id).toSet();
+  final shopIds = shopIdsString.split(',').toSet();
+  
+  // Read the latest list of shops to get shop names without subscribing to their modifications.
+  final shops = ref.read(nearbyShopsProvider).value ?? [];
   final shopNames = {for (final s in shops) s.id: s.shopName};
 
   // See nearbyShopsProvider: keep cache on screen if a later fetch fails, but
@@ -37,43 +44,15 @@ final nearbyOffersProvider = StreamProvider<List<Offer>>((ref) async* {
     debugPrint('Error yielding cached offers: $e');
   }
 
-  final now = DateTime.now();
-
-  // 2. Fetch only nearby shops' offers in parallel — no full-tree download.
-  //    Capped at 20 shops to bound the parallel request count.
+  // 2. Fetch from repository
   try {
     final targetShopIds = shopIds.take(20).toList();
-    final snapshots = await Future.wait(
-      targetShopIds.map((id) => FirebaseDatabase.instance.ref('offers/$id').get()),
-    );
+    final repo = ref.read(offerRepositoryProvider);
+    final rawOffers = await repo.getNearbyOffers(targetShopIds);
 
-    final List<Offer> offers = [];
-    for (int i = 0; i < snapshots.length; i++) {
-      final shopId = targetShopIds[i];
-      final snapshot = snapshots[i];
-      if (!snapshot.exists || snapshot.value == null) continue;
+    // Map shop names locally
+    final offers = rawOffers.map((o) => o.copyWith(shopName: shopNames[o.shopId] ?? '')).toList();
 
-      final offersMap = snapshot.value as Map<dynamic, dynamic>;
-      offersMap.forEach((offerIdKey, offerValue) {
-        if (offerValue is Map) {
-          try {
-            final offer = Offer.fromRTDB(
-              offerIdKey.toString(),
-              shopId,
-              Map<dynamic, dynamic>.from(offerValue),
-            ).copyWith(shopName: shopNames[shopId] ?? '');
-
-            final active = (offer.endDate == null || offer.endDate!.isAfter(now)) &&
-                (offer.startDate == null || offer.startDate!.isBefore(now));
-            if (offer.isActive && active) offers.add(offer);
-          } catch (e) {
-            debugPrint('Error parsing offer: $e');
-          }
-        }
-      });
-    }
-
-    offers.sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));
     await DataCacheService.cacheOffers(offers);
     yield offers;
     hasYielded = true;

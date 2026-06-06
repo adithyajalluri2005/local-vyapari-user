@@ -10,58 +10,98 @@ import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 
-class OfferDetailsScreen extends ConsumerWidget {
-  final Offer offer;
+import 'package:local_vyapari_user/features/offers/providers/offer_details_provider.dart';
 
-  const OfferDetailsScreen({super.key, required this.offer});
+class OfferDetailsScreen extends ConsumerStatefulWidget {
+  final Offer? offer;
+  final String? offerId;
+  final String? shopId;
+  const OfferDetailsScreen({super.key, this.offer, this.offerId, this.shopId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    Responsive.init(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shopAsync = ref.watch(shopDetailsProvider(offer.shopId));
+  ConsumerState<OfferDetailsScreen> createState() => _OfferDetailsScreenState();
+}
 
-    final bannerWidget = _buildBannerHeader(context);
-    final detailsWidget = _buildDetailsColumn(context, ref, shopAsync, isDark);
+class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
+  Offer? _offer;
+  Offer get offer => _offer!;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          'Offer Details',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 17),
-        ),
-        centerTitle: true,
-        backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
-      ),
-      body: SafeArea(
-        child: Responsive.isTablet(context)
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(flex: 4, child: bannerWidget),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    flex: 6,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: detailsWidget,
+  @override
+  void initState() {
+    super.initState();
+    _offer = widget.offer;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sId = widget.offer?.shopId ?? widget.shopId;
+    final oId = widget.offer?.id ?? widget.offerId;
+    if (sId == null || oId == null) {
+      return const Scaffold(body: Center(child: Text('Invalid offer details')));
+    }
+
+    final offerAsync = ref.watch(offerDetailsStreamProvider('$sId:$oId'));
+
+    return offerAsync.when(
+      data: (offerData) {
+        final currentOffer = offerData ?? _offer ?? widget.offer;
+        if (currentOffer == null) {
+          return const Scaffold(body: Center(child: Text('Offer not found')));
+        }
+        _offer = currentOffer;
+
+        Responsive.init(context);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final shopAsync = ref.watch(shopDetailsProvider(currentOffer.shopId));
+
+        final bannerWidget = _buildBannerHeader(context);
+        final detailsWidget = _buildDetailsColumn(context, ref, shopAsync, isDark);
+
+        return Scaffold(
+          backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
+          appBar: AppBar(
+            title: Text(
+              'Offer Details',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 17),
+            ),
+            centerTitle: true,
+            backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+          ),
+          body: SafeArea(
+            child: Responsive.isTablet(context)
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(flex: 4, child: bannerWidget),
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        flex: 6,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(24),
+                          child: detailsWidget,
+                        ),
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(height: 200, child: bannerWidget),
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: detailsWidget,
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              )
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(height: 200, child: bannerWidget),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: detailsWidget,
-                    ),
-                  ],
-                ),
-              ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('Failed to load offer details: $error')),
       ),
     );
   }

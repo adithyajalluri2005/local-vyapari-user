@@ -11,6 +11,7 @@ import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
 import 'package:local_vyapari_user/core/theme/app_spacing.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/shared/models/product.dart';
+import 'package:local_vyapari_user/features/products/providers/product_details_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
@@ -25,71 +26,96 @@ import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProductDetailsScreen extends ConsumerStatefulWidget {
-  final Product product;
-  const ProductDetailsScreen({super.key, required this.product});
+  final Product? product;
+  final String? productId;
+  final String? shopId;
+  const ProductDetailsScreen({super.key, this.product, this.productId, this.shopId});
 
   @override
   ConsumerState<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
-  Product get product => widget.product;
+  Product? _product;
+  Product get product => _product!;
 
   @override
   Widget build(BuildContext context) {
-    final padding = AppSizes.paddingLarge(context);
+    final sId = widget.product?.shopId ?? widget.shopId;
+    final pId = widget.product?.id ?? widget.productId;
+    if (sId == null || pId == null) {
+      return const Scaffold(body: Center(child: Text('Invalid product details')));
+    }
 
-    final galleryWidget = Container(
-      color: Theme.of(context).cardColor,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ProductImageGallery(images: product.images),
-    );
+    final productAsync = ref.watch(productDetailsStreamProvider('$sId:$pId'));
 
-    final detailsWidget = _buildDetailsColumn(context);
+    return productAsync.when(
+      data: (productData) {
+        final currentProduct = productData ?? _product ?? widget.product;
+        if (currentProduct == null) {
+          return const Scaffold(body: Center(child: Text('Product not found')));
+        }
+        _product = currentProduct;
+        final padding = AppSizes.paddingLarge(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Product Details',
-          style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
-        ),
-      ),
-      bottomNavigationBar: _buildBottomActionBar(context),
-      body: SafeArea(
-        child: Responsive.isTablet(context)
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: Center(
-                      child: SingleChildScrollView(
-                        child: galleryWidget,
+        final galleryWidget = Container(
+          color: Theme.of(context).cardColor,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ProductImageGallery(images: currentProduct.images),
+        );
+
+        final detailsWidget = _buildDetailsColumn(context);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Product Details',
+              style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
+            ),
+          ),
+          bottomNavigationBar: _buildBottomActionBar(context),
+          body: SafeArea(
+            child: Responsive.isTablet(context)
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Center(
+                          child: SingleChildScrollView(
+                            child: galleryWidget,
+                          ),
+                        ),
                       ),
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        flex: 5,
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.all(padding),
+                          child: detailsWidget,
+                        ),
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        galleryWidget,
+                        Padding(
+                          padding: EdgeInsets.all(padding),
+                          child: detailsWidget,
+                        ),
+                      ],
                     ),
                   ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    flex: 5,
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(padding),
-                      child: detailsWidget,
-                    ),
-                  ),
-                ],
-              )
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    galleryWidget,
-                    Padding(
-                      padding: EdgeInsets.all(padding),
-                      child: detailsWidget,
-                    ),
-                  ],
-                ),
-              ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('Failed to load product details: $error')),
       ),
     );
   }
