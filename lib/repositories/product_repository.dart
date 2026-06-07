@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +16,13 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) => FirebaseP
 
 class FirebaseProductRepository implements ProductRepository {
   final FirebaseDatabase _database;
+  final FirebaseFunctions _functions;
 
   FirebaseProductRepository({
     FirebaseDatabase? database,
-  })  : _database = database ?? FirebaseDatabase.instance;
+    FirebaseFunctions? functions,
+  })  : _database = database ?? FirebaseDatabase.instance,
+        _functions = functions ?? FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   @override
   Stream<List<Product>> getShopProducts(String shopId) {
@@ -54,34 +58,47 @@ class FirebaseProductRepository implements ProductRepository {
 
   @override
   Future<List<Product>> getNearbyProducts(List<String> shopIds) async {
+    if (shopIds.isEmpty) return <Product>[];
+
     final targetShopIds = shopIds.take(15).toList();
-    final snapshots = await Future.wait(
-      targetShopIds.map((id) => _database.ref('products/$id').get()),
-    );
+    final List<Product> rawProducts = [];
 
-    final Map<String, List<Product>> byShop = {};
-    for (int i = 0; i < snapshots.length; i++) {
-      final shopId = targetShopIds[i];
-      final snapshot = snapshots[i];
-      if (!snapshot.exists || snapshot.value == null) continue;
+    try {
+      final callable = _functions.httpsCallable('getNearbyProductsAggregated');
+      final response = await callable.call({
+        'shopIds': targetShopIds,
+      });
 
-      final productsMap = snapshot.value as Map<dynamic, dynamic>;
-      productsMap.forEach((productIdKey, productValue) {
-        if (productValue is Map) {
-          try {
-            final product = Product.fromRTDB(
-              productIdKey.toString(),
-              shopId,
-              Map<dynamic, dynamic>.from(productValue),
-            );
-            if (product.isActive && !product.isOutOfStock) {
-              byShop.putIfAbsent(shopId, () => []).add(product);
+      final data = response.data;
+      if (data is Map && data['products'] is List) {
+        for (final item in data['products']) {
+          if (item is Map) {
+            try {
+              final id = item['id']?.toString() ?? '';
+              final shopId = item['shopId']?.toString() ?? '';
+              final product = Product.fromRTDB(
+                id,
+                shopId,
+                Map<dynamic, dynamic>.from(item),
+              );
+              rawProducts.add(product);
+            } catch (e) {
+              debugPrint('Error parsing product from aggregated response: $e');
             }
-          } catch (e) {
-            debugPrint('Error parsing product: $e');
           }
         }
-      });
+      }
+    } catch (e) {
+      debugPrint('Error fetching nearby products through aggregation function: $e');
+      // Fallback: If function fails, gracefully return empty list to prevent crash
+      return <Product>[];
+    }
+
+    final Map<String, List<Product>> byShop = {};
+    for (final product in rawProducts) {
+      if (product.isActive && !product.isOutOfStock) {
+        byShop.putIfAbsent(product.shopId, () => []).add(product);
+      }
     }
 
     const kMaxPerShop = 6;

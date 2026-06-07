@@ -61,7 +61,7 @@
             }
           },
           "lastMessage": {
-            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && (newData.child('senderId').val() === auth.uid || (auth.uid === $ownerId && newData.child('unread').val() === false))"
+            ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && ((auth.uid === $peerId && newData.child('senderId').val() === auth.uid && newData.child('unread').val() === true) || (auth.uid === $ownerId && newData.child('unread').val() === false))"
           },
           "vendorId": {
             ".write": "auth != null && (auth.uid === $ownerId || auth.uid === $peerId) && !data.exists()"
