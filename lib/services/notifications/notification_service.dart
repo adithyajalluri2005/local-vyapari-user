@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -21,7 +22,6 @@ import 'package:local_vyapari_user/features/home/providers/nearby_shops_provider
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/services/location/location_cache.dart';
-import 'package:local_vyapari_user/shared/models/shop.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -111,9 +111,14 @@ final notificationServiceProvider = Provider((ref) {
     });
   });
 
-  // Set up real-time offer listeners whenever the nearby-shops list changes.
-  ref.listen<AsyncValue<List<Shop>>>(nearbyShopsProvider, (_, next) {
-    next.whenData((shops) => service.updateNearbyShops(shops));
+  // Set up real-time offer listeners whenever the nearby shop ID SET changes.
+  // nearbyShopIdsProvider only emits on membership changes (not on shop data
+  // updates), so _updateOfferListeners is never called spuriously.
+  ref.listen<AsyncValue<String>>(nearbyShopIdsProvider, (_, next) {
+    next.whenData((idsString) {
+      final ids = idsString.isEmpty ? <String>{} : idsString.split(',').toSet();
+      service.updateNearbyShopIds(ids);
+    });
   });
 
   return service;
@@ -437,9 +442,8 @@ class NotificationService {
   /// Called whenever the nearby-shops list changes. Sets up / tears down
   /// per-shop RTDB `onChildAdded` listeners so new offers trigger a notification
   /// immediately — no polling required.
-  void updateNearbyShops(List<Shop> shops) {
-    final shopIds = shops.map((s) => s.id).toSet();
-    debugPrint('[NotifSvc] updateNearbyShops — ${shops.length} shops: $shopIds');
+  void updateNearbyShopIds(Set<String> shopIds) {
+    debugPrint('[NotifSvc] updateNearbyShopIds — ${shopIds.length} shops: $shopIds');
     _updateOfferListeners(shopIds);
   }
 
@@ -529,13 +533,13 @@ class NotificationService {
 
   Future<String> _getShopName(String shopId) async {
     try {
-      final snap = await FirebaseDatabase.instance.ref('shop/$shopId/name').once();
-      if (snap.snapshot.exists && snap.snapshot.value != null) {
-        return snap.snapshot.value.toString();
-      }
-      final snap2 = await FirebaseDatabase.instance.ref('shop/$shopId/shopName').once();
-      if (snap2.snapshot.exists && snap2.snapshot.value != null) {
-        return snap2.snapshot.value.toString();
+      final doc = await FirebaseFirestore.instance
+          .collection('searchable_shops')
+          .doc(shopId)
+          .get();
+      if (doc.exists) {
+        final name = doc.data()?['shopName'] as String?;
+        if (name != null && name.isNotEmpty) return name;
       }
     } catch (e) {
       debugPrint('Error fetching shop name: $e');
