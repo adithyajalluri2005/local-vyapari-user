@@ -29,6 +29,15 @@ final roleServiceProvider = Provider<RoleService>((ref) {
 final sessionValidationProvider = Provider<Future<bool> Function(User, String)>((ref) {
   return (user, targetRole) async {
     try {
+      // 1. Try to use cached custom claims to avoid blocking startup with network calls
+      final tokenResult = await user.getIdTokenResult(false);
+      final claims = tokenResult.claims;
+      final roles = claims?['roles'] as Map?;
+      if (roles != null && roles[targetRole] == true) {
+        return true;
+      }
+
+      // 2. If roles claim is missing, perform the network handshake to validate session
       final result = await ref.read(firebaseFunctionsProvider).httpsCallable('validateSession').call({
         'targetRole': targetRole,
         'deviceInfo': {
