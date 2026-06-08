@@ -138,8 +138,8 @@ void main() {
 /// most specific destination available given the payload fields.
 PendingNotification _pendingFcmFrom(RemoteMessage msg) {
   final type = msg.data['type'] ?? '';
+  final shopId = msg.data['shopId'] ?? '';
   if (type == 'chat') {
-    final shopId = msg.data['shopId'] ?? '';
     final shopName = msg.data['shopName'] ?? 'Shop';
     if (shopId.isNotEmpty) {
       return PendingNotification(
@@ -149,7 +149,12 @@ PendingNotification _pendingFcmFrom(RemoteMessage msg) {
     }
     return const PendingNotification('/chats');
   }
-  if (type == 'offer' || msg.data.isNotEmpty) return const PendingNotification('/all_offers');
+  if (type == 'offer' || msg.data.isNotEmpty) {
+    if (shopId.isNotEmpty) {
+      return PendingNotification('/shop_details?shopId=$shopId');
+    }
+    return const PendingNotification('/all_offers');
+  }
   // No data payload — fall back on notification channel ID.
   final channelId = msg.notification?.android?.channelId ?? '';
   return PendingNotification(channelId.contains('chat') ? '/chats' : '/all_offers');

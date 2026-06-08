@@ -93,7 +93,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       notificationDetails: NotificationDetails(android: androidDetails),
       payload: isChat
           ? json.encode({'type': 'chat', 'shopId': message.data['shopId'] ?? '', 'shopName': message.data['shopName'] ?? ''})
-          : json.encode({'type': 'offer'}),
+          : json.encode({'type': 'offer', 'shopId': message.data['shopId'] ?? ''}),
     );
     debugPrint('[NotifSvc-BG] Local notification shown — id=$id');
   } catch (e) {
@@ -222,13 +222,19 @@ class NotificationService {
     try {
       final data = Map<String, dynamic>.from(json.decode(payload) as Map);
       final type = data['type'] as String? ?? '';
+      final shopId = data['shopId'] as String? ?? '';
       if (type == 'chat') {
-        final shopId = data['shopId'] as String? ?? '';
         final shopName = data['shopName'] as String? ?? 'Shop';
         if (shopId.isNotEmpty) {
           return PendingNotification('/chat', extra: {'shopId': shopId, 'shopName': shopName, 'shopLogo': ''});
         }
         return const PendingNotification('/chats');
+      }
+      if (type == 'offer' || data.isNotEmpty) {
+        if (shopId.isNotEmpty) {
+          return PendingNotification('/shop_details?shopId=$shopId');
+        }
+        return const PendingNotification('/all_offers');
       }
       return const PendingNotification('/all_offers');
     } catch (_) {
@@ -520,7 +526,7 @@ class NotificationService {
             onTap: () {
               try {
                 final context = rootNavigatorKey.currentContext;
-                if (context != null) GoRouter.of(context).push('/all_offers');
+                if (context != null) GoRouter.of(context).push('/shop_details?shopId=$shopId');
               } catch (_) {}
             },
           );
@@ -606,7 +612,14 @@ class NotificationService {
           }
         } else if (!rtdbListenersActive) {
           debugPrint('[NotifSvc] onMessage: showing offer notification via FCM (no RTDB listeners yet)');
-          _showNativeNotification(title, body);
+          _showNativeNotification(
+            title,
+            body,
+            payload: json.encode({
+              'type': 'offer',
+              'shopId': shopId,
+            }),
+          );
           _showForegroundNotification(
             title,
             body,
@@ -615,7 +628,13 @@ class NotificationService {
             onTap: () {
               try {
                 final context = rootNavigatorKey.currentContext;
-                if (context != null) GoRouter.of(context).push('/all_offers');
+                if (context != null) {
+                  if (shopId.isNotEmpty) {
+                    GoRouter.of(context).push('/shop_details?shopId=$shopId');
+                  } else {
+                    GoRouter.of(context).push('/all_offers');
+                  }
+                }
               } catch (_) {}
             },
           );
@@ -657,7 +676,14 @@ class NotificationService {
           }
         } else if (!rtdbListenersActive) {
           debugPrint('[NotifSvc] onMessage: showing offer notification via FCM fallback (data-only)');
-          _showNativeNotification(title, body);
+          _showNativeNotification(
+            title,
+            body,
+            payload: json.encode({
+              'type': 'offer',
+              'shopId': shopId,
+            }),
+          );
           _showForegroundNotification(
             title,
             body,
@@ -666,7 +692,13 @@ class NotificationService {
             onTap: () {
               try {
                 final context = rootNavigatorKey.currentContext;
-                if (context != null) GoRouter.of(context).push('/all_offers');
+                if (context != null) {
+                  if (shopId.isNotEmpty) {
+                    GoRouter.of(context).push('/shop_details?shopId=$shopId');
+                  } else {
+                    GoRouter.of(context).push('/all_offers');
+                  }
+                }
               } catch (_) {}
             },
           );
