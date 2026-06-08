@@ -29,25 +29,25 @@ final roleServiceProvider = Provider<RoleService>((ref) {
 final sessionValidationProvider = Provider<Future<bool> Function(User, String)>((ref) {
   return (user, targetRole) async {
     try {
-      // 1. Try to use cached custom claims to avoid blocking startup with network calls
-      final tokenResult = await user.getIdTokenResult(false);
-      final claims = tokenResult.claims;
-      final roles = claims?['roles'] as Map?;
-      if (roles != null && roles[targetRole] == true) {
-        return true;
-      }
+      // 1. Read user roles directly from the Realtime Database
+      final snapshot = await ref.read(firebaseDatabaseProvider)
+          .ref('users/${user.uid}/roles')
+          .get();
 
-      // 2. If roles claim is missing, perform the network handshake to validate session
-      final result = await ref.read(firebaseFunctionsProvider).httpsCallable('validateSession').call({
-        'targetRole': targetRole,
-        'deviceInfo': {
-          'platform': 'flutter-client',
+      if (snapshot.exists && snapshot.value is Map) {
+        final roles = snapshot.value as Map;
+        if (roles[targetRole] == true) {
+          // 2. Register/update the device record directly in RTDB
+          final deviceRef = ref.read(firebaseDatabaseProvider)
+              .ref('users_devices/${user.uid}/devices/client_device');
+          await deviceRef.update({
+            'id': 'client_device',
+            'userAgent': 'Flutter Customer Client',
+            'lastSeen': ServerValue.timestamp,
+            'revoked': false,
+          });
+          return true;
         }
-      });
-      final data = Map<String, dynamic>.from(result.data as Map);
-      if (data['success'] == true) {
-        await user.getIdToken(true);
-        return true;
       }
       return false;
     } catch (e) {

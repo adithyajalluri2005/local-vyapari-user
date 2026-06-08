@@ -47,6 +47,26 @@ export const indexShop = onValueWritten(
     const shopName = String(s.name ?? s.shopName ?? "");
 
     const beforeS = event.data.before.val() as Record<string, unknown> | null;
+
+    if (beforeS) {
+      const fieldsToCompare = [
+        "name", "shopName", "description", "phone", "logoUrl", "shopLogo", "bannerUrl", "shopBanner",
+        "isOpen", "isVerified", "openingTime", "closingTime", "rating", "totalReviews", "latitude", "longitude",
+        "geohash", "address", "city", "state", "pincode", "placeId", "ownerId"
+      ];
+      let changed = false;
+      for (const field of fieldsToCompare) {
+        if (beforeS[field] !== s[field]) {
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) {
+        console.log(`No indexed fields changed for shop ${shopId}. Exiting early.`);
+        return;
+      }
+    }
+
     const isNew = !event.data.before.exists();
     const geoOrStatusChanged = isNew ||
       beforeS?.latitude !== s.latitude ||

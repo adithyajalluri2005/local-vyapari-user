@@ -62,32 +62,37 @@ class FirebaseOfferRepository implements OfferRepository {
     final List<Offer> offers = [];
 
     try {
-      final callable = _functions.httpsCallable('getNearbyOffersAggregated');
-      final response = await callable.call({
-        'shopIds': targetShopIds,
-      });
-
-      final data = response.data;
-      if (data is Map && data['offers'] is List) {
-        for (final item in data['offers']) {
-          if (item is Map) {
+      final now = DateTime.now();
+      final fetchPromises = targetShopIds.map((shopId) async {
+        final snapshot = await _database.ref('offers/$shopId').get();
+        if (!snapshot.exists || snapshot.value is! Map) return <Offer>[];
+        final offersMap = snapshot.value as Map<dynamic, dynamic>;
+        final List<Offer> list = [];
+        offersMap.forEach((offerIdKey, offerValue) {
+          if (offerValue is Map) {
             try {
-              final id = item['id']?.toString() ?? '';
-              final shopId = item['shopId']?.toString() ?? '';
               final offer = Offer.fromRTDB(
-                id,
+                offerIdKey.toString(),
                 shopId,
-                Map<dynamic, dynamic>.from(item),
+                Map<dynamic, dynamic>.from(offerValue),
               );
-              offers.add(offer);
+              final active = (offer.endDate == null || offer.endDate!.isAfter(now)) &&
+                  (offer.startDate == null || offer.startDate!.isBefore(now));
+              if (offer.isActive && active) {
+                list.add(offer);
+              }
             } catch (e) {
-              debugPrint('Error parsing offer from aggregated response: $e');
+              debugPrint('Error parsing shop offer: $e');
             }
           }
-        }
-      }
+        });
+        return list;
+      });
+
+      final results = await Future.wait(fetchPromises);
+      offers.addAll(results.expand((element) => element));
     } catch (e) {
-      debugPrint('Error fetching nearby offers through aggregation function: $e');
+      debugPrint('Error fetching nearby offers directly from RTDB: $e');
       return <Offer>[];
     }
 

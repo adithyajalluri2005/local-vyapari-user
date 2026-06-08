@@ -20,7 +20,8 @@
     "offers": {
       ".read": true,
       "$shopId": {
-        ".write": "auth != null && (auth.uid === $shopId || root.child('shop').child($shopId).child('ownerId').val() === auth.uid)"
+        ".write": "auth != null && (auth.uid === $shopId || root.child('shop').child($shopId).child('ownerId').val() === auth.uid)",
+        ".indexOn": ["createdAt"]
       }
     },
 

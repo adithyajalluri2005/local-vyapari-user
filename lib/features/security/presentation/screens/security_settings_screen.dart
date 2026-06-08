@@ -14,8 +14,10 @@ class SecuritySettingsScreen extends ConsumerStatefulWidget {
 
 class _SecuritySettingsScreenState
     extends ConsumerState<SecuritySettingsScreen> {
+  bool _isSigningOut = false;
 
   Future<void> _signOutEverywhere() async {
+    if (_isSigningOut) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -32,6 +34,7 @@ class _SecuritySettingsScreenState
       ),
     );
     if (confirm != true) return;
+    setState(() => _isSigningOut = true);
     try {
       await ref.read(accountSecurityServiceProvider).signOutEverywhere();
       ref.invalidate(accountDevicesProvider);
@@ -45,6 +48,10 @@ class _SecuritySettingsScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not complete. Try again.')),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSigningOut = false);
       }
     }
   }
@@ -82,12 +89,14 @@ class _SecuritySettingsScreenState
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline),
                         tooltip: 'Remove',
-                        onPressed: () async {
-                          await ref
-                              .read(accountSecurityServiceProvider)
-                              .revokeDevice(d.id);
-                          ref.invalidate(accountDevicesProvider);
-                        },
+                        onPressed: _isSigningOut
+                            ? null
+                            : () async {
+                                await ref
+                                    .read(accountSecurityServiceProvider)
+                                    .revokeDevice(d.id);
+                                ref.invalidate(accountDevicesProvider);
+                              },
                       ),
                     ),
                 ],
@@ -100,7 +109,7 @@ class _SecuritySettingsScreenState
             child: OutlinedButton.icon(
               icon: const Icon(Icons.logout),
               label: const Text('Sign out of all other devices'),
-              onPressed: _signOutEverywhere,
+              onPressed: _isSigningOut ? null : _signOutEverywhere,
             ),
           ),
         ],

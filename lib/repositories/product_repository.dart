@@ -64,33 +64,34 @@ class FirebaseProductRepository implements ProductRepository {
     final List<Product> rawProducts = [];
 
     try {
-      final callable = _functions.httpsCallable('getNearbyProductsAggregated');
-      final response = await callable.call({
-        'shopIds': targetShopIds,
-      });
-
-      final data = response.data;
-      if (data is Map && data['products'] is List) {
-        for (final item in data['products']) {
-          if (item is Map) {
+      final fetchPromises = targetShopIds.map((shopId) async {
+        final snapshot = await _database.ref('products/$shopId').get();
+        if (!snapshot.exists || snapshot.value is! Map) return <Product>[];
+        final productsMap = snapshot.value as Map<dynamic, dynamic>;
+        final List<Product> list = [];
+        productsMap.forEach((productIdKey, productValue) {
+          if (productValue is Map) {
             try {
-              final id = item['id']?.toString() ?? '';
-              final shopId = item['shopId']?.toString() ?? '';
               final product = Product.fromRTDB(
-                id,
+                productIdKey.toString(),
                 shopId,
-                Map<dynamic, dynamic>.from(item),
+                Map<dynamic, dynamic>.from(productValue),
               );
-              rawProducts.add(product);
+              if (product.isActive && !product.isOutOfStock) {
+                list.add(product);
+              }
             } catch (e) {
-              debugPrint('Error parsing product from aggregated response: $e');
+              debugPrint('Error parsing product $productIdKey: $e');
             }
           }
-        }
-      }
+        });
+        return list;
+      });
+
+      final results = await Future.wait(fetchPromises);
+      rawProducts.addAll(results.expand((element) => element));
     } catch (e) {
-      debugPrint('Error fetching nearby products through aggregation function: $e');
-      // Fallback: If function fails, gracefully return empty list to prevent crash
+      debugPrint('Error fetching nearby products directly from RTDB: $e');
       return <Product>[];
     }
 

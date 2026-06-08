@@ -134,6 +134,11 @@ class NotificationService {
   // Per-shop real-time offer listeners, keyed by shopId.
   final Map<String, StreamSubscription<DatabaseEvent>> _offerSubscriptions = {};
 
+  // App startup timestamp to filter out historical notifications
+  final int _appStartupTime = DateTime.now().millisecondsSinceEpoch;
+  // In-memory cache for shop names to avoid redundant Firestore reads
+  final Map<String, String> _shopNameCache = {};
+
   final Ref _ref;
   NotificationService(this._ref);
 
@@ -352,95 +357,80 @@ class NotificationService {
     _chatSubscription?.cancel();
     _lastChatNotifyTs.clear();
 
-    FirebaseDatabase.instance.ref('chats/$userId').once().then((snapshot) {
-      if (snapshot.snapshot.exists && snapshot.snapshot.value != null) {
-        final map = snapshot.snapshot.value as Map<dynamic, dynamic>;
-        map.forEach((key, value) {
-          if (value is Map) {
-            final lastMsg = value['lastMessage'] as Map?;
-            if (lastMsg != null && lastMsg['timestamp'] is int) {
-              _lastChatNotifyTs[key.toString()] = lastMsg['timestamp'] as int;
-            }
+    debugPrint('[NotifSvc] Subscribing to chats/$userId onChildChanged');
+    _chatSubscription = FirebaseDatabase.instance
+        .ref('chats/$userId')
+        .onChildChanged
+        .listen((event) async {
+          final shopId = event.snapshot.key;
+          debugPrint('[NotifSvc] Chat onChildChanged — shopId=$shopId snapshotType=${event.snapshot.value?.runtimeType}');
+
+          if (shopId == null) {
+            debugPrint('[NotifSvc] Chat event has null key — skipping');
+            return;
           }
+
+          final sessionValue = event.snapshot.value;
+          if (sessionValue is! Map) {
+            debugPrint('[NotifSvc] Chat event value is not a Map (got ${sessionValue?.runtimeType}) — skipping');
+            return;
+          }
+
+          final lastMsg = sessionValue['lastMessage'] as Map?;
+          if (lastMsg == null) {
+            debugPrint('[NotifSvc] No lastMessage in chat session — skipping');
+            return;
+          }
+
+          final unread = lastMsg['unread'] == true;
+          final senderId = lastMsg['senderId']?.toString();
+          final messageText = lastMsg['text']?.toString() ?? '';
+          final timestamp = lastMsg['timestamp'] is int ? lastMsg['timestamp'] as int : 0;
+
+          debugPrint('[NotifSvc] Chat message — shopId=$shopId unread=$unread senderId=$senderId timestamp=$timestamp text="${messageText.isEmpty ? '<empty>' : messageText}"');
+
+          if (!unread) {
+            debugPrint('[NotifSvc] Message is not unread — skipping');
+            return;
+          }
+          if (senderId == userId) {
+            debugPrint('[NotifSvc] Message sent by current user — skipping');
+            return;
+          }
+          if (timestamp < _appStartupTime) {
+            debugPrint('[NotifSvc] Message is older than app startup — skipping');
+            return;
+          }
+          if (_lastChatNotifyTs[shopId] == timestamp) {
+            debugPrint('[NotifSvc] Already notified for timestamp=$timestamp shopId=$shopId — skipping');
+            return;
+          }
+
+          _lastChatNotifyTs[shopId] = timestamp;
+          final shopName = sessionValue['shopName']?.toString() ?? 'Shop';
+          debugPrint('[NotifSvc] Firing chat notification — shopId=$shopId shopName="$shopName"');
+
+          await _showChatNativeNotification(
+            shopId: shopId,
+            shopName: shopName,
+            messageText: messageText,
+          );
+          _showForegroundNotification(
+            'New message from $shopName',
+            messageText.isEmpty ? 'Sent you a message' : messageText,
+            icon: Icons.chat_bubble_rounded,
+            gradientColors: const [AppColors.primary, AppColors.primaryLight],
+            onTap: () {
+              try {
+                final context = rootNavigatorKey.currentContext;
+                if (context != null) GoRouter.of(context).push('/chats');
+              } catch (_) {}
+            },
+          );
+        }, onError: (Object e) {
+          debugPrint('[NotifSvc] Chat onChildChanged error: $e');
         });
-        debugPrint('[NotifSvc] Seeded ${_lastChatNotifyTs.length} chat timestamps: ${_lastChatNotifyTs.keys.toList()}');
-      } else {
-        debugPrint('[NotifSvc] No existing chats to seed for uid=$userId');
-      }
-
-      debugPrint('[NotifSvc] Subscribing to chats/$userId onChildChanged');
-      _chatSubscription = FirebaseDatabase.instance
-          .ref('chats/$userId')
-          .onChildChanged
-          .listen((event) async {
-            final shopId = event.snapshot.key;
-            debugPrint('[NotifSvc] Chat onChildChanged — shopId=$shopId snapshotType=${event.snapshot.value?.runtimeType}');
-
-            if (shopId == null) {
-              debugPrint('[NotifSvc] Chat event has null key — skipping');
-              return;
-            }
-
-            final sessionValue = event.snapshot.value;
-            if (sessionValue is! Map) {
-              debugPrint('[NotifSvc] Chat event value is not a Map (got ${sessionValue?.runtimeType}) — skipping');
-              return;
-            }
-
-            final lastMsg = sessionValue['lastMessage'] as Map?;
-            if (lastMsg == null) {
-              debugPrint('[NotifSvc] No lastMessage in chat session — skipping');
-              return;
-            }
-
-            final unread = lastMsg['unread'] == true;
-            final senderId = lastMsg['senderId']?.toString();
-            final messageText = lastMsg['text']?.toString() ?? '';
-            final timestamp = lastMsg['timestamp'] is int ? lastMsg['timestamp'] as int : 0;
-
-            debugPrint('[NotifSvc] Chat message — shopId=$shopId unread=$unread senderId=$senderId timestamp=$timestamp text="${messageText.isEmpty ? '<empty>' : messageText}"');
-
-            if (!unread) {
-              debugPrint('[NotifSvc] Message is not unread — skipping');
-              return;
-            }
-            if (senderId == userId) {
-              debugPrint('[NotifSvc] Message sent by current user — skipping');
-              return;
-            }
-            if (_lastChatNotifyTs[shopId] == timestamp) {
-              debugPrint('[NotifSvc] Already notified for timestamp=$timestamp shopId=$shopId — skipping');
-              return;
-            }
-
-            _lastChatNotifyTs[shopId] = timestamp;
-            final shopName = sessionValue['shopName']?.toString() ?? 'Shop';
-            debugPrint('[NotifSvc] Firing chat notification — shopId=$shopId shopName="$shopName"');
-
-            await _showChatNativeNotification(
-              shopId: shopId,
-              shopName: shopName,
-              messageText: messageText,
-            );
-            _showForegroundNotification(
-              'New message from $shopName',
-              messageText.isEmpty ? 'Sent you a message' : messageText,
-              icon: Icons.chat_bubble_rounded,
-              gradientColors: const [AppColors.primary, AppColors.primaryLight],
-              onTap: () {
-                try {
-                  final context = rootNavigatorKey.currentContext;
-                  if (context != null) GoRouter.of(context).push('/chats');
-                } catch (_) {}
-              },
-            );
-          }, onError: (Object e) {
-            debugPrint('[NotifSvc] Chat onChildChanged error: $e');
-          });
-      debugPrint('[NotifSvc] Chat listener active for uid=$userId');
-    }).catchError((e) {
-      debugPrint('[NotifSvc] Error seeding chat notify timestamps: $e');
-    });
+    debugPrint('[NotifSvc] Chat listener active for uid=$userId');
   }
 
   // ── Real-time per-shop offer listeners ────────────────────────────────────
@@ -470,29 +460,16 @@ class NotificationService {
 
   Future<void> _setupShopOfferListener(String shopId) async {
     debugPrint('[NotifSvc] _setupShopOfferListener — shopId=$shopId');
-    try {
-      final snapshot = await FirebaseDatabase.instance.ref('offers/$shopId').get();
-      if (snapshot.exists && snapshot.value is Map) {
-        final count = (snapshot.value as Map).length;
-        (snapshot.value as Map).forEach((key, _) => _seenOfferIds.add(key.toString()));
-        debugPrint('[NotifSvc] Seeded $count existing offer IDs for shopId=$shopId');
-      } else {
-        debugPrint('[NotifSvc] No existing offers to seed for shopId=$shopId');
-      }
-    } catch (e) {
-      debugPrint('[NotifSvc] Error seeding offer IDs for shop $shopId: $e');
-    }
-
     debugPrint('[NotifSvc] Subscribing to offers/$shopId onChildAdded');
+    
     _offerSubscriptions[shopId] = FirebaseDatabase.instance
         .ref('offers/$shopId')
+        .orderByChild('createdAt')
+        .startAt(_appStartupTime)
         .onChildAdded
         .listen((event) async {
           final offerId = event.snapshot.key;
-          debugPrint('[NotifSvc] Offer onChildAdded — shopId=$shopId offerId=$offerId alreadySeen=${offerId != null && _seenOfferIds.contains(offerId)}');
-
           if (offerId == null || _seenOfferIds.contains(offerId)) return;
-          _seenOfferIds.add(offerId);
 
           final raw = event.snapshot.value;
           if (raw is! Map) {
@@ -501,8 +478,14 @@ class NotificationService {
           }
           final offerData = Map<String, dynamic>.from(raw);
 
-          final isActive = offerData['isActive'];
-          debugPrint('[NotifSvc] Offer isActive=$isActive offerId=$offerId shopId=$shopId');
+          final createdAt = offerData['createdAt'] as int?;
+          if (createdAt != null && createdAt < _appStartupTime) {
+            _seenOfferIds.add(offerId);
+            return;
+          }
+
+          _seenOfferIds.add(offerId);
+
           if (offerData['isActive'] != true) {
             debugPrint('[NotifSvc] Offer not active — skipping notification');
             return;
@@ -538,6 +521,9 @@ class NotificationService {
   }
 
   Future<String> _getShopName(String shopId) async {
+    if (_shopNameCache.containsKey(shopId)) {
+      return _shopNameCache[shopId]!;
+    }
     try {
       final doc = await FirebaseFirestore.instance
           .collection('searchable_shops')
@@ -545,7 +531,10 @@ class NotificationService {
           .get();
       if (doc.exists) {
         final name = doc.data()?['shopName'] as String?;
-        if (name != null && name.isNotEmpty) return name;
+        if (name != null && name.isNotEmpty) {
+          _shopNameCache[shopId] = name;
+          return name;
+        }
       }
     } catch (e) {
       debugPrint('Error fetching shop name: $e');
