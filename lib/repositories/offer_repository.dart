@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +16,13 @@ final offerRepositoryProvider = Provider<OfferRepository>((ref) => FirebaseOffer
 
 class FirebaseOfferRepository implements OfferRepository {
   final FirebaseDatabase _database;
+  final FirebaseFunctions _functions;
 
   FirebaseOfferRepository({
     FirebaseDatabase? database,
-  })  : _database = database ?? FirebaseDatabase.instance;
+    FirebaseFunctions? functions,
+  })  : _database = database ?? FirebaseDatabase.instance,
+        _functions = functions ?? FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   @override
   Future<List<Offer>> getShopOffers(String shopId) async {
@@ -52,36 +56,44 @@ class FirebaseOfferRepository implements OfferRepository {
 
   @override
   Future<List<Offer>> getNearbyOffers(List<String> shopIds) async {
+    if (shopIds.isEmpty) return <Offer>[];
+
     final targetShopIds = shopIds.take(20).toList();
-    final snapshots = await Future.wait(
-      targetShopIds.map((id) => _database.ref('offers/$id').get()),
-    );
-
-    final now = DateTime.now();
     final List<Offer> offers = [];
-    for (int i = 0; i < snapshots.length; i++) {
-      final shopId = targetShopIds[i];
-      final snapshot = snapshots[i];
-      if (!snapshot.exists || snapshot.value == null) continue;
 
-      final offersMap = snapshot.value as Map<dynamic, dynamic>;
-      offersMap.forEach((offerIdKey, offerValue) {
-        if (offerValue is Map) {
-          try {
-            final offer = Offer.fromRTDB(
-              offerIdKey.toString(),
-              shopId,
-              Map<dynamic, dynamic>.from(offerValue),
-            );
-
-            final active = (offer.endDate == null || offer.endDate!.isAfter(now)) &&
-                (offer.startDate == null || offer.startDate!.isBefore(now));
-            if (offer.isActive && active) offers.add(offer);
-          } catch (e) {
-            debugPrint('Error parsing offer: $e');
+    try {
+      final now = DateTime.now();
+      final fetchPromises = targetShopIds.map((shopId) async {
+        final snapshot = await _database.ref('offers/$shopId').get();
+        if (!snapshot.exists || snapshot.value is! Map) return <Offer>[];
+        final offersMap = snapshot.value as Map<dynamic, dynamic>;
+        final List<Offer> list = [];
+        offersMap.forEach((offerIdKey, offerValue) {
+          if (offerValue is Map) {
+            try {
+              final offer = Offer.fromRTDB(
+                offerIdKey.toString(),
+                shopId,
+                Map<dynamic, dynamic>.from(offerValue),
+              );
+              final active = (offer.endDate == null || offer.endDate!.isAfter(now)) &&
+                  (offer.startDate == null || offer.startDate!.isBefore(now));
+              if (offer.isActive && active) {
+                list.add(offer);
+              }
+            } catch (e) {
+              debugPrint('Error parsing shop offer: $e');
+            }
           }
-        }
+        });
+        return list;
       });
+
+      final results = await Future.wait(fetchPromises);
+      offers.addAll(results.expand((element) => element));
+    } catch (e) {
+      debugPrint('Error fetching nearby offers directly from RTDB: $e');
+      return <Offer>[];
     }
 
     offers.sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));

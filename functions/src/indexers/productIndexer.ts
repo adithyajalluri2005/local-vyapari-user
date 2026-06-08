@@ -2,6 +2,13 @@ import * as admin from "firebase-admin";
 import { onValueWritten } from "firebase-functions/v2/database";
 import { getAlgoliaClient, PRODUCTS_INDEX } from "../lib/algolia";
 
+interface CachedShop {
+  data: Record<string, unknown> | null;
+  timestamp: number;
+}
+const shopCache = new Map<string, CachedShop>();
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
 export const indexProduct = onValueWritten(
   {
     ref: "/products/{shopId}/{productId}",
@@ -23,9 +30,45 @@ export const indexProduct = onValueWritten(
       return;
     }
 
-    // Fetch shop to get geo coordinates
-    const shopSnap = await admin.database().ref(`/shop/${shopId}`).get();
-    const shop = shopSnap.val() as Record<string, unknown> | null;
+    const beforeP = event.data.before.val() as Record<string, unknown> | null;
+    if (beforeP) {
+      const fieldsToCompare = [
+        "ownerId", "vendorId", "name", "description", "category",
+        "actualPrice", "price", "offerPrice", "stockQuantity",
+        "isActive", "isOutOfStock", "isLowStock", "avgRating",
+        "rating", "totalRatings", "totalReviews", "createdAt"
+      ];
+      let changed = false;
+      for (const field of fieldsToCompare) {
+        if (beforeP[field] !== p[field]) {
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) {
+        if (JSON.stringify(beforeP.images) !== JSON.stringify(p.images) ||
+            JSON.stringify(beforeP.searchKeywords) !== JSON.stringify(p.searchKeywords) ||
+            beforeP.imageUrl !== p.imageUrl) {
+          changed = true;
+        }
+      }
+      if (!changed) {
+        console.log(`No indexed fields changed for product ${productId}. Exiting early.`);
+        return;
+      }
+    }
+
+    // Fetch shop to get geo coordinates with in-memory caching
+    let shop: Record<string, unknown> | null = null;
+    const now = Date.now();
+    const cached = shopCache.get(shopId);
+    if (cached && (now - cached.timestamp < CACHE_TTL)) {
+      shop = cached.data;
+    } else {
+      const shopSnap = await admin.database().ref(`/shop/${shopId}`).get();
+      shop = shopSnap.val() as Record<string, unknown> | null;
+      shopCache.set(shopId, { data: shop, timestamp: now });
+    }
 
     const lat = Number(shop?.latitude ?? 0);
     const lng = Number(shop?.longitude ?? 0);

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +16,13 @@ final productRepositoryProvider = Provider<ProductRepository>((ref) => FirebaseP
 
 class FirebaseProductRepository implements ProductRepository {
   final FirebaseDatabase _database;
+  final FirebaseFunctions _functions;
 
   FirebaseProductRepository({
     FirebaseDatabase? database,
-  })  : _database = database ?? FirebaseDatabase.instance;
+    FirebaseFunctions? functions,
+  })  : _database = database ?? FirebaseDatabase.instance,
+        _functions = functions ?? FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   @override
   Stream<List<Product>> getShopProducts(String shopId) {
@@ -54,34 +58,48 @@ class FirebaseProductRepository implements ProductRepository {
 
   @override
   Future<List<Product>> getNearbyProducts(List<String> shopIds) async {
+    if (shopIds.isEmpty) return <Product>[];
+
     final targetShopIds = shopIds.take(15).toList();
-    final snapshots = await Future.wait(
-      targetShopIds.map((id) => _database.ref('products/$id').get()),
-    );
+    final List<Product> rawProducts = [];
+
+    try {
+      final fetchPromises = targetShopIds.map((shopId) async {
+        final snapshot = await _database.ref('products/$shopId').get();
+        if (!snapshot.exists || snapshot.value is! Map) return <Product>[];
+        final productsMap = snapshot.value as Map<dynamic, dynamic>;
+        final List<Product> list = [];
+        productsMap.forEach((productIdKey, productValue) {
+          if (productValue is Map) {
+            try {
+              final product = Product.fromRTDB(
+                productIdKey.toString(),
+                shopId,
+                Map<dynamic, dynamic>.from(productValue),
+              );
+              if (product.isActive && !product.isOutOfStock) {
+                list.add(product);
+              }
+            } catch (e) {
+              debugPrint('Error parsing product $productIdKey: $e');
+            }
+          }
+        });
+        return list;
+      });
+
+      final results = await Future.wait(fetchPromises);
+      rawProducts.addAll(results.expand((element) => element));
+    } catch (e) {
+      debugPrint('Error fetching nearby products directly from RTDB: $e');
+      return <Product>[];
+    }
 
     final Map<String, List<Product>> byShop = {};
-    for (int i = 0; i < snapshots.length; i++) {
-      final shopId = targetShopIds[i];
-      final snapshot = snapshots[i];
-      if (!snapshot.exists || snapshot.value == null) continue;
-
-      final productsMap = snapshot.value as Map<dynamic, dynamic>;
-      productsMap.forEach((productIdKey, productValue) {
-        if (productValue is Map) {
-          try {
-            final product = Product.fromRTDB(
-              productIdKey.toString(),
-              shopId,
-              Map<dynamic, dynamic>.from(productValue),
-            );
-            if (product.isActive && !product.isOutOfStock) {
-              byShop.putIfAbsent(shopId, () => []).add(product);
-            }
-          } catch (e) {
-            debugPrint('Error parsing product: $e');
-          }
-        }
-      });
+    for (final product in rawProducts) {
+      if (product.isActive && !product.isOutOfStock) {
+        byShop.putIfAbsent(product.shopId, () => []).add(product);
+      }
     }
 
     const kMaxPerShop = 6;

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
+import 'package:local_vyapari_user/services/cache/security_helper.dart';
 
 class LocationCache {
   static Future<File> _getFile(String filename) async {
@@ -13,7 +14,9 @@ class LocationCache {
   static Future<void> saveActiveLocation(LocationResult location) async {
     try {
       final file = await _getFile('active_location.json');
-      await file.writeAsString(json.encode(location.toMap()));
+      final jsonString = json.encode(location.toMap());
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error saving active location locally: $e');
     }
@@ -25,7 +28,17 @@ class LocationCache {
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isEmpty) return null;
-        final map = json.decode(content) as Map<String, dynamic>;
+        
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          // If decryption fails (e.g. key changed or legacy unencrypted file), delete the file
+          await file.delete();
+          return null;
+        }
+
+        final map = json.decode(decryptedContent) as Map<String, dynamic>;
         return LocationResult.fromMap(map);
       }
     } catch (e) {
@@ -49,7 +62,9 @@ class LocationCache {
 
       final file = await _getFile('recent_locations.json');
       final list = recent.map((l) => l.toMap()).toList();
-      await file.writeAsString(json.encode(list));
+      final jsonString = json.encode(list);
+      final encryptedString = await SecurityHelper.encryptData(jsonString);
+      await file.writeAsString(encryptedString);
     } catch (e) {
       debugPrint('Error saving recent location locally: $e');
     }
@@ -61,7 +76,17 @@ class LocationCache {
       if (await file.exists()) {
         final content = await file.readAsString();
         if (content.trim().isEmpty) return [];
-        final list = json.decode(content) as List<dynamic>;
+        
+        String decryptedContent;
+        try {
+          decryptedContent = await SecurityHelper.decryptData(content);
+        } catch (e) {
+          // If decryption fails (e.g. key changed or legacy unencrypted file), delete the file
+          await file.delete();
+          return [];
+        }
+
+        final list = json.decode(decryptedContent) as List<dynamic>;
         return list
             .map((item) => LocationResult.fromMap(Map<String, dynamic>.from(item)))
             .toList();

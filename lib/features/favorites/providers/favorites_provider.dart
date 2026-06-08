@@ -263,19 +263,38 @@ final favoriteProductsProvider = FutureProvider<List<Product>>((ref) async {
     });
   }
 
-  // Fetch only the specific products we need, using their known shopIds
-  final futures = favoritesState.productIds.map((productId) async {
+  // Group favorited product IDs by shopId to avoid N+1 queries
+  final Map<String, Set<String>> shopToProductIds = {};
+  for (final productId in favoritesState.productIds) {
     final shopId = productShopMap[productId];
-    if (shopId == null) return; // legacy entry with no shopId — skip
-    final snap = await rtdb.child('products/$shopId/$productId').get();
-    if (snap.exists && snap.value is Map) {
-      try {
-        products.add(Product.fromRTDB(
-          productId,
-          shopId,
-          Map<dynamic, dynamic>.from(snap.value as Map),
-        ));
-      } catch (_) {}
+    if (shopId != null && shopId.isNotEmpty) {
+      shopToProductIds.putIfAbsent(shopId, () => {}).add(productId);
+    }
+  }
+
+  // Fetch only one products node per shop in parallel
+  final futures = shopToProductIds.entries.map((entry) async {
+    final shopId = entry.key;
+    final targetProductIds = entry.value;
+    try {
+      final snap = await rtdb.child('products/$shopId').get();
+      if (snap.exists && snap.value is Map) {
+        final shopProductsMap = snap.value as Map<dynamic, dynamic>;
+        shopProductsMap.forEach((productIdKey, productData) {
+          final productIdStr = productIdKey.toString();
+          if (targetProductIds.contains(productIdStr) && productData is Map) {
+            try {
+              products.add(Product.fromRTDB(
+                productIdStr,
+                shopId,
+                Map<dynamic, dynamic>.from(productData),
+              ));
+            } catch (_) {}
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching products for shop $shopId: $e');
     }
   });
   await Future.wait(futures);
