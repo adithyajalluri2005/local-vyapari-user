@@ -32,6 +32,8 @@ void main() {
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
     ]);
 
     // Intercept layout and render-time errors to show a premium error screen instead of standard crash layout

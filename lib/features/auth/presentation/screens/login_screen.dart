@@ -80,13 +80,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _socialLoading = false);
         return;
       }
-      // Keep _socialLoading true — auth state listener will navigate away
     } catch (e) {
       setState(() => _socialLoading = false);
       if (mounted) {
         CustomSnackBar.showError(
             context: context, message: '$e', title: 'Sign in failed');
       }
+    }
+  }
+
+  void _showResetDialog() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ResetDialog(ref: ref),
+    );
+    if (ok == true && context.mounted) {
+      CustomSnackBar.showSuccess(
+        context: context,
+        title: 'Password reset',
+        message: 'Your password has been reset successfully.',
+      );
     }
   }
 
@@ -101,7 +114,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     final isLoading = ref.watch(authProvider) is AuthLoading || _socialLoading;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final formContent = _FormBody(
+      formKey: _formKey,
+      emailCtrl: _emailCtrl,
+      phoneCtrl: _phoneCtrl,
+      passCtrl: _passCtrl,
+      obscure: _obscure,
+      isEmail: _isEmail,
+      isLoading: isLoading,
+      onObscureChanged: (v) => setState(() => _obscure = v),
+      onModeChanged: (v) {
+        setState(() => _isEmail = v);
+        ref.read(authProvider.notifier).resetState();
+      },
+      onSubmit: _submit,
+      onForgotPassword: _showResetDialog,
+      onGoogleSignIn: () => _handleSocial(ref.read(socialAuthServiceProvider).signInWithGoogle),
+      onAppleSignIn: (Platform.isIOS || Platform.isMacOS)
+          ? () => _handleSocial(ref.read(socialAuthServiceProvider).signInWithApple)
+          : null,
+    );
+
+    Widget body;
+    if (Responsive.useNavRail(context)) {
+      body = _TabletLayout(form: formContent);
+    } else {
+      body = _PortraitLayout(form: formContent);
+    }
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -114,14 +154,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 28),
+                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
                 child: FadeInSlide(
                   slideOffset: 30,
                   child: Column(
                   children: [
                     Image.asset(
                       'assets/images/logo.png',
-                      height: Responsive.isTablet(context) ? 96 : 80,
+                      height: 72,
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) => const Icon(
                         Icons.storefront_rounded,
@@ -137,26 +177,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Customer Portal',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.65),
+                      const SizedBox(height: 16),
+                      Text(
+                        _socialLoading ? 'Connecting with Google...' : 'Signing you in...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Discover local shops & exclusive offers',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -167,8 +198,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkScaffold : AppColors.background,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(AppRadius.xxl),
-                    topRight: Radius.circular(AppRadius.xxl),
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
                   ),
                 ),
                 child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -212,257 +243,374 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
 
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 250),
-                                child: _ModeToggle(
-                                  isEmail: _isEmail,
-                                  onChanged: (v) {
-                                    setState(() => _isEmail = v);
-                                    ref.read(authProvider.notifier).resetState();
-                                  },
-                                  isDark: isDark,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 350),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: _isEmail
-                                      ? TextFormField(
-                                          key: const ValueKey('email'),
-                                          controller: _emailCtrl,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Email address',
-                                            prefixIcon: Icon(Icons.mail_outline_rounded),
-                                          ),
-                                          keyboardType: TextInputType.emailAddress,
-                                          textInputAction: TextInputAction.next,
-                                          validator: (v) =>
-                                              (v == null || v.isEmpty) ? 'Email is required' : null,
-                                        )
-                                      : TextFormField(
-                                          key: const ValueKey('phone'),
-                                          controller: _phoneCtrl,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Phone number',
-                                            prefixIcon: Icon(Icons.phone_outlined),
-                                            prefixText: '+91 ',
-                                          ),
-                                          keyboardType: TextInputType.phone,
-                                          textInputAction: TextInputAction.next,
-                                          inputFormatters: [LengthLimitingTextInputFormatter(10)],
-                                          validator: (v) {
-                                            if (v == null || v.isEmpty) return 'Phone is required';
-                                            if (v.length != 10) return 'Enter a valid 10-digit number';
-                                            return null;
-                                          },
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 430),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    TextFormField(
-                                      controller: _passCtrl,
-                                      obscureText: _obscure,
-                                      textInputAction: TextInputAction.done,
-                                      onFieldSubmitted: (_) => isLoading ? null : _submit(),
-                                      decoration: InputDecoration(
-                                        labelText: 'Password',
-                                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                                        suffixIcon: GestureDetector(
-                                          onTap: () => setState(() => _obscure = !_obscure),
-                                          child: Icon(_obscure
-                                              ? Icons.visibility_outlined
-                                              : Icons.visibility_off_outlined),
-                                        ),
-                                      ),
-                                      validator: (v) =>
-                                          (v == null || v.isEmpty) ? 'Password is required' : null,
-                                    ),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton(
-                                        onPressed: () => _showResetDialog(context),
-                                        child: Text(
-                                          'Forgot Password?',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 530),
-                                child: ScaleOnTap(
-                                  child: PrimaryButton(
-                                    label: 'Sign in',
-                                    isLoading: isLoading,
-                                    onPressed: _submit,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 620),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Expanded(child: Divider()),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                          child: Text('or continue with',
-                                              style: GoogleFonts.poppins(
-                                                  fontSize: 12, color: AppColors.textHint)),
-                                        ),
-                                        const Expanded(child: Divider()),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 14),
-                                    ScaleOnTap(
-                                      child: OutlinedButton.icon(
-                                        onPressed: isLoading
-                                            ? null
-                                            : () => _handleSocial(ref
-                                                .read(socialAuthServiceProvider)
-                                                .signInWithGoogle),
-                                        icon: const Icon(Icons.g_mobiledata, size: 28),
-                                        label: const Text('Continue with Google'),
-                                      ),
-                                    ),
-                                    if (Platform.isIOS || Platform.isMacOS) ...[
-                                      const SizedBox(height: 10),
-                                      ScaleOnTap(
-                                        child: OutlinedButton.icon(
-                                          onPressed: isLoading
-                                              ? null
-                                              : () => _handleSocial(ref
-                                                  .read(socialAuthServiceProvider)
-                                                  .signInWithApple),
-                                          icon: const Icon(Icons.apple, size: 24),
-                                          label: const Text('Continue with Apple'),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-
-                              FadeInSlide(
-                                delay: const Duration(milliseconds: 700),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Don\'t have an account? ',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        color: isDark ? Colors.white70 : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () => context.push('/register'),
-                                      child: Text(
-                                        'Create Account',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: isDark ? Colors.white : AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 250),
+                  child: _ModeToggle(
+                    isEmail: isEmail,
+                    onChanged: onModeChanged,
+                    isDark: isDark,
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-          ),
-          if (isLoading)
-            Container(
-              color: AppColors.primary,
-              child: SafeArea(
-                child: Center(
+                const SizedBox(height: 18),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 350),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: isEmail
+                        ? TextFormField(
+                            key: const ValueKey('email'),
+                            controller: emailCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Email address',
+                              prefixIcon: Icon(Icons.mail_outline_rounded),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            validator: (v) =>
+                                (v == null || v.isEmpty) ? 'Email is required' : null,
+                          )
+                        : TextFormField(
+                            key: const ValueKey('phone'),
+                            controller: phoneCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone number',
+                              prefixIcon: Icon(Icons.phone_outlined),
+                              prefixText: '+91 ',
+                            ),
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [LengthLimitingTextInputFormatter(10)],
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Phone is required';
+                              if (v.length != 10) return 'Enter a valid 10-digit number';
+                              return null;
+                            },
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 430),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Image.asset(
-                        'assets/images/logo.png',
-                        height: 80,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => const Icon(
-                          Icons.storefront_rounded,
-                          size: 60,
-                          color: Colors.white,
+                      TextFormField(
+                        controller: passCtrl,
+                        obscureText: obscure,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => isLoading ? null : onSubmit(),
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                          suffixIcon: GestureDetector(
+                            onTap: () => onObscureChanged(!obscure),
+                            child: Icon(obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined),
+                          ),
                         ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Password is required' : null,
                       ),
-                      const SizedBox(height: 32),
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _socialLoading ? 'Connecting with Google...' : 'Signing you in...',
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w500,
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: onForgotPassword,
+                          child: Text(
+                            'Forgot Password?',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 4),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 530),
+                  child: ScaleOnTap(
+                    child: PrimaryButton(
+                      label: 'Sign in',
+                      isLoading: isLoading,
+                      onPressed: onSubmit,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 620),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text('or continue with',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12, color: AppColors.textHint)),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      ScaleOnTap(
+                        child: OutlinedButton.icon(
+                          onPressed: isLoading ? null : onGoogleSignIn,
+                          icon: const Icon(Icons.g_mobiledata, size: 28),
+                          label: const Text('Continue with Google'),
+                        ),
+                      ),
+                      if (onAppleSignIn != null) ...[
+                        const SizedBox(height: 10),
+                        ScaleOnTap(
+                          child: OutlinedButton.icon(
+                            onPressed: isLoading ? null : onAppleSignIn,
+                            icon: const Icon(Icons.apple, size: 24),
+                            label: const Text('Continue with Apple'),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 700),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Don\'t have an account? ',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: isDark ? Colors.white70 : AppColors.textSecondary,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => context.push('/register'),
+                        child: Text(
+                          'Create Account',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Portrait layout ───────────────────────────────────────────────────────────
+
+class _PortraitLayout extends StatelessWidget {
+  final Widget form;
+  const _PortraitLayout({required this.form});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+
+    return Scaffold(
+      backgroundColor: AppColors.primary,
+      resizeToAvoidBottomInset: false,
+      body: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+              child: FadeInSlide(
+                slideOffset: 30,
+                child: Column(
+                  children: [
+                    Image.asset(
+                      'assets/images/logo.png',
+                      height: 72,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.storefront_rounded,
+                        size: 60,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Local Vyapari',
+                      style: GoogleFonts.poppins(
+                        fontSize: isSmall ? 19 : 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Customer Portal',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.65),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Discover local shops & exclusive offers',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
+          ),
+
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkScaffold : AppColors.background,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              child: AnnotatedRegion<SystemUiOverlayStyle>(
+                value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+                child: form,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  void _showResetDialog(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => _ResetDialog(ref: ref),
+// ── Tablet layout ─────────────────────────────────────────────────────────────
+
+class _TabletLayout extends StatelessWidget {
+  final Widget form;
+  const _TabletLayout({required this.form});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLarge = Responsive.isLargeTablet(context);
+    final leftWidth = isLarge ? 380.0 : 320.0;
+
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: Row(
+        children: [
+          SizedBox(
+            width: leftWidth,
+            child: Container(
+              color: AppColors.primary,
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Image.asset(
+                            'assets/images/logo.png',
+                            height: isLarge ? 80 : 64,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => Icon(
+                              Icons.storefront_rounded,
+                              size: isLarge ? 64 : 52,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Local Vyapari',
+                            style: GoogleFonts.poppins(
+                              fontSize: isLarge ? 28 : 24,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.full),
+                            ),
+                            child: Text(
+                              'Customer Portal',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Discover local shops & exclusive offers near you.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13.5,
+                              color: Colors.white.withValues(alpha: 0.65),
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(flex: 2),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 0.7,
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : AppColors.border,
+          ),
+          Expanded(
+            child: Container(
+              color: isDark ? AppColors.darkScaffold : AppColors.background,
+              child: form,
+            ),
+          ),
+        ],
+      ),
     );
-    if (ok == true && context.mounted) {
-      CustomSnackBar.showSuccess(
-        context: context,
-        title: 'Password reset',
-        message: 'Your password has been reset successfully.',
-      );
-    }
   }
 }
+
 
 // ── Mode toggle ──────────────────────────────────────────────────────────────
 

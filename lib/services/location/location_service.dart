@@ -22,13 +22,16 @@ class ActiveBrowsingLocationNotifier extends Notifier<AsyncValue<LocationResult?
     final subscription = service.streamActiveBrowsingLocation().listen((location) async {
       if (location == null) {
         try {
-          final gpsLoc = await service.getGPSLocationResult();
-          if (gpsLoc != null) {
-            await service.saveActiveBrowsingLocation(gpsLoc);
-            state = AsyncValue.data(gpsLoc);
-          } else {
-            state = const AsyncValue.data(null);
+          final permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+            final gpsLoc = await service.getGPSLocationResult();
+            if (gpsLoc != null) {
+              await service.saveActiveBrowsingLocation(gpsLoc);
+              state = AsyncValue.data(gpsLoc);
+              return;
+            }
           }
+          state = const AsyncValue.data(null);
         } catch (e, stack) {
           state = AsyncValue.error(e, stack);
         }
@@ -182,9 +185,35 @@ class LocationService {
         return null;
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      ).timeout(const Duration(seconds: 5));
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        ).timeout(const Duration(seconds: 5));
+      } catch (e) {
+        debugPrint('Failed to get high accuracy position: $e. Trying last known position...');
+        try {
+          position = await Geolocator.getLastKnownPosition();
+        } catch (err) {
+          debugPrint('Failed to get last known position: $err');
+        }
+        
+        if (position == null) {
+          debugPrint('Last known position was null. Trying low accuracy position...');
+          try {
+            position = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+            ).timeout(const Duration(seconds: 5));
+          } catch (err) {
+            debugPrint('Failed to get low accuracy position: $err');
+          }
+        }
+      }
+
+      if (position == null) {
+        debugPrint('Could not retrieve any GPS position.');
+        return null;
+      }
 
       // Use reverse geocoding via Geoapify to fetch details or fall back to coordinates
       if (_apiKey.isNotEmpty) {

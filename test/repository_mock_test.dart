@@ -22,6 +22,20 @@ class MockShopRepository implements ShopRepository {
   }
 
   @override
+  Stream<List<String>> streamNearbyShopIds({
+    required double latitude,
+    required double longitude,
+    required double radiusInKm,
+  }) {
+    return Stream.value(shops.map((s) => s.id).toList());
+  }
+
+  @override
+  Stream<List<Shop>> streamShopsByIds(List<String> shopIds) {
+    return Stream.value(shops.where((s) => shopIds.contains(s.id)).toList());
+  }
+
+  @override
   Future<Shop?> getShopDetails(String shopId) async {
     return shops.firstWhere((s) => s.id == shopId, orElse: () => throw Exception('Shop not found'));
   }
@@ -93,9 +107,19 @@ void main() {
         shopLogo: '',
         shopBanner: '',
         phone: '1234567890',
-        location: const ShopLocation(latitude: 12.0, longitude: 77.0, address: 'Test Address', city: 'Test City', geohash: ''),
+        location: ShopLocation(
+          latitude: 12.0,
+          longitude: 77.0,
+          address: 'Test Address',
+          city: 'Test City',
+          geohash: '',
+          state: 'Test State',
+          pincode: '123456',
+          placeId: 'place_1',
+        ),
         isVerified: true,
         isOpen: true,
+        storedIsOpen: true,
         rating: 4.5,
         totalReviews: 10,
         createdAt: DateTime.now(),
@@ -118,6 +142,7 @@ void main() {
       final mockProduct = Product(
         id: 'prod_1',
         shopId: 'shop_1',
+        ownerId: 'owner_1',
         name: 'Test Product',
         description: 'Test Description',
         actualPrice: 100.0,
@@ -126,6 +151,9 @@ void main() {
         category: 'Test Category',
         isActive: true,
         isOutOfStock: false,
+        stockQuantity: 10,
+        isLowStock: false,
+        searchKeywords: [],
         rating: 4.0,
         totalReviews: 5,
         createdAt: DateTime.now(),
@@ -148,10 +176,13 @@ void main() {
       final mockOffer = Offer(
         id: 'offer_1',
         shopId: 'shop_1',
+        productId: 'prod_1',
+        ownerId: 'owner_1',
         title: 'Test Offer',
         description: 'Test Offer Description',
         discountPercentage: 20.0,
         isActive: true,
+        isFeatured: false,
         startDate: DateTime.now().subtract(const Duration(days: 1)),
         endDate: DateTime.now().add(const Duration(days: 1)),
         createdAt: DateTime.now(),

@@ -223,7 +223,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       onSignIn: () => context.pop(),
     );
 
-    if (Responsive.isTablet(context)) {
+    if (Responsive.useNavRail(context)) {
       return _TabletLayout(onBack: () => context.pop(), form: formContent);
     }
     return _PortraitLayout(onBack: () => context.pop(), form: formContent);
@@ -443,6 +443,7 @@ class _PortraitLayout extends StatelessWidget {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppColors.primary,
+        resizeToAvoidBottomInset: false,
         body: Column(
           children: [
             SafeArea(
@@ -522,6 +523,7 @@ class _TabletLayout extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         body: Row(
           children: [
             SizedBox(

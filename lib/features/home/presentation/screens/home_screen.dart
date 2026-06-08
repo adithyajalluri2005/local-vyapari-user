@@ -83,7 +83,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       (offers) => offers.where((o) => o.isFeatured).toList(),
     );
     final dealsOffersAsync = offersAsync.whenData(
-      (offers) => offers.where((o) => !o.isFeatured).toList(),
+      (offers) {
+        if (offers.length < 4) {
+          return offers;
+        }
+        return offers.where((o) => !o.isFeatured).toList();
+      },
     );
 
     final isDark = Theme.of(context).brightness == Brightness.dark;

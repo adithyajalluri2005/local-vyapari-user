@@ -143,13 +143,13 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   onPressed: () async {
                     final lat = shop.location.latitude;
                     final lng = shop.location.longitude;
-                    final url = Uri.parse('geo:$lat,$lng?q=$lat,$lng(${Uri.encodeComponent(shop.shopName)})');
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    } else {
+                    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+                    try {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } catch (_) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: const Text('Could not open Maps')),
+                          const SnackBar(content: Text('Could not open Maps')),
                         );
                       }
                     }

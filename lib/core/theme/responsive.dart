@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class Responsive {
-  // ── Breakpoints use shortestSide so landscape phones get phone layout ──
+  // ── Breakpoints use shortestSide so landscape phones get phone layout if needed,
+  // but we can check orientations as well for layout-adaptive components.
   static bool isPhone(BuildContext context) =>
       MediaQuery.of(context).size.shortestSide < 600;
 
@@ -45,8 +46,19 @@ class Responsive {
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────
-  static bool useNavRail(BuildContext context) => isTablet(context);
+  // Use nav rail on tablet, or on phone when in landscape to maximize vertical screen area
+  static bool useNavRail(BuildContext context) =>
+      isTablet(context) || MediaQuery.of(context).orientation == Orientation.landscape;
+      
   static bool useExtendedRail(BuildContext context) => isLargeTablet(context);
+
+  // ── Scale helpers ──────────────────────────────────────────────────────
+  static double scaleFactor(BuildContext context) {
+    if (isLargeTablet(context)) return 1.25;
+    if (isTablet(context)) return 1.15;
+    if (isSmallPhone(context)) return 0.85;
+    return 1.0;
+  }
 
   // ── Misc helpers ───────────────────────────────────────────────────────
   static double chartHeight(BuildContext context) => isTablet(context) ? 210 : 160;
@@ -82,4 +94,39 @@ class Responsive {
 
   static double getSafeAreaTop(BuildContext context) => MediaQuery.of(context).padding.top;
   static double getSafeAreaBottom(BuildContext context) => MediaQuery.of(context).padding.bottom;
+}
+
+// ── Extensions ────────────────────────────────────────────────────────────────
+
+extension ResponsiveContext on BuildContext {
+  bool get isPhone => Responsive.isPhone(this);
+  bool get isTablet => Responsive.isTablet(this);
+  bool get isLargeTablet => Responsive.isLargeTablet(this);
+  bool get isSmallPhone => Responsive.isSmallPhone(this);
+  bool get isMobile => Responsive.isMobile(this);
+  double get screenWidth => MediaQuery.of(this).size.width;
+  double get screenHeight => MediaQuery.of(this).size.height;
+  Orientation get orientation => MediaQuery.of(this).orientation;
+  bool get isLandscape => orientation == Orientation.landscape;
+  bool get isPortrait => orientation == Orientation.portrait;
+  double get horizontalPadding => Responsive.horizontalPadding(this);
+  double get textScaleFactor => MediaQuery.textScalerOf(this).scale(1.0);
+
+  T responsive<T>({
+    required T mobile,
+    T? tablet,
+    T? desktop,
+  }) {
+    if (isLargeTablet && desktop != null) return desktop;
+    if (isTablet && tablet != null) return tablet;
+    return mobile;
+  }
+}
+
+extension ResponsiveNumeric on num {
+  double scale(BuildContext context) => toDouble() * Responsive.scaleFactor(context);
+  Widget get verticalSpace => SizedBox(height: toDouble());
+  Widget get horizontalSpace => SizedBox(width: toDouble());
+  Widget verticalSpaceScaled(BuildContext context) => SizedBox(height: scale(context));
+  Widget horizontalSpaceScaled(BuildContext context) => SizedBox(width: scale(context));
 }

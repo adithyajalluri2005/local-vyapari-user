@@ -16,6 +16,9 @@ import 'package:local_vyapari_user/features/search/presentation/screens/search_s
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/core/providers/notification_route_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
+import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:local_vyapari_user/services/location/location_service.dart';
 
 export 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 
@@ -37,9 +40,10 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     // Consume any pending notification captured before auth completed.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final pending = ref.read(pendingNotificationRouteProvider);
-      if (pending == null || !mounted) return;
-      ref.read(pendingNotificationRouteProvider.notifier).set(null);
-      context.push(pending.route, extra: pending.extra);
+      if (pending != null && mounted) {
+        ref.read(pendingNotificationRouteProvider.notifier).set(null);
+        context.push(pending.route, extra: pending.extra);
+      }
     });
   }
 
@@ -54,61 +58,75 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
         if (mounted) context.push(pending.route, extra: pending.extra);
       });
     });
-    final currentIndex = ref.watch(navigationIndexProvider);
-    void onTap(int i) => ref.read(navigationIndexProvider.notifier).setIndex(i);
 
-    final screens = [
-      HomeScreen(onSearchTap: () => onTap(1)),
-      const SearchScreen(),
-      const OffersScreen(),
-      const FavoritesScreen(),
-      const ChatsListScreen(),
-      const ProfileScreen(),
-    ];
+    final locationState = ref.watch(activeBrowsingLocationProvider);
 
-    final body = Responsive.useNavRail(context)
-        ? _TabletScaffold(
-            currentIndex: currentIndex,
-            onTap: onTap,
-            screens: screens,
-            ref: ref,
-          )
-        : Scaffold(
-            extendBody: true,
-            body: FadeIndexedStack(index: currentIndex, children: screens),
-            bottomNavigationBar: _FloatingPillNav(
-              currentIndex: currentIndex,
-              onTap: onTap,
-              ref: ref,
-            ),
-          );
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-
-        if (currentIndex != 0) {
-          ref.read(navigationIndexProvider.notifier).setIndex(0);
-          return;
+    return locationState.when(
+      loading: () => const _LocationLoadingGate(),
+      error: (err, stack) => _LocationOnboardingGate(
+        error: err.toString().replaceFirst('Exception: ', ''),
+      ),
+      data: (location) {
+        if (location == null) {
+          return const _LocationOnboardingGate();
         }
 
-        final now = DateTime.now();
-        if (_lastBackPressed != null &&
-            now.difference(_lastBackPressed!) < const Duration(seconds: 2)) {
-          SystemNavigator.pop();
-          return;
-        }
-        _lastBackPressed = now;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Press back again to exit'),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
+        final currentIndex = ref.watch(navigationIndexProvider);
+        void onTap(int i) => ref.read(navigationIndexProvider.notifier).setIndex(i);
+
+        final screens = [
+          HomeScreen(onSearchTap: () => onTap(1)),
+          const SearchScreen(),
+          const OffersScreen(),
+          const FavoritesScreen(),
+          const ChatsListScreen(),
+          const ProfileScreen(),
+        ];
+
+        final body = Responsive.useNavRail(context)
+            ? _TabletScaffold(
+                currentIndex: currentIndex,
+                onTap: onTap,
+                screens: screens,
+              )
+            : Scaffold(
+                extendBody: true,
+                body: FadeIndexedStack(index: currentIndex, children: screens),
+                bottomNavigationBar: _FloatingPillNav(
+                  currentIndex: currentIndex,
+                  onTap: onTap,
+                  ref: ref,
+                ),
+              );
+
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+
+            if (currentIndex != 0) {
+              ref.read(navigationIndexProvider.notifier).setIndex(0);
+              return;
+            }
+
+            final now = DateTime.now();
+            if (_lastBackPressed != null &&
+                now.difference(_lastBackPressed!) < const Duration(seconds: 2)) {
+              SystemNavigator.pop();
+              return;
+            }
+            _lastBackPressed = now;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Press back again to exit'),
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+          child: body,
         );
       },
-      child: body,
     );
   }
 }
@@ -129,80 +147,107 @@ String _navLabel(BuildContext context, int index) {
 
 // ── Tablet layout with NavigationRail ─────────────────────────────────────────
 
-class _TabletScaffold extends StatelessWidget {
+class _TabletScaffold extends ConsumerWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
   final List<Widget> screens;
-  final WidgetRef ref;
 
   const _TabletScaffold({
     required this.currentIndex,
     required this.onTap,
     required this.screens,
-    required this.ref,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final extended = Responsive.useExtendedRail(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final railBg = isDark ? AppColors.darkSurface : AppColors.surface;
 
+    final chatsAsync = ref.watch(userChatsStreamProvider);
+    final unreadCount = chatsAsync.whenOrNull(
+          data: (sessions) => sessions.where((s) => s.unread).length,
+        ) ??
+        0;
+
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            backgroundColor: railBg,
-            extended: extended,
-            selectedIndex: currentIndex,
-            onDestinationSelected: onTap,
-            indicatorColor: AppColors.primary.withValues(alpha: 0.12),
-            indicatorShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
+          SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height,
+              ),
+              child: IntrinsicHeight(
+                child: NavigationRail(
+                  backgroundColor: railBg,
+                  extended: extended,
+                  selectedIndex: currentIndex,
+                  onDestinationSelected: onTap,
+                  indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+                  indicatorShape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  selectedIconTheme: IconThemeData(
+                    color: isDark ? Colors.white : AppColors.primary,
+                    size: 22,
+                  ),
+                  unselectedIconTheme: const IconThemeData(
+                    color: AppColors.textHint,
+                    size: 22,
+                  ),
+                  selectedLabelTextStyle: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : AppColors.primary,
+                  ),
+                  unselectedLabelTextStyle: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppColors.textHint,
+                  ),
+                  destinations: [
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: const Icon(Icons.home_rounded),
+                      label: Text(_navLabel(context, 0)),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.search_outlined),
+                      selectedIcon: const Icon(Icons.search_rounded),
+                      label: Text(_navLabel(context, 1)),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.local_offer_outlined),
+                      selectedIcon: const Icon(Icons.local_offer_rounded),
+                      label: Text(_navLabel(context, 2)),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.favorite_outline_rounded),
+                      selectedIcon: const Icon(Icons.favorite_rounded),
+                      label: Text(_navLabel(context, 3)),
+                    ),
+                    NavigationRailDestination(
+                      icon: Badge(
+                        isLabelVisible: unreadCount > 0,
+                        label: Text(unreadCount > 9 ? '9+' : '$unreadCount'),
+                        child: const Icon(Icons.chat_bubble_outline_rounded),
+                      ),
+                      selectedIcon: Badge(
+                        isLabelVisible: unreadCount > 0,
+                        label: Text(unreadCount > 9 ? '9+' : '$unreadCount'),
+                        child: const Icon(Icons.chat_bubble_rounded),
+                      ),
+                      label: Text(_navLabel(context, 4)),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.person_outline_rounded),
+                      selectedIcon: const Icon(Icons.person_rounded),
+                      label: Text(_navLabel(context, 5)),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            selectedIconTheme: IconThemeData(color: isDark ? Colors.white : AppColors.primary, size: 22),
-            unselectedIconTheme: const IconThemeData(color: AppColors.textHint, size: 22),
-            selectedLabelTextStyle: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : AppColors.primary,
-            ),
-            unselectedLabelTextStyle: GoogleFonts.poppins(
-              fontSize: 12,
-              color: AppColors.textHint,
-            ),
-            destinations: [
-              NavigationRailDestination(
-                icon: const Icon(Icons.home_outlined),
-                selectedIcon: const Icon(Icons.home_rounded),
-                label: Text(_navLabel(context, 0)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.search_outlined),
-                selectedIcon: const Icon(Icons.search_rounded),
-                label: Text(_navLabel(context, 1)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.local_offer_outlined),
-                selectedIcon: const Icon(Icons.local_offer_rounded),
-                label: Text(_navLabel(context, 2)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.favorite_outline_rounded),
-                selectedIcon: const Icon(Icons.favorite_rounded),
-                label: Text(_navLabel(context, 3)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.chat_bubble_outline_rounded),
-                selectedIcon: const Icon(Icons.chat_bubble_rounded),
-                label: Text(_navLabel(context, 4)),
-              ),
-              NavigationRailDestination(
-                icon: const Icon(Icons.person_outline_rounded),
-                selectedIcon: const Icon(Icons.person_rounded),
-                label: Text(_navLabel(context, 5)),
-              ),
-            ],
           ),
           const VerticalDivider(width: 1),
           Expanded(child: FadeIndexedStack(index: currentIndex, children: screens)),
@@ -370,6 +415,354 @@ class _NavButton extends StatelessWidget {
                   : const SizedBox.shrink(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Location Loading Gate ───────────────────────────────────────────────────
+
+class _LocationLoadingGate extends StatelessWidget {
+  const _LocationLoadingGate();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const PulsingRadarIcon(),
+            const SizedBox(height: 28),
+            Text(
+              'Identifying your location...',
+              style: GoogleFonts.poppins(
+                fontSize: 16.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Looking for nearby shops and deals',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: AppColors.textHint,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pulsing Radar Icon Animation ──────────────────────────────────────────────
+
+class PulsingRadarIcon extends StatefulWidget {
+  const PulsingRadarIcon({super.key});
+
+  @override
+  State<PulsingRadarIcon> createState() => _PulsingRadarIconState();
+}
+
+class _PulsingRadarIconState extends State<PulsingRadarIcon>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            for (int i = 0; i < 3; i++)
+              Container(
+                width: 70.0 + (i * 35.0) * _controller.value,
+                height: 70.0 + (i * 35.0) * _controller.value,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(
+                    alpha: (0.15 * (1.0 - _controller.value)).clamp(0.0, 1.0),
+                  ),
+                ),
+              ),
+            Container(
+              width: 65,
+              height: 65,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary,
+              ),
+              child: const Icon(
+                Icons.my_location_rounded,
+                size: 28,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ── Location Onboarding / Request Gate ────────────────────────────────────────
+
+class _LocationOnboardingGate extends ConsumerStatefulWidget {
+  final String? error;
+  const _LocationOnboardingGate({super.key, this.error});
+
+  @override
+  ConsumerState<_LocationOnboardingGate> createState() => _LocationOnboardingGateState();
+}
+
+class _LocationOnboardingGateState extends ConsumerState<_LocationOnboardingGate> {
+  bool _loading = false;
+
+  void _useGps() async {
+    setState(() => _loading = true);
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          setState(() => _loading = false);
+          CustomSnackBar.showError(
+            context: context,
+            title: 'Location Services Disabled',
+            message: 'Please enable GPS/location services in your device settings.',
+          );
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() => _loading = false);
+          CustomSnackBar.showError(
+            context: context,
+            title: 'Permission Denied',
+            message: 'Location permissions are permanently denied. Please enable them in settings or search manually.',
+          );
+        }
+        return;
+      }
+
+      if (permission == LocationPermission.denied) {
+        if (mounted) {
+          setState(() => _loading = false);
+          CustomSnackBar.showError(
+            context: context,
+            title: 'Permission Denied',
+            message: 'Location permission was denied. We need it to find nearby stores.',
+          );
+        }
+        return;
+      }
+
+      final ok = await ref.read(activeBrowsingLocationProvider.notifier).locateAndSetGPS();
+      if (mounted) {
+        setState(() => _loading = false);
+        if (!ok) {
+          CustomSnackBar.showError(
+            context: context,
+            title: 'Location Fetch Failed',
+            message: 'Could not retrieve GPS coordinates. Please select manually.',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        CustomSnackBar.showError(
+          context: context,
+          title: 'Error',
+          message: 'An unexpected error occurred: $e',
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              FadeInSlide(
+                duration: const Duration(milliseconds: 500),
+                child: Icon(
+                  Icons.location_on_rounded,
+                  size: 84,
+                  color: AppColors.primary.withValues(alpha: 0.85),
+                ),
+              ),
+              const SizedBox(height: 32),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 100),
+                child: Text(
+                  'Where are you shopping from?',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                    height: 1.25,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 12),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 200),
+                child: Text(
+                  'To show you nearby local stores, exclusive deals, and fast delivery, we need your shopping location.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: isDark ? Colors.white70 : AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              if (widget.error != null) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.15)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          widget.error!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const Spacer(flex: 2),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 300),
+                child: ScaleOnTap(
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _useGps,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.my_location_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Use Current Location (GPS)',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              FadeInSlide(
+                delay: const Duration(milliseconds: 400),
+                child: OutlinedButton(
+                  onPressed: () => context.push('/location_search'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(
+                      color: isDark ? Colors.white24 : AppColors.border,
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: isDark ? Colors.white70 : AppColors.textPrimary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Select Location Manually',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14.5,
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
