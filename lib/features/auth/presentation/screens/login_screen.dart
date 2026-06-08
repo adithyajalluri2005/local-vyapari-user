@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
 import 'package:local_vyapari_user/services/security/social_auth_service.dart';
@@ -91,6 +92,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Responsive.init(context);
     ref.listen<AuthState>(authProvider, (_, next) {
       if (next is AuthFailure) {
         CustomSnackBar.showError(context: context, message: next.message, title: 'Sign in failed');
@@ -112,14 +114,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 28),
                 child: FadeInSlide(
                   slideOffset: 30,
                   child: Column(
                   children: [
                     Image.asset(
                       'assets/images/logo.png',
-                      height: 72,
+                      height: Responsive.isTablet(context) ? 96 : 80,
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) => const Icon(
                         Icons.storefront_rounded,
@@ -165,8 +167,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkScaffold : AppColors.background,
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(28),
-                    topRight: Radius.circular(28),
+                    topLeft: Radius.circular(AppRadius.xxl),
+                    topRight: Radius.circular(AppRadius.xxl),
                   ),
                 ),
                 child: AnnotatedRegion<SystemUiOverlayStyle>(

@@ -22,63 +22,124 @@ import 'package:local_vyapari_user/features/security/presentation/screens/securi
 import 'package:local_vyapari_user/features/products/presentation/screens/product_image_fullscreen_screen.dart';
 import 'package:local_vyapari_user/features/offers/presentation/screens/all_offers_screen.dart';
 
-enum TransitionType { slide, fade, scale, slideUp }
-
-CustomTransitionPage<T> buildPageWithTransition<T>({
-  required BuildContext context,
-  required GoRouterState state,
+CustomTransitionPage<T> buildFadeThroughPage<T>({
+  required LocalKey key,
   required Widget child,
-  TransitionType transitionType = TransitionType.slide,
 }) {
   return CustomTransitionPage<T>(
-    key: state.pageKey,
+    key: key,
     child: child,
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      switch (transitionType) {
-        case TransitionType.fade:
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        case TransitionType.scale:
-          return ScaleTransition(
-            scale: Tween<double>(begin: 0.95, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            ),
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          );
-        case TransitionType.slideUp:
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.0, 0.15),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            ),
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          );
-        case TransitionType.slide:
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(1.0, 0.0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-            ),
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          );
-      }
+      final enterFade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+      final enterScale = Tween<double>(begin: 0.94, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+
+      final exitFade = Tween<double>(begin: 1.0, end: 0.85).animate(
+          CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeIn));
+      final exitScale = Tween<double>(begin: 1.0, end: 0.96).animate(
+          CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeIn));
+
+      return FadeTransition(
+        opacity: exitFade,
+        child: ScaleTransition(
+          scale: exitScale,
+          child: FadeTransition(
+            opacity: enterFade,
+            child: ScaleTransition(scale: enterScale, child: child),
+          ),
+        ),
+      );
     },
-    transitionDuration: const Duration(milliseconds: 300),
+  );
+}
+
+CustomTransitionPage<T> buildSlideRightPage<T>({
+  required LocalKey key,
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 380),
+    reverseTransitionDuration: const Duration(milliseconds: 280),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final enterSlide = Tween<Offset>(
+        begin: const Offset(1.0, 0.0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ));
+
+      final exitSlide = Tween<Offset>(
+        begin: Offset.zero,
+        end: const Offset(-0.3, 0.0),
+      ).animate(
+          CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOut));
+      final exitDim = Tween<double>(begin: 1.0, end: 0.85).animate(
+          CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeIn));
+
+      return SlideTransition(
+        position: exitSlide,
+        child: FadeTransition(
+          opacity: exitDim,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 24,
+                  offset: const Offset(-6, 0),
+                ),
+              ],
+            ),
+            child: SlideTransition(position: enterSlide, child: child),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+CustomTransitionPage<T> buildSlideUpPage<T>({
+  required LocalKey key,
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 420),
+    reverseTransitionDuration: const Duration(milliseconds: 320),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final enterSlide = Tween<Offset>(
+        begin: const Offset(0.0, 0.12),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutQuart,
+        reverseCurve: Curves.easeInQuint,
+      ));
+      final enterFade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+
+      final secScale = Tween<double>(begin: 1.0, end: 0.94).animate(
+          CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeIn));
+      final secDim = Tween<double>(begin: 1.0, end: 0.78).animate(
+          CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeIn));
+
+      return ScaleTransition(
+        scale: secScale,
+        child: FadeTransition(
+          opacity: secDim,
+          child: FadeTransition(
+            opacity: enterFade,
+            child: SlideTransition(position: enterSlide, child: child),
+          ),
+        ),
+      );
+    },
   );
 }
 
@@ -118,7 +179,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: '/splash',
     refreshListenable: routerNotifier,
     redirect: (context, state) {
       final authState = ref.read(authProvider);
@@ -136,15 +197,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       final isGoingToLogin = state.matchedLocation == '/login';
       final isGoingToRegister = state.matchedLocation == '/register';
-      final isGoingToSplash = state.matchedLocation == '/';
+      final isGoingToSplash = state.matchedLocation == '/splash';
 
       final isAuthScreen = isGoingToLogin || isGoingToRegister;
 
-      if (authState is AuthInitial) {
-        return '/';
+      // Allow splash screen to display and complete its intro sequences
+      if (state.matchedLocation == '/splash') {
+        return null;
       }
 
-      if (authState is AuthLoading) {
+      if (authState is AuthInitial || authState is AuthLoading) {
         return null;
       }
 
@@ -160,7 +222,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (authState is Authenticated) {
         if (isAuthScreen || isGoingToSplash || state.matchedLocation == '/display_name') {
-          return '/home';
+          return '/';
         }
       }
 
@@ -168,57 +230,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(
-        path: '/',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        path: '/splash',
+        pageBuilder: (context, state) => buildFadeThroughPage(
+          key: state.pageKey,
           child: const SplashScreen(),
-          transitionType: TransitionType.fade,
         ),
       ),
       GoRoute(
         path: '/login',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildFadeThroughPage(
+          key: state.pageKey,
           child: const LoginScreen(),
-          transitionType: TransitionType.fade,
         ),
       ),
       GoRoute(
         path: '/register',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildSlideRightPage(
+          key: state.pageKey,
           child: const RegisterScreen(),
-          transitionType: TransitionType.slide,
         ),
       ),
       GoRoute(
         path: '/display_name',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildFadeThroughPage(
+          key: state.pageKey,
           child: const DisplayNameScreen(),
-          transitionType: TransitionType.fade,
         ),
       ),
       GoRoute(
-        path: '/home',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        path: '/',
+        pageBuilder: (context, state) => buildFadeThroughPage(
+          key: state.pageKey,
           child: const MainNavigationScreen(),
-          transitionType: TransitionType.fade,
         ),
       ),
       GoRoute(
         path: '/location_search',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildSlideUpPage(
+          key: state.pageKey,
           child: const LocationSearchScreen(),
-          transitionType: TransitionType.slideUp,
         ),
       ),
       GoRoute(
@@ -226,11 +276,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) {
           final shop = state.extra as Shop?;
           final shopId = state.uri.queryParameters['shopId'] ?? state.uri.queryParameters['id'];
-          return buildPageWithTransition(
-            context: context,
-            state: state,
+          return buildSlideRightPage(
+            key: state.pageKey,
             child: ShopDetailsScreen(shop: shop, shopId: shopId),
-            transitionType: TransitionType.slide,
           );
         },
       ),
@@ -240,15 +288,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final product = state.extra as Product?;
           final productId = state.uri.queryParameters['productId'] ?? state.uri.queryParameters['id'];
           final shopId = state.uri.queryParameters['shopId'];
-          return buildPageWithTransition(
-            context: context,
-            state: state,
+          return buildSlideRightPage(
+            key: state.pageKey,
             child: ProductDetailsScreen(
               product: product,
               productId: productId,
               shopId: shopId,
             ),
-            transitionType: TransitionType.slide,
           );
         },
       ),
@@ -258,89 +304,75 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final offer = state.extra as Offer?;
           final offerId = state.uri.queryParameters['offerId'] ?? state.uri.queryParameters['id'];
           final shopId = state.uri.queryParameters['shopId'];
-          return buildPageWithTransition(
-            context: context,
-            state: state,
+          return buildSlideRightPage(
+            key: state.pageKey,
             child: OfferDetailsScreen(
               offer: offer,
               offerId: offerId,
               shopId: shopId,
             ),
-            transitionType: TransitionType.slide,
           );
         },
       ),
       GoRoute(
         path: '/radar',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildSlideUpPage(
+          key: state.pageKey,
           child: const HyperlocalRadarScreen(),
-          transitionType: TransitionType.slideUp,
         ),
       ),
       GoRoute(
         path: '/all_offers',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildSlideRightPage(
+          key: state.pageKey,
           child: const AllOffersScreen(),
-          transitionType: TransitionType.slide,
         ),
       ),
       GoRoute(
         path: '/chat',
-        redirect: (context, state) => state.extra == null ? '/home' : null,
+        redirect: (context, state) => state.extra == null ? '/' : null,
         pageBuilder: (context, state) {
           final extras = state.extra as Map<dynamic, dynamic>;
           final shopId = extras['shopId']?.toString() ?? '';
           final shopName = extras['shopName']?.toString() ?? '';
           final shopLogo = extras['shopLogo']?.toString() ?? '';
-          return buildPageWithTransition(
-            context: context,
-            state: state,
+          return buildSlideRightPage(
+            key: state.pageKey,
             child: ChatScreen(
               shopId: shopId,
               shopName: shopName,
               shopLogo: shopLogo,
             ),
-            transitionType: TransitionType.slide,
           );
         },
       ),
       GoRoute(
         path: '/chats',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildSlideRightPage(
+          key: state.pageKey,
           child: const ChatsListScreen(),
-          transitionType: TransitionType.slide,
         ),
       ),
       GoRoute(
         path: '/security',
-        pageBuilder: (context, state) => buildPageWithTransition(
-          context: context,
-          state: state,
+        pageBuilder: (context, state) => buildSlideRightPage(
+          key: state.pageKey,
           child: const SecuritySettingsScreen(),
-          transitionType: TransitionType.slide,
         ),
       ),
       GoRoute(
         path: '/product_image_fullscreen',
-        redirect: (context, state) => state.extra == null ? '/home' : null,
+        redirect: (context, state) => state.extra == null ? '/' : null,
         pageBuilder: (context, state) {
           final extras = state.extra as Map<dynamic, dynamic>;
           final images = List<String>.from(extras['images'] as List? ?? []);
           final initialIndex = (extras['initialIndex'] as int?) ?? 0;
-          return buildPageWithTransition(
-            context: context,
-            state: state,
+          return buildFadeThroughPage(
+            key: state.pageKey,
             child: ProductImageFullscreenScreen(
               images: images,
               initialIndex: initialIndex,
             ),
-            transitionType: TransitionType.fade,
           );
         },
       ),
