@@ -55,6 +55,16 @@ class ActiveBrowsingLocationNotifier extends Notifier<AsyncValue<LocationResult?
     state = AsyncValue.data(location);
   }
 
+  /// Reads cached location and sets state immediately so MainNavigationScreen
+  /// never sees a loading flash when location is already stored.
+  Future<void> preloadFromCache() async {
+    if (!state.isLoading) return;
+    final cached = await LocationCache.getActiveLocation();
+    if (cached != null) {
+      state = AsyncValue.data(cached);
+    }
+  }
+
   Future<bool> locateAndSetGPS() async {
     state = const AsyncValue.loading();
     try {

@@ -10,7 +10,6 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/core/providers/notification_route_provider.dart';
 import 'package:local_vyapari_user/core/router/app_router.dart';
@@ -27,13 +26,10 @@ PendingNotification? _pendingFcm;
 
 void main() {
   runZonedGuarded(() async {
-    final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-    FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+    WidgetsFlutterBinding.ensureInitialized();
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
     ]);
 
     // Intercept layout and render-time errors to show a premium error screen instead of standard crash layout
@@ -113,7 +109,6 @@ void main() {
       }
     });
 
-    FlutterNativeSplash.remove();
     final startupNotification = initialNotification ?? _pendingFcm;
     _pendingFcm = null;
     runApp(

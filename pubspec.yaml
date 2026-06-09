@@ -132,12 +132,12 @@ flutter:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/logo_white.png"
 
 flutter_native_splash:
-  color: "#F8FAFC"
+  color: "#FFFFFF"
   android_12:
-    color: "#F8FAFC"
+    color: "#FFFFFF"
   ios: true
   android: true
   web: false

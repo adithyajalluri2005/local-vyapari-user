@@ -14,14 +14,13 @@ class OfferPopupSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? AppColors.darkSurface : Colors.white;
     final discPct = offer.discountPercentage.toInt();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
       child: Container(
         decoration: BoxDecoration(
-          color: cardBg,
+          color: isDark ? AppColors.darkSurface : Colors.white,
           borderRadius: const BorderRadius.all(Radius.circular(AppRadius.xxl)),
           boxShadow: [
             BoxShadow(
@@ -93,7 +92,7 @@ class OfferPopupSheet extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 76,
                             fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
+                            color: isDark ? Colors.white : AppColors.primary,
                             height: 1,
                           ),
                         ),
@@ -102,7 +101,7 @@ class OfferPopupSheet extends StatelessWidget {
                           style: GoogleFonts.poppins(
                             fontSize: 38,
                             fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
+                            color: isDark ? Colors.white : AppColors.primary,
                             height: 1,
                           ),
                         ),
@@ -114,14 +113,12 @@ class OfferPopupSheet extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.primaryLight,
+                      color: isDark ? Colors.white70 : AppColors.primaryLight,
                       letterSpacing: 5,
                     ),
                   ),
                   const SizedBox(height: 18),
-                  DashedDivider(
-                    color: isDark ? Colors.white12 : AppColors.border,
-                  ),
+                  DashedDivider(color: isDark ? Colors.white12 : AppColors.border),
                   const SizedBox(height: 18),
                   Text(
                     offer.title,

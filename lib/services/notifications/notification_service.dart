@@ -66,7 +66,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
   final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
   const AndroidInitializationSettings initSettings =
-      AndroidInitializationSettings('@mipmap/launcher_icon');
+      AndroidInitializationSettings('@drawable/ic_notification');
 
   try {
     await localNotifications.initialize(
@@ -83,6 +83,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       showWhen: true,
       playSound: true,
       color: const Color(0xFF112E51),
+      largeIcon: const DrawableResourceAndroidBitmap('@drawable/ic_notification'),
     );
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -174,7 +175,7 @@ class NotificationService {
 
   Future<void> _initLocalNotifications() async {
     const AndroidInitializationSettings initSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     try {
       await _localNotifications.initialize(
@@ -292,6 +293,7 @@ class NotificationService {
       showWhen: true,
       playSound: true,
       color: Color(0xFF112E51),
+      largeIcon: DrawableResourceAndroidBitmap('@drawable/ic_notification'),
     );
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -325,6 +327,7 @@ class NotificationService {
       showWhen: true,
       playSound: true,
       color: Color(0xFF112E51),
+      largeIcon: DrawableResourceAndroidBitmap('@drawable/ic_notification'),
     );
 
     final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
@@ -928,12 +931,20 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                    width: 42,
+                    height: 42,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(widget.icon, color: Colors.white, size: 22),
+                    clipBehavior: Clip.antiAlias,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
