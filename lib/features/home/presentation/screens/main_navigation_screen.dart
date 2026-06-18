@@ -303,10 +303,11 @@ class _FloatingPillNav extends ConsumerWidget {
         ) ??
         0;
 
+    final isSmall = Responsive.isSmallPhone(context);
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, (bottom > 0 ? bottom : 12)),
+      padding: EdgeInsets.fromLTRB(isSmall ? 10 : 16, 0, isSmall ? 10 : 16, (bottom > 0 ? bottom : 12)),
       child: Container(
-        height: 62,
+        height: isSmall ? 56.0 : 62.0,
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(AppRadius.full),
@@ -347,6 +348,9 @@ class _NavButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+    final circleSize = isSmall ? 30.0 : 36.0;
+    final iconSize = isSmall ? 16.0 : 19.0;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -360,15 +364,15 @@ class _NavButton extends StatelessWidget {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOut,
-                  width: 36,
-                  height: 36,
+                  width: circleSize,
+                  height: circleSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: active ? AppColors.primary : Colors.transparent,
                   ),
                   child: Icon(
                     active ? item.activeIcon : item.icon,
-                    size: 19,
+                    size: iconSize,
                     color: active ? Colors.white : AppColors.textHint,
                   ),
                 ),
@@ -402,11 +406,11 @@ class _NavButton extends StatelessWidget {
               curve: Curves.easeOut,
               child: active
                   ? Padding(
-                      padding: const EdgeInsets.only(top: 3),
+                      padding: const EdgeInsets.only(top: 2),
                       child: Text(
                         _navLabel(context, item.tabIndex),
                         style: GoogleFonts.poppins(
-                          fontSize: 9.5,
+                          fontSize: isSmall ? 8.5 : 9.5,
                           fontWeight: FontWeight.w600,
                           color: isDark ? Colors.white : AppColors.primary,
                         ),

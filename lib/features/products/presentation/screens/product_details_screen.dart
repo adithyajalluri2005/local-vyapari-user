@@ -125,7 +125,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   // ── Image zone: edge-to-edge gallery + rounded card peek ──────────────────
 
   Widget _buildImageZone(BuildContext context) {
-    final galleryHeight = Responsive.isTablet(context) ? 420.0 : 340.0;
+    final galleryHeight = Responsive.isTablet(context) ? 420.0 : (Responsive.isSmallPhone(context) ? 280.0 : 340.0);
     final bg = Theme.of(context).scaffoldBackgroundColor;
 
     return Stack(

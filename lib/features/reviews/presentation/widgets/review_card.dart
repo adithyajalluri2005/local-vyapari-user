@@ -3,6 +3,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/app_text_styles.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 
 class ReviewCard extends StatefulWidget {
   final String userName;
@@ -39,7 +40,7 @@ class _ReviewCardState extends State<ReviewCard> {
         side: BorderSide(color: cs.outline),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(Responsive.isSmallPhone(context) ? 12.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

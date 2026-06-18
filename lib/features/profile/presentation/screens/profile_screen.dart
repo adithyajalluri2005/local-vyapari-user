@@ -65,7 +65,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
+                    padding: EdgeInsets.fromLTRB(Responsive.horizontalPadding(context), 20, Responsive.horizontalPadding(context), 32),
                     child: Column(
                       children: [
                         // Activity

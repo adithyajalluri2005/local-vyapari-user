@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/app_sizes.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/empty_section.dart';
@@ -82,7 +83,7 @@ class OfferBannerList extends StatelessWidget {
                       child: Column(
                         children: [
                           Container(
-                            height: 76,
+                            height: Responsive.isTablet(ctx) ? 88.0 : (Responsive.isSmallPhone(ctx) ? 64.0 : 76.0),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: colors,
@@ -90,8 +91,8 @@ class OfferBannerList extends StatelessWidget {
                                 end: Alignment.bottomRight,
                               ),
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: Responsive.isSmallPhone(ctx) ? 10.0 : 14.0,
                               vertical: 10,
                             ),
                             child: Row(
@@ -101,7 +102,7 @@ class OfferBannerList extends StatelessWidget {
                                   child: Text(
                                     '${offer.discountPercentage.toInt()}%\nOFF',
                                     style: GoogleFonts.poppins(
-                                      fontSize: 24,
+                                      fontSize: Responsive.isTablet(ctx) ? 28.0 : (Responsive.isSmallPhone(ctx) ? 20.0 : 24.0),
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
                                       height: 1.1,
@@ -110,7 +111,7 @@ class OfferBannerList extends StatelessWidget {
                                 ),
                                 Icon(
                                   Icons.local_offer_rounded,
-                                  size: 34,
+                                  size: Responsive.isTablet(ctx) ? 40.0 : (Responsive.isSmallPhone(ctx) ? 28.0 : 34.0),
                                   color: Colors.white.withValues(alpha: 0.2),
                                 ),
                               ],

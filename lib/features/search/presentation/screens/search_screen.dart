@@ -126,7 +126,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
             // ── Filter chips ─────────────────────────────────────────
             SizedBox(
-              height: 36,
+              height: Responsive.isSmallPhone(context) ? 32.0 : 36.0,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.symmetric(horizontal: hPad),
@@ -183,8 +183,11 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSmall = Responsive.isSmallPhone(context);
+    final barHeight = isSmall ? 42.0 : 46.0;
+    final fontSize = isSmall ? 13.0 : 14.0;
     return Container(
-      height: 46,
+      height: barHeight,
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -195,22 +198,22 @@ class _SearchBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(width: 12),
-          Icon(Icons.search_rounded, size: 20, color: AppColors.textHint),
-          const SizedBox(width: 8),
+          SizedBox(width: isSmall ? 10 : 12),
+          Icon(Icons.search_rounded, size: isSmall ? 18.0 : 20.0, color: AppColors.textHint),
+          SizedBox(width: isSmall ? 6 : 8),
           Expanded(
             child: TextField(
               controller: ctrl,
               focusNode: focusNode,
               onChanged: onChanged,
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: fontSize,
                 color: isDark ? Colors.white : AppColors.textPrimary,
               ),
               decoration: InputDecoration(
                 hintText: 'Search shops, products…',
                 hintStyle: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: fontSize,
                   color: AppColors.textHint,
                 ),
                 border: InputBorder.none,
@@ -224,12 +227,12 @@ class _SearchBar extends StatelessWidget {
             GestureDetector(
               onTap: onClear,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 10),
                 child: Icon(Icons.close_rounded, size: 18, color: AppColors.textHint),
               ),
             )
           else
-            const SizedBox(width: 12),
+            SizedBox(width: isSmall ? 10 : 12),
         ],
       ),
     );

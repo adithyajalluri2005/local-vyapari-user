@@ -304,7 +304,7 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
             controller: _scrollCtrl,
             slivers: [
               SliverAppBar(
-                expandedHeight: 250,
+                expandedHeight: Responsive.isSmallPhone(context) ? 200.0 : 250.0,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
                   background: CachedNetworkImage(

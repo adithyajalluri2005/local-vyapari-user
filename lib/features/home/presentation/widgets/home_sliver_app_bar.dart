@@ -27,6 +27,16 @@ class HomeSliverAppBar extends StatelessWidget {
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
     final hPad = Responsive.horizontalPadding(context);
     final isTablet = Responsive.isTablet(context);
+    final isSmallPhone = Responsive.isSmallPhone(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Cap location text width so it never crowds the action buttons.
+    // Reserve ≈ icon(22) + gap(6) + chevron(18) + actions(~52) + titleSpacing + buffer.
+    final locationMaxWidth = (screenWidth * (isTablet ? 0.40 : 0.44)).clamp(
+      isSmallPhone ? 110.0 : 140.0,
+      isTablet ? 280.0 : 200.0,
+    );
+
     return SliverAppBar(
       automaticallyImplyLeading: false,
       titleSpacing: hPad,
@@ -44,9 +54,9 @@ class HomeSliverAppBar extends StatelessWidget {
             Icon(
               Icons.location_on_rounded,
               color: textColor,
-              size: 22,
+              size: isSmallPhone ? 18.0 : 22.0,
             ),
-            const SizedBox(width: 6),
+            SizedBox(width: isSmallPhone ? 4 : 6),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -54,7 +64,7 @@ class HomeSliverAppBar extends StatelessWidget {
                 Text(
                   'Browsing near',
                   style: GoogleFonts.poppins(
-                    fontSize: 10,
+                    fontSize: isSmallPhone ? 9.0 : 10.0,
                     color: AppColors.textHint,
                     fontWeight: FontWeight.w400,
                   ),
@@ -63,7 +73,7 @@ class HomeSliverAppBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: isTablet ? 260.0 : 180.0),
+                      constraints: BoxConstraints(maxWidth: locationMaxWidth),
                       child: Text(
                         locationLoading
                             ? 'Detecting location...'
@@ -71,7 +81,7 @@ class HomeSliverAppBar extends StatelessWidget {
                                 ? locationName
                                 : 'Set your location',
                         style: GoogleFonts.poppins(
-                          fontSize: isTablet ? 17.0 : 15.0,
+                          fontSize: isTablet ? 17.0 : isSmallPhone ? 13.0 : 15.0,
                           fontWeight: FontWeight.w700,
                           color: textColor,
                         ),
@@ -81,7 +91,7 @@ class HomeSliverAppBar extends StatelessWidget {
                     ),
                     Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      size: 18,
+                      size: isSmallPhone ? 16.0 : 18.0,
                       color: textColor,
                     ),
                   ],
@@ -93,14 +103,17 @@ class HomeSliverAppBar extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_none_rounded, size: 22),
+          icon: Icon(
+            Icons.notifications_none_rounded,
+            size: isSmallPhone ? 20.0 : 22.0,
+          ),
           onPressed: onNotificationTap,
           tooltip: 'Notifications',
         ),
-        const SizedBox(width: 4),
+        SizedBox(width: isSmallPhone ? 2 : 4),
       ],
       bottom: PreferredSize(
-        preferredSize: Size.fromHeight(isTablet ? 62.0 : 56.0),
+        preferredSize: Size.fromHeight(isTablet ? 62.0 : isSmallPhone ? 52.0 : 56.0),
         child: Container(
           decoration: BoxDecoration(
             border: Border(
@@ -114,7 +127,7 @@ class HomeSliverAppBar extends StatelessWidget {
           child: GestureDetector(
             onTap: onSearchTap,
             child: Container(
-              height: isTablet ? 48.0 : 44.0,
+              height: isTablet ? 48.0 : isSmallPhone ? 40.0 : 44.0,
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(AppRadius.full),
@@ -125,20 +138,25 @@ class HomeSliverAppBar extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const SizedBox(width: 14),
-                  const Icon(
+                  SizedBox(width: isSmallPhone ? 10 : 14),
+                  Icon(
                     Icons.search_rounded,
-                    size: 20,
+                    size: isSmallPhone ? 18.0 : 20.0,
                     color: AppColors.textHint,
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Search shops, products & offers...',
-                    style: GoogleFonts.poppins(
-                      fontSize: isTablet ? 15.0 : 13.5,
-                      color: AppColors.textHint,
+                  SizedBox(width: isSmallPhone ? 6 : 10),
+                  Flexible(
+                    child: Text(
+                      'Search shops, products & offers...',
+                      style: GoogleFonts.poppins(
+                        fontSize: isTablet ? 15.0 : isSmallPhone ? 12.0 : 13.5,
+                        color: AppColors.textHint,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  SizedBox(width: isSmallPhone ? 10 : 14),
                 ],
               ),
             ),
