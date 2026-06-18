@@ -267,7 +267,7 @@ class _FormBodyState extends State<_FormBody> {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         24, 24, 24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
       ),
       child: Center(
         child: ConstrainedBox(

@@ -50,7 +50,6 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
         }
         _offer = currentOffer;
 
-        Responsive.init(context);
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final shopAsync = ref.watch(shopDetailsProvider(currentOffer.shopId));
 

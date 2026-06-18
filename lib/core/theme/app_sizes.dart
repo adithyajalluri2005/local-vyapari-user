@@ -15,7 +15,7 @@ class AppSizes {
   static double paddingExtraLarge(BuildContext context) => Responsive.isTablet(context) ? 40.0 : 32.0;
 
   static double offerCardWidth(BuildContext context) {
-    double width = MediaQuery.of(context).size.width;
+    double width = MediaQuery.sizeOf(context).width;
     if (Responsive.isTablet(context)) return width * 0.38;
     return width * 0.72;
   }
@@ -39,7 +39,7 @@ class AppSizes {
 
   static int productGridColumnCount(BuildContext context) {
     if (Responsive.isTablet(context)) {
-      return MediaQuery.of(context).orientation == Orientation.portrait ? 3 : 4;
+      return MediaQuery.orientationOf(context) == Orientation.portrait ? 3 : 4;
     }
     return 2;
   }

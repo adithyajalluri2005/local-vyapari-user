@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/app_dimensions.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:local_vyapari_user/features/search/providers/hybrid_search_provider.dart';
@@ -144,17 +145,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
             // ── Body ────────────────────────────────────────────────
             Expanded(
-              child: !_hasActiveSearch
-                  ? _SuggestionsView(onCategorySelect: _onCategorySelected)
-                  : _ResultsView(
-                      query: _query,
-                      selectedCategory: _selectedCategory,
-                      onClearFilters: () {
-                        setState(() => _selectedCategory = null);
-                        _triggerSearch();
-                      },
-                      onRetry: _triggerSearch,
-                    ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: AppDimensions.maxWideContentWidth),
+                  child: !_hasActiveSearch
+                      ? _SuggestionsView(onCategorySelect: _onCategorySelected)
+                      : _ResultsView(
+                          query: _query,
+                          selectedCategory: _selectedCategory,
+                          onClearFilters: () {
+                            setState(() => _selectedCategory = null);
+                            _triggerSearch();
+                          },
+                          onRetry: _triggerSearch,
+                        ),
+                ),
+              ),
             ),
           ],
         ),

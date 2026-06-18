@@ -62,7 +62,10 @@ class _SecuritySettingsScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Security')),
-      body: ListView(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: ListView(
         children: [
           _sectionHeader(context, 'Signed-in devices'),
           devicesAsync.when(
@@ -113,6 +116,8 @@ class _SecuritySettingsScreenState
             ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }

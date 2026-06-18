@@ -543,7 +543,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             Responsive.horizontalPadding(context),
             12,
             Responsive.horizontalPadding(context),
-            MediaQuery.of(context).padding.bottom + 12,
+            MediaQuery.paddingOf(context).bottom + 12,
           ),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,

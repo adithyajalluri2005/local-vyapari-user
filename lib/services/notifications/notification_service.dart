@@ -903,7 +903,7 @@ class _ForegroundNotificationBannerState extends State<ForegroundNotificationBan
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
+    final top = MediaQuery.paddingOf(context).top;
     return Positioned(
       top: top + 12,
       left: 16,

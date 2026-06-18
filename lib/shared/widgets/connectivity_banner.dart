@@ -102,7 +102,7 @@ class _BannerContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
     final backgroundColor =
         showBackOnline ? const Color(0xFF15803D) : const Color(0xFF1A2433);
 

@@ -252,7 +252,7 @@ class _FormBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         24, 36, 24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
       ),
       child: Center(
         child: ConstrainedBox(

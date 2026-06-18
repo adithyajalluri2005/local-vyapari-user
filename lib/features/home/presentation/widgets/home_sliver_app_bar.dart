@@ -28,7 +28,7 @@ class HomeSliverAppBar extends StatelessWidget {
     final hPad = Responsive.horizontalPadding(context);
     final isTablet = Responsive.isTablet(context);
     final isSmallPhone = Responsive.isSmallPhone(context);
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery.sizeOf(context).width;
 
     // Cap location text width so it never crowds the action buttons.
     // Reserve ≈ icon(22) + gap(6) + chevron(18) + actions(~52) + titleSpacing + buffer.

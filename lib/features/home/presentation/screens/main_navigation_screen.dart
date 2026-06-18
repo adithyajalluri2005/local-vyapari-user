@@ -176,7 +176,7 @@ class _TabletScaffold extends ConsumerWidget {
           SingleChildScrollView(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height,
+                minHeight: MediaQuery.sizeOf(context).height,
               ),
               child: IntrinsicHeight(
                 child: NavigationRail(
@@ -295,7 +295,7 @@ class _FloatingPillNav extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkSurface : AppColors.surface;
     final shadow = Colors.black.withValues(alpha: isDark ? 0.22 : 0.055);
-    final bottom = MediaQuery.of(context).padding.bottom;
+    final bottom = MediaQuery.paddingOf(context).bottom;
 
     final chatsAsync = ref.watch(userChatsStreamProvider);
     final unreadCount = chatsAsync.whenOrNull(

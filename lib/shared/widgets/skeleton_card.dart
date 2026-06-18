@@ -214,7 +214,7 @@ class _BubbleSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxWidth = MediaQuery.of(context).size.width * widthFraction;
+    final maxWidth = MediaQuery.sizeOf(context).width * widthFraction;
     return Align(
       alignment: fromUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(

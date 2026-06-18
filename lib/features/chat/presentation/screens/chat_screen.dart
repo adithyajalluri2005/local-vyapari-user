@@ -286,7 +286,7 @@ class _MessageBubble extends StatelessWidget {
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.72,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.72,
         ),
         child: Container(
           margin: EdgeInsets.only(
@@ -425,7 +425,7 @@ class _InputBar extends StatelessWidget {
         hPad,
         10,
         hPad,
-        MediaQuery.of(context).padding.bottom + 10,
+        MediaQuery.paddingOf(context).bottom + 10,
       ),
       child: Center(
         child: ConstrainedBox(

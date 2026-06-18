@@ -105,7 +105,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Responsive.init(context);
     ref.listen<AuthState>(authProvider, (_, next) {
       if (next is AuthFailure) {
         CustomSnackBar.showError(context: context, message: next.message, title: 'Sign in failed');
@@ -379,7 +378,7 @@ class _FormBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         24, 28, 24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
       ),
       child: Center(
         child: ConstrainedBox(

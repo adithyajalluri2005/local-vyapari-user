@@ -163,7 +163,6 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
           return const Scaffold(body: Center(child: Text('Shop not found')));
         }
         _shop = currentShop;
-        Responsive.init(context);
         final productsAsync = ref.watch(shopProductsProvider(currentShop.id));
         final padding = AppSizes.paddingMedium(context);
 

@@ -69,7 +69,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Responsive.init(context);
     final hp = Responsive.horizontalPadding(context);
     final locationAsync = ref.watch(activeBrowsingLocationProvider);
     final shopsAsync = ref.watch(nearbyShopsProvider);
@@ -144,7 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               SliverPadding(
                 padding: EdgeInsets.only(
-                  bottom: 90 + MediaQuery.of(context).padding.bottom,
+                  bottom: 90 + MediaQuery.paddingOf(context).bottom,
                 ),
                 sliver: SliverToBoxAdapter(
                   child: Center(
