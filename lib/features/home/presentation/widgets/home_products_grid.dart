@@ -88,7 +88,7 @@ class ProductsGrid extends ConsumerWidget {
                           Stack(
                             children: [
                               AspectRatio(
-                                aspectRatio: 1.1,
+                                aspectRatio: 1.2,
                                 child: p.images.isNotEmpty
                                     ? CachedNetworkImage(
                                         imageUrl: p.images.first,
