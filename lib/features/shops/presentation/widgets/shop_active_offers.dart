@@ -665,9 +665,13 @@ class _OfferDetailsBottomSheet extends StatelessWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => _launchMaps(context, shop!),
                         icon: const Icon(Icons.directions_outlined, size: 16),
-                        label: const Text('Directions'),
+                        label: const Text(
+                          'Directions',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
@@ -676,7 +680,6 @@ class _OfferDetailsBottomSheet extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      flex: 2,
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context); // close bottom sheet
