@@ -20,13 +20,17 @@ import 'package:local_vyapari_user/features/shops/providers/shop_details_provide
 import 'package:local_vyapari_user/features/shops/presentation/widgets/shop_product_card.dart';
 import 'package:local_vyapari_user/features/shops/presentation/widgets/shop_active_offers.dart';
 import 'package:local_vyapari_user/features/shops/presentation/widgets/shop_reviews_section.dart';
+import 'package:local_vyapari_user/shared/models/offer.dart';
+import 'package:local_vyapari_user/features/offers/providers/offer_details_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 
 class ShopDetailsScreen extends ConsumerStatefulWidget {
   final Shop? shop;
   final String? shopId;
-  const ShopDetailsScreen({super.key, this.shop, this.shopId});
+  final Offer? initialOffer;
+  final String? initialOfferId;
+  const ShopDetailsScreen({super.key, this.shop, this.shopId, this.initialOffer, this.initialOfferId});
 
   @override
   ConsumerState<ShopDetailsScreen> createState() => _ShopDetailsScreenState();
@@ -53,6 +57,36 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
     }
     _scrollCtrl.addListener(_onMobileScroll);
     _tabletCtrl.addListener(_onTabletScroll);
+
+    if (widget.initialOffer != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        ShopActiveOffers.showOfferSheet(
+          context,
+          widget.initialOffer!,
+          isDark: isDark,
+          shop: _shop,
+        );
+      });
+    } else if (widget.initialOfferId != null) {
+      final sId = widget.shop?.id ?? widget.shopId ?? '';
+      final oId = widget.initialOfferId!;
+      if (sId.isNotEmpty && oId.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          final offer = await ref.read(offerDetailsProvider('$sId:$oId').future);
+          if (!mounted || offer == null) return;
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          ShopActiveOffers.showOfferSheet(
+            context,
+            offer,
+            isDark: isDark,
+            shop: _shop,
+          );
+        });
+      }
+    }
   }
 
   @override

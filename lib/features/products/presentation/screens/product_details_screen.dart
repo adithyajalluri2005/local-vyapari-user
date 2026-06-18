@@ -60,20 +60,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
         return Scaffold(
           bottomNavigationBar: _buildBottomBar(context),
-          body: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildImageZone(context),
-                    _buildContent(context),
-                  ],
-                ),
-              ),
-              _buildFloatingButtons(context),
-            ],
-          ),
+          body: Responsive.isTablet(context)
+              ? _buildTabletLayout(context)
+              : _buildPhoneLayout(context),
         );
       },
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -81,6 +70,55 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         appBar: AppBar(),
         body: Center(child: Text('Failed to load product: $error')),
       ),
+    );
+  }
+
+  // ── Layouts ───────────────────────────────────────────────────────────────
+
+  Widget _buildPhoneLayout(BuildContext context) {
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildImageZone(context),
+              _buildContent(context),
+            ],
+          ),
+        ),
+        _buildFloatingButtons(context),
+      ],
+    );
+  }
+
+  Widget _buildTabletLayout(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: 4,
+          child: LayoutBuilder(
+            builder: (ctx, constraints) => Stack(
+              fit: StackFit.expand,
+              children: [
+                ProductImageGallery(
+                  images: product.images,
+                  height: constraints.maxHeight,
+                ),
+                _buildFloatingButtons(ctx),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          flex: 6,
+          child: SingleChildScrollView(
+            child: _buildContent(context),
+          ),
+        ),
+      ],
     );
   }
 
@@ -112,7 +150,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   Widget _buildFloatingButtons(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: 8,
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -147,7 +188,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
   Widget _buildContent(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hPad = Responsive.isTablet(context) ? 28.0 : 20.0;
+    final hPad = Responsive.horizontalPadding(context);
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: hPad),
@@ -188,7 +229,13 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
             context,
             color: isDark ? Colors.white : AppColors.primary,
             fontWeight: FontWeight.bold,
-          ).copyWith(fontSize: Responsive.isTablet(context) ? 32 : 28),
+          ).copyWith(
+            fontSize: context.responsive<double>(
+              mobile: Responsive.isSmallPhone(context) ? 24 : 28,
+              tablet: 32,
+              desktop: 36,
+            ),
+          ),
         ),
         if (product.actualPrice > product.offerPrice) ...[
           AppSpacing.horizontalSm,
@@ -270,7 +317,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
   Widget _buildDescriptionCard(BuildContext context, bool isDark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(
+        context.responsive<double>(mobile: 14, tablet: 20),
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -305,11 +354,14 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         ref.watch(shopDetailsProvider(product.shopId)).when(
           data: (shop) {
             if (shop == null) return const Text('Shop details not available');
+            final logoSize = context.responsive<double>(mobile: 44, tablet: 56);
             return InkWell(
               onTap: () => context.push('/shop_details', extra: shop),
               borderRadius: BorderRadius.circular(AppRadius.md),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(
+                  context.responsive<double>(mobile: 12, tablet: 16),
+                ),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -320,8 +372,8 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       child: shop.shopLogo.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: shop.shopLogo,
-                              width: 44,
-                              height: 44,
+                              width: logoSize,
+                              height: logoSize,
                               fit: BoxFit.cover,
                               cacheManager: AppCacheManager(),
                               placeholder: (ctx, _) {
@@ -332,9 +384,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                                   child: Container(color: dark ? const Color(0xFF1E1E2E) : Colors.white),
                                 );
                               },
-                              errorWidget: (_, _, _) => _shopAvatarPlaceholder(),
+                              errorWidget: (_, _, _) => _shopAvatarPlaceholder(logoSize),
                             )
-                          : _shopAvatarPlaceholder(),
+                          : _shopAvatarPlaceholder(logoSize),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -383,11 +435,11 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     );
   }
 
-  Widget _shopAvatarPlaceholder() {
+  Widget _shopAvatarPlaceholder([double size = 44]) {
     return CircleAvatar(
-      radius: 22,
+      radius: size / 2,
       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-      child: const Icon(Icons.store, color: AppColors.primary, size: 20),
+      child: Icon(Icons.store, color: AppColors.primary, size: size * 0.45),
     );
   }
 
@@ -487,7 +539,12 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
       data: (shop) {
         if (shop == null) return const SizedBox.shrink();
         return Container(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+          padding: EdgeInsets.fromLTRB(
+            Responsive.horizontalPadding(context),
+            12,
+            Responsive.horizontalPadding(context),
+            MediaQuery.of(context).padding.bottom + 12,
+          ),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             boxShadow: [
@@ -520,7 +577,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   icon: const Icon(Icons.directions_outlined),
                   label: const Text('Directions'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: EdgeInsets.symmetric(
+                      vertical: context.responsive<double>(mobile: 14, tablet: 16),
+                    ),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.md)),
                   ),
@@ -540,7 +599,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   icon: const Icon(Icons.chat_bubble_outline),
                   label: const Text('Chat with Shop'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: EdgeInsets.symmetric(
+                      vertical: context.responsive<double>(mobile: 14, tablet: 16),
+                    ),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppRadius.md)),
                   ),

@@ -85,33 +85,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
-tasks.register("copyLogos") {
-    doLast {
-        val srcFile = file("C:/Users/adith/.gemini/antigravity/brain/0a7d04d1-6af7-441a-99b1-da540a0d8c6c/media__1780986388840.png")
-        if (srcFile.exists()) {
-            copy {
-                from(srcFile)
-                into("src/main/res/drawable")
-                rename { "ic_notification.png" }
-            }
-            copy {
-                from(srcFile)
-                into("../../assets/images")
-                rename { "logo.png" }
-            }
-            copy {
-                from(srcFile)
-                into("../../assets/images")
-                rename { "logo_white.png" }
-            }
-            println("[Gradle] Successfully copied new logos from temporary brain directory.")
-        } else {
-            println("[Gradle] Source logo file not found or already deleted; skipping copy task.")
-        }
-    }
-}
 
-tasks.named("preBuild") {
-    dependsOn("copyLogos")
-}
+// Keep standard configurations.
+
 

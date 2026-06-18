@@ -94,7 +94,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       notificationDetails: NotificationDetails(android: androidDetails),
       payload: isChat
           ? json.encode({'type': 'chat', 'shopId': message.data['shopId'] ?? '', 'shopName': message.data['shopName'] ?? ''})
-          : json.encode({'type': 'offer', 'shopId': message.data['shopId'] ?? ''}),
+          : json.encode({'type': 'offer', 'shopId': message.data['shopId'] ?? '', 'offerId': message.data['offerId'] ?? ''}),
     );
     debugPrint('[NotifSvc-BG] Local notification shown — id=$id');
   } catch (e) {
@@ -237,8 +237,12 @@ class NotificationService {
         return const PendingNotification('/chats');
       }
       if (type == 'offer' || data.isNotEmpty) {
+        final offerId = data['offerId'] as String? ?? '';
         if (shopId.isNotEmpty) {
-          return PendingNotification('/shop_details?shopId=$shopId');
+          final route = offerId.isNotEmpty
+              ? '/shop_details?shopId=$shopId&offerId=$offerId'
+              : '/shop_details?shopId=$shopId';
+          return PendingNotification(route);
         }
         return const PendingNotification('/all_offers');
       }
@@ -503,7 +507,15 @@ class NotificationService {
 
           final titleStr = 'New Offer at $shopName!';
           final bodyStr = '$title - Get $discount% OFF!';
+          final offerRoute = '/offer_details?shopId=$shopId&offerId=$offerId';
           debugPrint('[NotifSvc] Showing offer foreground notification — "$titleStr" | "$bodyStr"');
+
+          await _showNativeNotification(
+            titleStr,
+            bodyStr,
+            payload: json.encode({'type': 'offer', 'shopId': shopId, 'offerId': offerId}),
+          );
+
           _showForegroundNotification(
             titleStr,
             bodyStr,
@@ -512,7 +524,7 @@ class NotificationService {
             onTap: () {
               try {
                 final context = rootNavigatorKey.currentContext;
-                if (context != null) GoRouter.of(context).push('/shop_details?shopId=$shopId');
+                if (context != null) GoRouter.of(context).push(offerRoute);
               } catch (_) {}
             },
           );
@@ -603,14 +615,17 @@ class NotificationService {
             _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
           }
         } else if (!rtdbListenersActive) {
+          final offerId = message.data['offerId'] ?? '';
+          final offerRoute = shopId.isNotEmpty && offerId.isNotEmpty
+              ? '/shop_details?shopId=$shopId&offerId=$offerId'
+              : shopId.isNotEmpty
+                  ? '/shop_details?shopId=$shopId'
+                  : '/all_offers';
           debugPrint('[NotifSvc] onMessage: showing offer notification via FCM (no RTDB listeners yet)');
           _showNativeNotification(
             title,
             body,
-            payload: json.encode({
-              'type': 'offer',
-              'shopId': shopId,
-            }),
+            payload: json.encode({'type': 'offer', 'shopId': shopId, 'offerId': offerId}),
           );
           _showForegroundNotification(
             title,
@@ -620,13 +635,7 @@ class NotificationService {
             onTap: () {
               try {
                 final context = rootNavigatorKey.currentContext;
-                if (context != null) {
-                  if (shopId.isNotEmpty) {
-                    GoRouter.of(context).push('/shop_details?shopId=$shopId');
-                  } else {
-                    GoRouter.of(context).push('/all_offers');
-                  }
-                }
+                if (context != null) GoRouter.of(context).push(offerRoute);
               } catch (_) {}
             },
           );
@@ -667,14 +676,17 @@ class NotificationService {
             _lastChatNotifyTs[shopId] = DateTime.now().millisecondsSinceEpoch;
           }
         } else if (!rtdbListenersActive) {
+          final offerId = message.data['offerId'] ?? '';
+          final offerRoute = shopId.isNotEmpty && offerId.isNotEmpty
+              ? '/shop_details?shopId=$shopId&offerId=$offerId'
+              : shopId.isNotEmpty
+                  ? '/shop_details?shopId=$shopId'
+                  : '/all_offers';
           debugPrint('[NotifSvc] onMessage: showing offer notification via FCM fallback (data-only)');
           _showNativeNotification(
             title,
             body,
-            payload: json.encode({
-              'type': 'offer',
-              'shopId': shopId,
-            }),
+            payload: json.encode({'type': 'offer', 'shopId': shopId, 'offerId': offerId}),
           );
           _showForegroundNotification(
             title,
@@ -684,13 +696,7 @@ class NotificationService {
             onTap: () {
               try {
                 final context = rootNavigatorKey.currentContext;
-                if (context != null) {
-                  if (shopId.isNotEmpty) {
-                    GoRouter.of(context).push('/shop_details?shopId=$shopId');
-                  } else {
-                    GoRouter.of(context).push('/all_offers');
-                  }
-                }
+                if (context != null) GoRouter.of(context).push(offerRoute);
               } catch (_) {}
             },
           );

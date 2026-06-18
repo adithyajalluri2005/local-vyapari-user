@@ -49,6 +49,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
+  void _scrollToBottom({bool animated = true}) {
+    Future.delayed(const Duration(milliseconds: 80), () {
+      if (_scrollCtrl.hasClients) {
+        if (animated) {
+          _scrollCtrl.animateTo(
+            0.0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        } else {
+          _scrollCtrl.jumpTo(0.0);
+        }
+      }
+    });
+  }
+
   void _send() {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
@@ -60,16 +76,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       shopLogo: widget.shopLogo,
     );
     _ctrl.clear();
-
-    Future.delayed(const Duration(milliseconds: 80), () {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    _scrollToBottom();
   }
 
   Future<void> _confirmDelete() async {
@@ -106,9 +113,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(chatMessagesProvider(widget.shopId), (_, next) {
+    ref.listen(chatMessagesProvider(widget.shopId), (previous, next) {
       if (next.hasValue && next.value!.isNotEmpty) {
         ref.read(chatServiceProvider).markAsRead(widget.shopId);
+        final prevCount = previous?.value?.length ?? 0;
+        if (next.value!.length > prevCount) {
+          _scrollToBottom();
+        }
       }
     });
 
@@ -192,6 +203,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               ),
               data: (messages) {
                 if (messages.isEmpty) return _EmptyChat(shopName: widget.shopName);
+
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollToBottom(animated: false);
+                });
 
                 return ListView.builder(
                   controller: _scrollCtrl,

@@ -274,11 +274,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/shop_details',
         pageBuilder: (context, state) {
-          final shop = state.extra as Shop?;
+          final extra = state.extra;
+          Shop? shop;
+          Offer? initialOffer;
+          if (extra is Shop) {
+            shop = extra;
+          } else if (extra is Map) {
+            shop = extra['shop'] as Shop?;
+            initialOffer = extra['offer'] as Offer?;
+          }
           final shopId = state.uri.queryParameters['shopId'] ?? state.uri.queryParameters['id'];
+          final offerId = state.uri.queryParameters['offerId'];
           return buildSlideRightPage(
             key: state.pageKey,
-            child: ShopDetailsScreen(shop: shop, shopId: shopId),
+            child: ShopDetailsScreen(
+              shop: shop,
+              shopId: shopId,
+              initialOffer: initialOffer,
+              initialOfferId: initialOffer == null ? offerId : null,
+            ),
           );
         },
       ),

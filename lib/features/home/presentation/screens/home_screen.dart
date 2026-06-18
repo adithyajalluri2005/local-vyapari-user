@@ -246,7 +246,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final shops = ref.read(nearbyShopsProvider).value ?? [];
     final matches = shops.where((s) => s.id == offer.shopId);
     if (matches.isEmpty) return;
-    context.push('/shop_details', extra: matches.first);
+    context.push('/shop_details', extra: {'shop': matches.first, 'offer': offer});
   }
 
   void _showOfferPopup(BuildContext context, Offer offer) {

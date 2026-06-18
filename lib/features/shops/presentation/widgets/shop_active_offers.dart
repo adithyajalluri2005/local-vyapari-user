@@ -25,6 +25,26 @@ class ShopActiveOffers extends ConsumerWidget {
     required this.padding,
   });
 
+  static void showOfferSheet(
+    BuildContext context,
+    Offer offer, {
+    bool isDark = false,
+    Shop? shop,
+  }) {
+    final colors = _offerCardGradients[0];
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OfferDetailsBottomSheet(
+        offer: offer,
+        colors: colors,
+        isDark: isDark,
+        shop: shop,
+      ),
+    );
+  }
+
   static const _offerCardGradients = [
     [Color(0xFFE8445A), Color(0xFFF76F83)],
     [Color(0xFF3730A3), Color(0xFF6366F1)],
