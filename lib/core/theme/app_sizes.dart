@@ -46,8 +46,8 @@ class AppSizes {
 
   static double productGridAspectRatio(BuildContext context) {
     if (Responsive.isTablet(context)) return 0.82;
-    if (Responsive.isSmallPhone(context)) return 0.66;
-    return 0.70;
+    if (Responsive.isSmallPhone(context)) return 0.64;
+    return 0.68;
   }
 
   // ── Offer banner horizontal carousel ─────────────────────────────────────
