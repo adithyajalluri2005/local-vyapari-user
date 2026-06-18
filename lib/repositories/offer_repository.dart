@@ -96,8 +96,24 @@ class FirebaseOfferRepository implements OfferRepository {
       return <Offer>[];
     }
 
-    offers.sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));
-    return offers;
+    const kMaxPerShop = 3;
+    final Map<String, List<Offer>> byShop = {};
+    for (final offer in offers) {
+      byShop.putIfAbsent(offer.shopId, () => []).add(offer);
+    }
+    final shopBuckets = byShop.values.map((list) {
+      list.sort((a, b) => b.discountPercentage.compareTo(a.discountPercentage));
+      return list.take(kMaxPerShop).toList();
+    }).toList();
+
+    final List<Offer> result = [];
+    final maxLen = shopBuckets.fold(0, (m, b) => b.length > m ? b.length : m);
+    for (int i = 0; i < maxLen; i++) {
+      for (final bucket in shopBuckets) {
+        if (i < bucket.length) result.add(bucket[i]);
+      }
+    }
+    return result;
   }
 
   @override
