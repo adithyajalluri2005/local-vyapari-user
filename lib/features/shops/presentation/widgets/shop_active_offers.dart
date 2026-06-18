@@ -73,20 +73,23 @@ class ShopActiveOffers extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.08),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : AppColors.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_offer_rounded, size: 13, color: AppColors.primary),
+                        Icon(Icons.local_offer_rounded, size: 13,
+                            color: isDark ? Colors.white : AppColors.primary),
                         const SizedBox(width: 5),
                         Text(
                           'Active Offers',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                            color: isDark ? Colors.white : AppColors.primary,
                           ),
                         ),
                       ],
@@ -96,7 +99,9 @@ class ShopActiveOffers extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.1),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : AppColors.accent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -104,7 +109,7 @@ class ShopActiveOffers extends ConsumerWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.accent,
+                        color: isDark ? Colors.white70 : AppColors.accent,
                       ),
                     ),
                   ),
@@ -239,7 +244,9 @@ class ShopActiveOffers extends ConsumerWidget {
                             Icon(
                               Icons.access_time_rounded,
                               size: 10,
-                              color: daysLeft <= 1 ? AppColors.error : colors[0],
+                              color: daysLeft <= 1
+                                  ? AppColors.error
+                                  : isDark ? Colors.white60 : colors[0],
                             ),
                             const SizedBox(width: 3),
                             Flexible(
@@ -252,7 +259,9 @@ class ShopActiveOffers extends ConsumerWidget {
                                 style: GoogleFonts.poppins(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w600,
-                                  color: daysLeft <= 1 ? AppColors.error : colors[0],
+                                  color: daysLeft <= 1
+                                      ? AppColors.error
+                                      : isDark ? Colors.white60 : colors[0],
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -265,7 +274,7 @@ class ShopActiveOffers extends ConsumerWidget {
                           'Limited time offer',
                           style: GoogleFonts.poppins(
                             fontSize: 9.5,
-                            color: AppColors.textHint,
+                            color: isDark ? Colors.white38 : AppColors.textHint,
                           ),
                         ),
                     ],
