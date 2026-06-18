@@ -240,7 +240,7 @@ class NotificationService {
         final offerId = data['offerId'] as String? ?? '';
         if (shopId.isNotEmpty) {
           final route = offerId.isNotEmpty
-              ? '/shop_details?shopId=$shopId&offerId=$offerId'
+              ? '/offer_details?shopId=$shopId&offerId=$offerId'
               : '/shop_details?shopId=$shopId';
           return PendingNotification(route);
         }
@@ -617,7 +617,7 @@ class NotificationService {
         } else if (!rtdbListenersActive) {
           final offerId = message.data['offerId'] ?? '';
           final offerRoute = shopId.isNotEmpty && offerId.isNotEmpty
-              ? '/shop_details?shopId=$shopId&offerId=$offerId'
+              ? '/offer_details?shopId=$shopId&offerId=$offerId'
               : shopId.isNotEmpty
                   ? '/shop_details?shopId=$shopId'
                   : '/all_offers';
@@ -678,7 +678,7 @@ class NotificationService {
         } else if (!rtdbListenersActive) {
           final offerId = message.data['offerId'] ?? '';
           final offerRoute = shopId.isNotEmpty && offerId.isNotEmpty
-              ? '/shop_details?shopId=$shopId&offerId=$offerId'
+              ? '/offer_details?shopId=$shopId&offerId=$offerId'
               : shopId.isNotEmpty
                   ? '/shop_details?shopId=$shopId'
                   : '/all_offers';
