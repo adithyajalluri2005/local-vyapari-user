@@ -279,14 +279,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Container(
               width: 52,
               height: 52,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.08),
-              ),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                size: 26,
                 color: Colors.white,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(height: 12),

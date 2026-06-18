@@ -90,7 +90,7 @@ class HomeSliverAppBar extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_none_rounded),
+          icon: const Icon(Icons.notifications_none_rounded, size: 22),
           onPressed: onNotificationTap,
           tooltip: 'Notifications',
         ),
