@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
@@ -24,6 +25,11 @@ class ShopCard extends StatelessWidget {
     final bg = isDark ? AppColors.darkSurface : AppColors.surface;
     final border = isDark ? Colors.white10 : AppColors.border.withValues(alpha: 0.8);
     final shadow = Colors.black.withValues(alpha: isDark ? 0.2 : 0.055);
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final nameFontSize = isTablet ? 15.0 : (isSmall ? 13.0 : 14.0);
+    final cityFontSize = isTablet ? 13.0 : (isSmall ? 11.0 : 12.0);
+    final avatarRadius = isTablet ? 32.0 : (isSmall ? 24.0 : 28.0);
 
     return ScaleOnTap(
       onTap: onTap,
@@ -38,11 +44,11 @@ class ShopCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(isTablet ? 14.0 : 12.0),
           child: Row(
             children: [
-              _ShopAvatar(logoUrl: shop.shopLogo, radius: 28),
-              const SizedBox(width: 12),
+              _ShopAvatar(logoUrl: shop.shopLogo, radius: avatarRadius),
+              SizedBox(width: isTablet ? 14.0 : 12.0),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,7 +56,7 @@ class ShopCard extends StatelessWidget {
                     Text(
                       shop.shopName,
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: nameFontSize,
                         fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white : AppColors.textPrimary,
                       ),
@@ -62,7 +68,7 @@ class ShopCard extends StatelessWidget {
                       Text(
                         shop.location.city,
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
+                          fontSize: cityFontSize,
                           color: AppColors.textHint,
                         ),
                         maxLines: 1,

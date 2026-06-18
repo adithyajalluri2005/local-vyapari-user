@@ -6,8 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
-import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
+import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/chat_session.dart';
@@ -48,8 +49,12 @@ class ChatsListScreen extends ConsumerWidget {
         data: (chats) {
           if (chats.isEmpty) return const _EmptyView();
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(top: 8, bottom: 90),
+          final hPad = Responsive.horizontalPadding(context);
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: ListView.builder(
+            padding: EdgeInsets.only(top: 8, bottom: 90, left: hPad, right: hPad),
             itemCount: chats.length,
             itemBuilder: (context, index) {
               final chat = chats[index];
@@ -66,6 +71,8 @@ class ChatsListScreen extends ConsumerWidget {
                 ),
               );
             },
+          ),
+            ),
           );
         },
       ),
@@ -158,87 +165,96 @@ class _ChatTile extends StatelessWidget {
           'shopName': name,
           'shopLogo': logo,
         }),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkScaffold : AppColors.background,
-            border: Border(
-              bottom: BorderSide(
-                color: AppColors.border.withValues(alpha: 0.5),
-                width: 0.7,
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              // Avatar
-              _ShopAvatar(logo: logo, name: name),
-              const SizedBox(width: 12),
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: session.unread ? FontWeight.w700 : FontWeight.w600,
-                        color: isDark ? Colors.white : AppColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      session.lastMessageText.isNotEmpty
-                          ? session.lastMessageText
-                          : 'Say hello 👋',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.5,
-                        color: session.unread
-                            ? (isDark ? Colors.white : AppColors.textPrimary)
-                            : AppColors.textHint,
-                        fontWeight:
-                            session.unread ? FontWeight.w500 : FontWeight.normal,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+        child: Builder(builder: (context) {
+          final isTablet = Responsive.isTablet(context);
+          final isSmall = Responsive.isSmallPhone(context);
+          return Container(
+            padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 20.0 : 16.0,
+                vertical: isTablet ? 14.0 : 12.0),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkScaffold : AppColors.background,
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                  width: 0.7,
                 ),
               ),
-              const SizedBox(width: 8),
-              // Trailing
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (time.isNotEmpty)
-                    Text(
-                      time,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: session.unread ? (isDark ? Colors.white : AppColors.primary) : AppColors.textHint,
-                        fontWeight: session.unread ? FontWeight.w600 : FontWeight.normal,
+            ),
+            child: Row(
+              children: [
+                // Avatar
+                _ShopAvatar(logo: logo, name: name),
+                const SizedBox(width: 12),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: GoogleFonts.poppins(
+                          fontSize: isTablet ? 15.0 : (isSmall ? 13.0 : 14.0),
+                          fontWeight: session.unread ? FontWeight.w700 : FontWeight.w600,
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  if (session.unread) ...[
-                    const SizedBox(height: 5),
-                    Container(
-                      width: 9,
-                      height: 9,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
+                      const SizedBox(height: 2),
+                      Text(
+                        session.lastMessageText.isNotEmpty
+                            ? session.lastMessageText
+                            : 'Say hello 👋',
+                        style: GoogleFonts.poppins(
+                          fontSize: isTablet ? 13.5 : (isSmall ? 11.5 : 12.5),
+                          color: session.unread
+                              ? (isDark ? Colors.white : AppColors.textPrimary)
+                              : AppColors.textHint,
+                          fontWeight:
+                              session.unread ? FontWeight.w500 : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Trailing
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (time.isNotEmpty)
+                      Text(
+                        time,
+                        style: GoogleFonts.poppins(
+                          fontSize: isTablet ? 12.0 : (isSmall ? 10.0 : 11.0),
+                          color: session.unread
+                              ? (isDark ? Colors.white : AppColors.primary)
+                              : AppColors.textHint,
+                          fontWeight:
+                              session.unread ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    if (session.unread) ...[
+                      const SizedBox(height: 5),
+                      Container(
+                        width: isTablet ? 11.0 : 9.0,
+                        height: isTablet ? 11.0 : 9.0,
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
-              ),
-            ],
-          ),
-        ),
+                ),
+              ],
+            ),
+          );
+        }),
       ),
     );
   }
@@ -262,9 +278,12 @@ class _ShopAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final size = isTablet ? 56.0 : (isSmall ? 42.0 : 48.0);
     return Container(
-      width: 48,
-      height: 48,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
@@ -294,13 +313,15 @@ class _Fallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
     return Container(
       color: AppColors.primary.withValues(alpha: 0.1),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : 'S',
           style: GoogleFonts.poppins(
-            fontSize: 18,
+            fontSize: isTablet ? 22.0 : (isSmall ? 16.0 : 18.0),
             fontWeight: FontWeight.w700,
             color: AppColors.primary,
           ),
@@ -318,6 +339,9 @@ class _EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final iconBoxSize = isTablet ? 96.0 : (isSmall ? 68.0 : 80.0);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -325,15 +349,15 @@ class _EmptyView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: iconBoxSize,
+              height: iconBoxSize,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.chat_bubble_outline_rounded,
-                size: 36,
+                size: isTablet ? 44.0 : (isSmall ? 30.0 : 36.0),
                 color: AppColors.textHint,
               ),
             ),
@@ -341,7 +365,7 @@ class _EmptyView extends StatelessWidget {
             Text(
               'No conversations yet',
               style: GoogleFonts.poppins(
-                fontSize: 17,
+                fontSize: isTablet ? 19.0 : (isSmall ? 15.0 : 17.0),
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white : AppColors.textPrimary,
               ),
@@ -349,7 +373,9 @@ class _EmptyView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Start a chat from any shop page to talk directly with local vendors.',
-              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
+              style: GoogleFonts.poppins(
+                  fontSize: isTablet ? 14.0 : (isSmall ? 12.0 : 13.0),
+                  color: AppColors.textHint),
               textAlign: TextAlign.center,
             ),
           ],

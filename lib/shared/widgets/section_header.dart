@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -11,13 +12,15 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
           style: GoogleFonts.poppins(
-            fontSize: 15,
+            fontSize: isTablet ? 17.0 : (isSmall ? 13.5 : 15.0),
             fontWeight: FontWeight.w600,
             color: isDark ? Colors.white : AppColors.textPrimary,
           ),
@@ -34,10 +37,12 @@ class SeeAllChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 14.0 : 12.0, vertical: 5),
         decoration: BoxDecoration(
           color: AppColors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(32),
@@ -45,7 +50,7 @@ class SeeAllChip extends StatelessWidget {
         child: Text(
           'See all',
           style: GoogleFonts.poppins(
-            fontSize: 12,
+            fontSize: isTablet ? 13.0 : 12.0,
             fontWeight: FontWeight.w600,
             color: AppColors.primary,
           ),

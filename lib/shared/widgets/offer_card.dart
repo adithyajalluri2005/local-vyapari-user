@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
@@ -20,6 +21,8 @@ class OfferCard extends StatelessWidget {
     final border = isDark ? Colors.white10 : AppColors.border.withValues(alpha: 0.8);
     final shadow = Colors.black.withValues(alpha: isDark ? 0.2 : 0.055);
     final daysLeft = offer.endDate?.difference(DateTime.now()).inDays;
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
 
     return ScaleOnTap(
       onTap: onTap,
@@ -44,7 +47,7 @@ class OfferCard extends StatelessWidget {
 
               // ── Content ───────────────────────────────────────
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isTablet ? 14.0 : 12.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -66,7 +69,7 @@ class OfferCard extends StatelessWidget {
                             child: Text(
                               offer.shopName,
                               style: GoogleFonts.poppins(
-                                fontSize: 12,
+                                fontSize: isTablet ? 13.0 : (isSmall ? 11.0 : 12.0),
                                 color: isDark ? Colors.white70 : AppColors.textSecondary,
                               ),
                               maxLines: 1,
@@ -81,7 +84,7 @@ class OfferCard extends StatelessWidget {
                     Text(
                       offer.title,
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
+                        fontSize: isTablet ? 15.0 : (isSmall ? 13.0 : 14.0),
                         fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white : AppColors.textPrimary,
                       ),
@@ -138,9 +141,10 @@ class _OfferImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imgH = Responsive.isTablet(context) ? 160.0 : (Responsive.isSmallPhone(context) ? 120.0 : 140.0);
     if (imageUrl.isEmpty) {
       return Container(
-        height: 140,
+        height: imgH,
         color: AppColors.primary.withValues(alpha: 0.08),
         child: const Center(
           child: Icon(Icons.local_offer_outlined, size: 40, color: AppColors.primary),
@@ -151,16 +155,16 @@ class _OfferImage extends StatelessWidget {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       child: CachedNetworkImage(
         imageUrl: imageUrl,
-        height: 140,
+        height: imgH,
         width: double.infinity,
         fit: BoxFit.cover,
         cacheManager: AppCacheManager(),
         placeholder: (_, _) => Container(
-          height: 140,
+          height: imgH,
           color: AppColors.surfaceElevated,
         ),
         errorWidget: (_, _, _) => Container(
-          height: 140,
+          height: imgH,
           color: AppColors.surfaceElevated,
           child: const Icon(Icons.image_not_supported_outlined, color: AppColors.textHint),
         ),

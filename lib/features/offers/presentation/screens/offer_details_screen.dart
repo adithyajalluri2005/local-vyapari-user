@@ -56,19 +56,23 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
 
         final bannerWidget = _buildBannerHeader(context);
         final detailsWidget = _buildDetailsColumn(context, ref, shopAsync, isDark);
+        final isTablet = Responsive.isTablet(context);
+        final hPad = Responsive.horizontalPadding(context);
 
         return Scaffold(
           backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
           appBar: AppBar(
             title: Text(
               'Offer Details',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 17),
+              style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: isTablet ? 19.0 : 17.0),
             ),
             centerTitle: true,
             backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
           ),
           body: SafeArea(
-            child: Responsive.isTablet(context)
+            child: isTablet
                 ? Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -77,7 +81,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                       Expanded(
                         flex: 6,
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(hPad + 4),
                           child: detailsWidget,
                         ),
                       ),
@@ -87,9 +91,11 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(height: 200, child: bannerWidget),
+                        SizedBox(
+                            height: Responsive.isSmallPhone(context) ? 170.0 : 200.0,
+                            child: bannerWidget),
                         Padding(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(hPad),
                           child: detailsWidget,
                         ),
                       ],
@@ -107,6 +113,8 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
   }
 
   Widget _buildBannerHeader(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -122,7 +130,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
             Text(
               '${offer.discountPercentage.toInt()}% OFF',
               style: GoogleFonts.poppins(
-                fontSize: Responsive.isTablet(context) ? 56 : 48,
+                fontSize: isTablet ? 56.0 : (isSmall ? 40.0 : 48.0),
                 fontWeight: FontWeight.w900,
                 color: Colors.white,
                 letterSpacing: 2,
@@ -132,7 +140,9 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: isTablet ? 20.0 : 16.0,
+                      vertical: isTablet ? 10.0 : 8.0),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(AppRadius.full),
@@ -142,7 +152,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      fontSize: isTablet ? 14.5 : (isSmall ? 12.0 : 13.0),
                     ),
                   ),
                 ),
@@ -159,13 +169,15 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
     AsyncValue<dynamic> shopAsync,
     bool isDark,
   ) {
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           offer.title,
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: isTablet ? 22.0 : (isSmall ? 17.0 : 20.0),
             fontWeight: FontWeight.w700,
             color: isDark ? Colors.white : AppColors.textPrimary,
           ),
@@ -174,7 +186,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
         Text(
           'Description',
           style: GoogleFonts.poppins(
-            fontSize: 13,
+            fontSize: isTablet ? 14.0 : (isSmall ? 12.0 : 13.0),
             fontWeight: FontWeight.w600,
             color: isDark ? Colors.white : AppColors.textSecondary,
             letterSpacing: 0.3,
@@ -184,7 +196,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
         Text(
           offer.description,
           style: GoogleFonts.poppins(
-            fontSize: 14,
+            fontSize: isTablet ? 15.0 : (isSmall ? 13.0 : 14.0),
             color: isDark ? AppColors.textSecondary : const Color(0xFF475569),
             height: 1.6,
           ),
@@ -195,7 +207,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
         Text(
           'Available At',
           style: GoogleFonts.poppins(
-            fontSize: 15,
+            fontSize: isTablet ? 17.0 : (isSmall ? 13.5 : 15.0),
             fontWeight: FontWeight.w700,
             color: isDark ? Colors.white : AppColors.textPrimary,
           ),
@@ -206,13 +218,14 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
             if (shop == null) {
               return Text(
                 'Shop details not available',
-                style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
+                style: GoogleFonts.poppins(
+                    fontSize: isTablet ? 14.0 : 13.0, color: AppColors.textHint),
               );
             }
             return GestureDetector(
               onTap: () => context.push('/shop_details', extra: shop),
               child: Container(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.all(isTablet ? 16.0 : 14.0),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkSurface : AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -233,7 +246,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                 child: Row(
                   children: [
                     CircleAvatar(
-                      radius: 28,
+                      radius: isTablet ? 34.0 : (isSmall ? 24.0 : 28.0),
                       backgroundColor: AppColors.primary.withValues(alpha: 0.08),
                       backgroundImage: shop.shopLogo.isNotEmpty
                           ? CachedNetworkImageProvider(
@@ -242,7 +255,9 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                             )
                           : null,
                       child: shop.shopLogo.isEmpty
-                          ? const Icon(Icons.store_rounded, color: AppColors.primary, size: 26)
+                          ? Icon(Icons.store_rounded,
+                              color: AppColors.primary,
+                              size: isTablet ? 30.0 : 26.0)
                           : null,
                     ),
                     const SizedBox(width: 14),
@@ -253,7 +268,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                           Text(
                             shop.shopName,
                             style: GoogleFonts.poppins(
-                              fontSize: 14,
+                              fontSize: isTablet ? 15.0 : (isSmall ? 13.0 : 14.0),
                               fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white : AppColors.textPrimary,
                             ),
@@ -266,7 +281,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                               Text(
                                 '${shop.rating} (${shop.totalReviews} reviews)',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
+                                  fontSize: isTablet ? 13.0 : (isSmall ? 11.0 : 12.0),
                                   color: AppColors.textHint,
                                 ),
                               ),
@@ -283,7 +298,7 @@ class _OfferDetailsScreenState extends ConsumerState<OfferDetailsScreen> {
                                   child: Text(
                                     shop.location.address,
                                     style: GoogleFonts.poppins(
-                                      fontSize: 11.5,
+                                      fontSize: isTablet ? 12.5 : (isSmall ? 10.5 : 11.5),
                                       color: AppColors.textHint,
                                     ),
                                     maxLines: 1,

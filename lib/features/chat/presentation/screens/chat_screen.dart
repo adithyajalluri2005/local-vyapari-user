@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/chat/providers/chat_provider.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
@@ -126,6 +127,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final messagesAsync = ref.watch(chatMessagesProvider(widget.shopId));
     final currentUserId = ref.watch(userIdProvider);
+    final isTablet = Responsive.isTablet(context);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
@@ -144,8 +146,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           children: [
             // Shop avatar
             Container(
-              width: 34,
-              height: 34,
+              width: isTablet ? 40.0 : 34.0,
+              height: isTablet ? 40.0 : 34.0,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primary.withValues(alpha: 0.1),
@@ -166,7 +168,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Text(
                 widget.shopName,
                 style: GoogleFonts.poppins(
-                  fontSize: 15,
+                  fontSize: isTablet ? 17.0 : 15.0,
                   fontWeight: FontWeight.w700,
                   color: isDark ? Colors.white : AppColors.textPrimary,
                 ),
@@ -208,10 +210,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   _scrollToBottom(animated: false);
                 });
 
-                return ListView.builder(
+                final hPad = Responsive.horizontalPadding(context);
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: ListView.builder(
                   controller: _scrollCtrl,
                   reverse: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 12),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[messages.length - 1 - index];
@@ -234,6 +240,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ],
                     );
                   },
+                ),
+                  ),
                 );
               },
             ),
@@ -272,6 +280,8 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -281,10 +291,12 @@ class _MessageBubble extends StatelessWidget {
         child: Container(
           margin: EdgeInsets.only(
             bottom: 6,
-            left: isMe ? 48 : 0,
-            right: isMe ? 0 : 48,
+            left: isMe ? (isTablet ? 72.0 : 48.0) : 0,
+            right: isMe ? 0 : (isTablet ? 72.0 : 48.0),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 16.0 : 14.0,
+              vertical: isTablet ? 12.0 : 10.0),
           decoration: BoxDecoration(
             color: isMe
                 ? AppColors.primary
@@ -315,7 +327,7 @@ class _MessageBubble extends StatelessWidget {
               Text(
                 text,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: isTablet ? 15.0 : (isSmall ? 13.0 : 14.0),
                   color: isMe
                       ? Colors.white
                       : isDark
@@ -328,7 +340,7 @@ class _MessageBubble extends StatelessWidget {
               Text(
                 DateFormat('hh:mm a').format(time),
                 style: GoogleFonts.poppins(
-                  fontSize: 10,
+                  fontSize: isTablet ? 11.0 : (isSmall ? 9.0 : 10.0),
                   color: isMe
                       ? Colors.white.withValues(alpha: 0.6)
                       : AppColors.textHint,
@@ -401,69 +413,78 @@ class _InputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final hPad = Responsive.horizontalPadding(context);
+    final btnSize = isTablet ? 48.0 : 42.0;
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
       ),
       padding: EdgeInsets.fromLTRB(
-        12,
+        hPad,
         10,
-        12,
+        hPad,
         MediaQuery.of(context).padding.bottom + 10,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-                border: Border.all(
-                  color: isDark ? Colors.white10 : AppColors.border,
-                  width: 0.7,
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: ctrl,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: isDark ? Colors.white : AppColors.textPrimary,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Type a message…',
-                  hintStyle: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: AppColors.textHint,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : AppColors.border,
+                      width: 0.7,
+                    ),
                   ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  isDense: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: ctrl,
+                    style: GoogleFonts.poppins(
+                      fontSize: isTablet ? 15.0 : 14.0,
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Type a message…',
+                      hintStyle: GoogleFonts.poppins(
+                        fontSize: isTablet ? 15.0 : 14.0,
+                        color: AppColors.textHint,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      isDense: true,
+                    ),
+                    maxLines: 4,
+                    minLines: 1,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => onSend(),
+                  ),
                 ),
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => onSend(),
               ),
-            ),
+              const SizedBox(width: 8),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: btnSize,
+                height: btnSize,
+                decoration: BoxDecoration(
+                  color: canSend ? AppColors.primary : AppColors.border,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: canSend ? onSend : null,
+                  icon: Icon(Icons.send_rounded,
+                      size: isTablet ? 20.0 : 18.0, color: Colors.white),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: canSend ? AppColors.primary : AppColors.border,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: canSend ? onSend : null,
-              icon: const Icon(Icons.send_rounded, size: 18, color: Colors.white),
-              padding: EdgeInsets.zero,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -478,6 +499,9 @@ class _EmptyChat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final boxSize = isTablet ? 88.0 : (isSmall ? 60.0 : 72.0);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -485,15 +509,15 @@ class _EmptyChat extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 72,
-              height: 72,
+              width: boxSize,
+              height: boxSize,
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.chat_bubble_outline_rounded,
-                size: 32,
+                size: isTablet ? 40.0 : (isSmall ? 26.0 : 32.0),
                 color: AppColors.textHint,
               ),
             ),
@@ -501,7 +525,7 @@ class _EmptyChat extends StatelessWidget {
             Text(
               'Start the conversation',
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: isTablet ? 18.0 : (isSmall ? 14.0 : 16.0),
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white : AppColors.textPrimary,
               ),
@@ -509,7 +533,9 @@ class _EmptyChat extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               'Say hello to $shopName',
-              style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textHint),
+              style: GoogleFonts.poppins(
+                  fontSize: isTablet ? 14.0 : (isSmall ? 12.0 : 13.0),
+                  color: AppColors.textHint),
             ),
           ],
         ),

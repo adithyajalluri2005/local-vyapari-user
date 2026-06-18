@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_offers_provider.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
@@ -216,7 +217,7 @@ class _ShopOffersCardState extends ConsumerState<_ShopOffersCard> {
 
           // ── Offer carousel ────────────────────────────────────────
           SizedBox(
-            height: 152,
+            height: AppSizes.offerTileCarouselHeight(context),
             child: PageView.builder(
               controller: _page,
               itemCount: widget.offers.length,
@@ -288,7 +289,7 @@ class _OfferTile extends ConsumerWidget {
           children: [
             // Discount badge
             Container(
-              width: 92,
+              width: AppSizes.offerTileDiscountBadgeWidth(context),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isHighDiscount
@@ -304,7 +305,7 @@ class _OfferTile extends ConsumerWidget {
                   Text(
                     '${offer.discountPercentage.toInt()}%',
                     style: GoogleFonts.poppins(
-                      fontSize: 28,
+                      fontSize: Responsive.isTablet(context) ? 32.0 : (Responsive.isSmallPhone(context) ? 24.0 : 28.0),
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                       height: 1.0,
@@ -313,7 +314,7 @@ class _OfferTile extends ConsumerWidget {
                   Text(
                     'OFF',
                     style: GoogleFonts.poppins(
-                      fontSize: 12,
+                      fontSize: Responsive.isTablet(context) ? 13.0 : 12.0,
                       fontWeight: FontWeight.w800,
                       color: Colors.white.withValues(alpha: 0.75),
                       letterSpacing: 2.5,

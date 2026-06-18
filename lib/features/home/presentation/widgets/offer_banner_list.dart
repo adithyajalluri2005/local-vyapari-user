@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 import 'package:local_vyapari_user/shared/widgets/empty_section.dart';
@@ -35,8 +36,9 @@ class OfferBannerList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardHeight = AppSizes.offerBannerCardHeight(context);
     return SizedBox(
-      height: 180,
+      height: cardHeight,
       child: offersAsync.when(
         skipLoadingOnReload: false,
         data: (offers) {
@@ -56,6 +58,7 @@ class OfferBannerList extends StatelessWidget {
               final colors = _cardColors[i % _cardColors.length];
               final cardBg = isDark ? AppColors.darkSurface : Colors.white;
               final daysLeft = offer.endDate?.difference(DateTime.now()).inDays;
+              final cardWidth = AppSizes.offerBannerCardWidth(context);
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: FadeInSlide(
@@ -63,7 +66,7 @@ class OfferBannerList extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () => onOfferTap(offer),
                     child: Container(
-                      width: 180,
+                      width: cardWidth,
                       decoration: BoxDecoration(
                         color: cardBg,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -217,8 +220,8 @@ class OfferBannerList extends StatelessWidget {
               baseColor: isDark ? _kShimmerDark : Colors.grey.shade300,
               highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
               child: Container(
-                width: 180,
-                height: 180,
+                width: AppSizes.offerBannerCardWidth(context),
+                height: cardHeight,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppRadius.lg),

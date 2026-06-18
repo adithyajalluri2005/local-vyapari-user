@@ -8,6 +8,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_offers_provider.dart';
 import 'package:local_vyapari_user/features/shops/providers/shop_details_provider.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
@@ -118,7 +120,7 @@ class ShopActiveOffers extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 175,
+              height: AppSizes.shopOfferListHeight(context),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: EdgeInsets.only(left: padding, right: padding / 2),
@@ -162,7 +164,7 @@ class ShopActiveOffers extends ConsumerWidget {
           );
         },
         child: Container(
-          width: 190,
+          width: AppSizes.shopOfferCardWidth(context),
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -178,7 +180,7 @@ class ShopActiveOffers extends ConsumerWidget {
           child: Column(
             children: [
               Container(
-                height: 78,
+                height: Responsive.isTablet(context) ? 88.0 : (Responsive.isSmallPhone(context) ? 68.0 : 78.0),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: colors,
@@ -194,7 +196,7 @@ class ShopActiveOffers extends ConsumerWidget {
                       child: Text(
                         '${offer.discountPercentage.toInt()}%\nOFF',
                         style: GoogleFonts.poppins(
-                          fontSize: 24,
+                          fontSize: Responsive.isTablet(context) ? 28.0 : (Responsive.isSmallPhone(context) ? 20.0 : 24.0),
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           height: 1.1,
@@ -203,7 +205,7 @@ class ShopActiveOffers extends ConsumerWidget {
                     ),
                     Icon(
                       Icons.local_offer_rounded,
-                      size: 36,
+                      size: Responsive.isTablet(context) ? 42.0 : 36.0,
                       color: Colors.white.withValues(alpha: 0.18),
                     ),
                   ],

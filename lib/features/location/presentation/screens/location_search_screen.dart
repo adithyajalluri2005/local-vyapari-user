@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_theme.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/location/models/location_result.dart';
 import 'package:local_vyapari_user/services/location/location_service.dart';
 
@@ -92,21 +93,28 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
     final recentLocationsAsync = ref.watch(recentLocationsStreamProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hintColor = isDark ? AppColors.textSecondary : AppColors.textHint;
+    final hPad = Responsive.horizontalPadding(context);
+    final isTablet = Responsive.isTablet(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           'Select Location',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: isTablet ? 19.0 : 17.0),
         ),
         elevation: 0,
       ),
-      body: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Search Input Bar
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
             child: Container(
               decoration: BoxDecoration(
                 boxShadow: [
@@ -289,6 +297,8 @@ class _LocationSearchScreenState extends ConsumerState<LocationSearchScreen> {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
 import 'package:local_vyapari_user/shared/models/offer.dart';
 import 'package:local_vyapari_user/shared/models/shop.dart';
@@ -57,7 +59,7 @@ class FeaturedSpotlightSection extends StatelessWidget {
           baseColor: isDark ? _kShimmerDark : Colors.grey.shade300,
           highlightColor: isDark ? _kShimmerDarkHL : Colors.grey.shade100,
           child: Container(
-            height: 224,
+            height: AppSizes.heroSpotlightHeight(context) + 34,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -158,7 +160,7 @@ class _HeroSpotlightCardState extends State<HeroSpotlightCard>
         switchOutCurve: Curves.easeIn,
         child: Container(
           key: ValueKey('hero-$_index-${offer.id}'),
-          height: 190,
+          height: AppSizes.heroSpotlightHeight(context),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [colors[0], colors[1]],
@@ -231,7 +233,7 @@ class _HeroSpotlightCardState extends State<HeroSpotlightCard>
                               Text(
                                 shopName,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 20,
+                                  fontSize: Responsive.isTablet(context) ? 24.0 : (Responsive.isSmallPhone(context) ? 17.0 : 20.0),
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                   height: 1.1,
@@ -445,9 +447,10 @@ class HeroLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final logoSize = Responsive.isTablet(context) ? 76.0 : (Responsive.isSmallPhone(context) ? 54.0 : 64.0);
     return Container(
-      width: 64,
-      height: 64,
+      width: logoSize,
+      height: logoSize,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AppRadius.md),

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/features/favorites/presentation/widgets/favorite_button.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/favorites/providers/favorites_provider.dart';
 import 'package:local_vyapari_user/features/home/providers/navigation_provider.dart';
 import 'package:local_vyapari_user/services/cache/app_cache_manager.dart';
@@ -87,8 +88,9 @@ class FavoritesScreen extends ConsumerWidget {
             subtitle: 'Tap the heart on any product to save it here.',
           );
         }
+        final hPad = Responsive.horizontalPadding(context);
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 100),
           itemCount: products.length,
           itemBuilder: (context, index) => FadeInSlide(
             delay: Duration(milliseconds: 40 * index),
@@ -118,8 +120,9 @@ class FavoritesScreen extends ConsumerWidget {
             subtitle: 'Tap the heart on any shop to save it here.',
           );
         }
+        final hPad = Responsive.horizontalPadding(context);
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 100),
           itemCount: shops.length,
           itemBuilder: (context, index) => FadeInSlide(
             delay: Duration(milliseconds: 40 * index),
@@ -224,6 +227,10 @@ class _ProductFavCard extends StatelessWidget {
     final border = isDark ? Colors.white10 : AppColors.border.withValues(alpha: 0.8);
     final shadow = Colors.black.withValues(alpha: isDark ? 0.2 : 0.055);
     final hasDiscount = product.actualPrice > product.offerPrice;
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final imgSize = isTablet ? 84.0 : (isSmall ? 60.0 : 70.0);
+    final cardPad = isTablet ? 14.0 : 12.0;
 
     return ScaleOnTap(
       onTap: () => context.push('/product_details', extra: product),
@@ -236,15 +243,15 @@ class _ProductFavCard extends StatelessWidget {
           boxShadow: [BoxShadow(color: shadow, blurRadius: 14, offset: const Offset(0, 4))],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(cardPad),
           child: Row(
             children: [
               // Image
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 child: SizedBox(
-                  width: 70,
-                  height: 70,
+                  width: imgSize,
+                  height: imgSize,
                   child: product.images.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: product.images.first,
@@ -273,7 +280,7 @@ class _ProductFavCard extends StatelessWidget {
                     Text(
                       product.name,
                       style: GoogleFonts.poppins(
-                        fontSize: 13.5,
+                        fontSize: isTablet ? 15.0 : (isSmall ? 12.0 : 13.5),
                         fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white : AppColors.textPrimary,
                       ),
@@ -284,7 +291,9 @@ class _ProductFavCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         product.category,
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppColors.textHint),
+                        style: GoogleFonts.poppins(
+                            fontSize: isTablet ? 12.0 : (isSmall ? 10.0 : 11.0),
+                            color: AppColors.textHint),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -297,7 +306,7 @@ class _ProductFavCard extends StatelessWidget {
                         Text(
                           '₹${product.offerPrice}',
                           style: GoogleFonts.poppins(
-                            fontSize: 14,
+                            fontSize: isTablet ? 15.5 : (isSmall ? 12.5 : 14.0),
                             fontWeight: FontWeight.w700,
                             color: AppColors.accent,
                           ),
@@ -307,7 +316,7 @@ class _ProductFavCard extends StatelessWidget {
                           Text(
                             '₹${product.actualPrice}',
                             style: GoogleFonts.poppins(
-                              fontSize: 11,
+                              fontSize: isTablet ? 12.0 : (isSmall ? 10.0 : 11.0),
                               color: AppColors.textHint,
                               decoration: TextDecoration.lineThrough,
                               decorationColor: AppColors.textHint,

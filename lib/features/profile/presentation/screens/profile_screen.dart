@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/core/theme/theme_provider.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
@@ -364,6 +365,10 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
+    final avatarSize = isTablet ? 80.0 : (isSmall ? 56.0 : 64.0);
+    final hPad = Responsive.horizontalPadding(context);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -375,14 +380,14 @@ class _ProfileHero extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Profile',
                 style: GoogleFonts.poppins(
-                  fontSize: 20,
+                  fontSize: isTablet ? 24.0 : 20.0,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
@@ -391,8 +396,8 @@ class _ProfileHero extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: avatarSize,
+                    height: avatarSize,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white.withValues(alpha: 0.15),
@@ -405,14 +410,14 @@ class _ProfileHero extends StatelessWidget {
                       child: Text(
                         initial,
                         style: GoogleFonts.poppins(
-                          fontSize: 26,
+                          fontSize: isTablet ? 32.0 : (isSmall ? 22.0 : 26.0),
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: isTablet ? 18.0 : 14.0),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,7 +425,7 @@ class _ProfileHero extends StatelessWidget {
                         Text(
                           email.isNotEmpty ? email : 'User',
                           style: GoogleFonts.poppins(
-                            fontSize: 15,
+                            fontSize: isTablet ? 17.0 : (isSmall ? 13.5 : 15.0),
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -431,7 +436,7 @@ class _ProfileHero extends StatelessWidget {
                         Text(
                           phone.isNotEmpty ? phone : 'No phone added',
                           style: GoogleFonts.poppins(
-                            fontSize: 12.5,
+                            fontSize: isTablet ? 14.0 : (isSmall ? 11.5 : 12.5),
                             color: Colors.white.withValues(alpha: 0.65),
                           ),
                         ),
@@ -529,27 +534,31 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = Responsive.isTablet(context);
+    final iconBoxSize = isTablet ? 40.0 : 34.0;
+    final iconSize = isTablet ? 20.0 : 17.0;
+    final labelSize = isTablet ? 15.0 : 14.0;
     return ScaleOnTap(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        padding: EdgeInsets.symmetric(horizontal: isTablet ? 18.0 : 14.0, vertical: isTablet ? 15.0 : 13.0),
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: iconBoxSize,
+              height: iconBoxSize,
               decoration: BoxDecoration(
                 color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(icon, color: iconColor, size: 17),
+              child: Icon(icon, color: iconColor, size: iconSize),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: isTablet ? 14.0 : 12.0),
             Expanded(
               child: Text(
                 label,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: labelSize,
                   fontWeight: FontWeight.w600,
                   color: isDark ? Colors.white : AppColors.textPrimary,
                 ),

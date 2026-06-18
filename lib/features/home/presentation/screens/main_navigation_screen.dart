@@ -429,6 +429,7 @@ class _LocationLoadingGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTablet = Responsive.isTablet(context);
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
       body: Center(
@@ -440,7 +441,7 @@ class _LocationLoadingGate extends StatelessWidget {
             Text(
               'Identifying your location...',
               style: GoogleFonts.poppins(
-                fontSize: 16.5,
+                fontSize: isTablet ? 19.0 : 16.5,
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : AppColors.textPrimary,
               ),
@@ -449,7 +450,7 @@ class _LocationLoadingGate extends StatelessWidget {
             Text(
               'Looking for nearby shops and deals',
               style: GoogleFonts.poppins(
-                fontSize: 13,
+                fontSize: isTablet ? 15.0 : 13.0,
                 color: AppColors.textHint,
               ),
             ),
@@ -611,11 +612,17 @@ class _LocationOnboardingGateState extends ConsumerState<_LocationOnboardingGate
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hPad = Responsive.horizontalPadding(context);
+    final isTablet = Responsive.isTablet(context);
+    final isSmall = Responsive.isSmallPhone(context);
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkScaffold : AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: hPad + 8, vertical: 24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -625,7 +632,7 @@ class _LocationOnboardingGateState extends ConsumerState<_LocationOnboardingGate
                 duration: const Duration(milliseconds: 500),
                 child: Icon(
                   Icons.location_on_rounded,
-                  size: 84,
+                  size: isTablet ? 108.0 : (isSmall ? 68.0 : 84.0),
                   color: AppColors.primary.withValues(alpha: 0.85),
                 ),
               ),
@@ -635,7 +642,7 @@ class _LocationOnboardingGateState extends ConsumerState<_LocationOnboardingGate
                 child: Text(
                   'Where are you shopping from?',
                   style: GoogleFonts.poppins(
-                    fontSize: 24,
+                    fontSize: isTablet ? 28.0 : (isSmall ? 20.0 : 24.0),
                     fontWeight: FontWeight.w700,
                     color: isDark ? Colors.white : AppColors.textPrimary,
                     height: 1.25,
@@ -649,7 +656,7 @@ class _LocationOnboardingGateState extends ConsumerState<_LocationOnboardingGate
                 child: Text(
                   'To show you nearby local stores, exclusive deals, and fast delivery, we need your shopping location.',
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
+                    fontSize: isTablet ? 15.5 : (isSmall ? 13.0 : 14.0),
                     color: isDark ? Colors.white70 : AppColors.textSecondary,
                     height: 1.5,
                   ),
@@ -762,6 +769,8 @@ class _LocationOnboardingGateState extends ConsumerState<_LocationOnboardingGate
               ),
               const SizedBox(height: 16),
             ],
+          ),
+        ),
           ),
         ),
       ),

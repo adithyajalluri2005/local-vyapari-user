@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/app_sizes.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/home/providers/nearby_products_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/skeleton_card.dart';
@@ -23,6 +24,7 @@ class ProductsGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final productsAsync = ref.watch(nearbyProductsProvider);
     final cols = Responsive.productGridColumns(context);
+    final aspectRatio = AppSizes.productGridAspectRatio(context);
 
     return productsAsync.when(
       skipLoadingOnReload: false,
@@ -45,7 +47,7 @@ class ProductsGrid extends ConsumerWidget {
                 crossAxisCount: cols,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 0.70,
+                childAspectRatio: aspectRatio,
               ),
               itemCount: visible.length,
               itemBuilder: (ctx, i) {
@@ -170,7 +172,7 @@ class ProductsGrid extends ConsumerWidget {
                                       Text(
                                         p.name,
                                         style: GoogleFonts.poppins(
-                                          fontSize: 12.5,
+                                          fontSize: Responsive.isTablet(context) ? 13.5 : (Responsive.isSmallPhone(context) ? 11.5 : 12.5),
                                           fontWeight: FontWeight.w600,
                                           color: isDark
                                               ? Colors.white
@@ -184,7 +186,7 @@ class ProductsGrid extends ConsumerWidget {
                                         Text(
                                           p.category,
                                           style: GoogleFonts.poppins(
-                                            fontSize: 10,
+                                            fontSize: Responsive.isTablet(context) ? 11.0 : (Responsive.isSmallPhone(context) ? 9.5 : 10.0),
                                             color: AppColors.textHint,
                                           ),
                                           maxLines: 1,
@@ -215,7 +217,7 @@ class ProductsGrid extends ConsumerWidget {
                                           Text(
                                             '₹${p.offerPrice}',
                                             style: GoogleFonts.poppins(
-                                              fontSize: 14,
+                                              fontSize: Responsive.isTablet(context) ? 15.0 : (Responsive.isSmallPhone(context) ? 13.0 : 14.0),
                                               fontWeight: FontWeight.w700,
                                               color: isDark ? Colors.white : AppColors.primary,
                                             ),
@@ -226,7 +228,7 @@ class ProductsGrid extends ConsumerWidget {
                                               child: Text(
                                                 '₹${p.actualPrice}',
                                                 style: GoogleFonts.poppins(
-                                                  fontSize: 11,
+                                                  fontSize: Responsive.isTablet(context) ? 12.0 : (Responsive.isSmallPhone(context) ? 10.0 : 11.0),
                                                   color: AppColors.textHint,
                                                   decoration:
                                                       TextDecoration.lineThrough,
@@ -258,7 +260,7 @@ class ProductsGrid extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 10),
                 child: SkeletonProductGrid(
                   crossAxisCount: cols,
-                  aspectRatio: 0.70,
+                  aspectRatio: aspectRatio,
                   spacing: 10,
                   rowCount: 1,
                 ),
@@ -268,7 +270,7 @@ class ProductsGrid extends ConsumerWidget {
       },
       loading: () => SkeletonProductGrid(
         crossAxisCount: cols,
-        aspectRatio: 0.70,
+        aspectRatio: aspectRatio,
         spacing: 10,
       ),
       error: (_, _) => const EmptySection(

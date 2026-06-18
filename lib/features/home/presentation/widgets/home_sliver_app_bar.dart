@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_vyapari_user/core/theme/app_colors.dart';
 import 'package:local_vyapari_user/core/theme/app_radius.dart';
+import 'package:local_vyapari_user/core/theme/responsive.dart';
 
 class HomeSliverAppBar extends StatelessWidget {
   final String locationName;
@@ -24,9 +25,11 @@ class HomeSliverAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final hPad = Responsive.horizontalPadding(context);
+    final isTablet = Responsive.isTablet(context);
     return SliverAppBar(
       automaticallyImplyLeading: false,
-      titleSpacing: 16,
+      titleSpacing: hPad,
       floating: true,
       snap: true,
       pinned: false,
@@ -60,7 +63,7 @@ class HomeSliverAppBar extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 180),
+                      constraints: BoxConstraints(maxWidth: isTablet ? 260.0 : 180.0),
                       child: Text(
                         locationLoading
                             ? 'Detecting location...'
@@ -68,7 +71,7 @@ class HomeSliverAppBar extends StatelessWidget {
                                 ? locationName
                                 : 'Set your location',
                         style: GoogleFonts.poppins(
-                          fontSize: 15,
+                          fontSize: isTablet ? 17.0 : 15.0,
                           fontWeight: FontWeight.w700,
                           color: textColor,
                         ),
@@ -97,7 +100,7 @@ class HomeSliverAppBar extends StatelessWidget {
         const SizedBox(width: 4),
       ],
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
+        preferredSize: Size.fromHeight(isTablet ? 62.0 : 56.0),
         child: Container(
           decoration: BoxDecoration(
             border: Border(
@@ -107,11 +110,11 @@ class HomeSliverAppBar extends StatelessWidget {
               ),
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 10),
           child: GestureDetector(
             onTap: onSearchTap,
             child: Container(
-              height: 44,
+              height: isTablet ? 48.0 : 44.0,
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(AppRadius.full),
@@ -132,7 +135,7 @@ class HomeSliverAppBar extends StatelessWidget {
                   Text(
                     'Search shops, products & offers...',
                     style: GoogleFonts.poppins(
-                      fontSize: 13.5,
+                      fontSize: isTablet ? 15.0 : 13.5,
                       color: AppColors.textHint,
                     ),
                   ),
