@@ -97,6 +97,14 @@
           }
         },
         {
+          "client_id": "185569988747-fscl2o4t0ur85u2bkvv16mi4rmj1s4ql.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.localvyapari.local_vyapari_user",
+            "certificate_hash": "7700a7718229b288775b5bce7dd4610ce962bc57"
+          }
+        },
+        {
           "client_id": "185569988747-m5t8sa37tf67q7h60jachrau7ffih1q1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -147,6 +155,14 @@
           "android_info": {
             "package_name": "com.localvyapari.vendor",
             "certificate_hash": "5ec42e7497d4747d79bb34be170461a76752bd23"
+          }
+        },
+        {
+          "client_id": "185569988747-4rkidp7hl3ankvm4qqhm1c9idfsttu7a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.localvyapari.vendor",
+            "certificate_hash": "298f76118cafd8a68270b77616c7f0c9b31868ea"
           }
         },
         {
