@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "185569988747-4fv46nquvd03mvaj83t46tgalfkgc5k3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.local_vyapari_vendor",
+            "certificate_hash": "5ec42e7497d4747d79bb34be170461a76752bd23"
+          }
+        },
+        {
           "client_id": "185569988747-nkgju4kkinhh1gjg4movpak2hm0nb499.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -22,6 +30,35 @@
             "certificate_hash": "663f8086dee9643bcc90ad68b34a939e0564d28b"
           }
         },
+        {
+          "client_id": "185569988747-39nov9mgv1aq4u75f9bu0febl41gg1tl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDA2THdnROYJyQZ7kH4YjHU9GM6omQpKQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "185569988747-39nov9mgv1aq4u75f9bu0febl41gg1tl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185569988747:android:cfd7687a3fc62d2e21848e",
+        "android_client_info": {
+          "package_name": "com.localvyapari.feedback_app"
+        }
+      },
+      "oauth_client": [
         {
           "client_id": "185569988747-39nov9mgv1aq4u75f9bu0febl41gg1tl.apps.googleusercontent.com",
           "client_type": 3
@@ -57,6 +94,59 @@
           "android_info": {
             "package_name": "com.localvyapari.local_vyapari_user",
             "certificate_hash": "663f8086dee9643bcc90ad68b34a939e0564d28b"
+          }
+        },
+        {
+          "client_id": "185569988747-m5t8sa37tf67q7h60jachrau7ffih1q1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.localvyapari.local_vyapari_user",
+            "certificate_hash": "c28d3f364db68968cd2468fcf0343b0776c83ea3"
+          }
+        },
+        {
+          "client_id": "185569988747-s48mfv57a178hstfusu9gst9pdpbscea.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.localvyapari.local_vyapari_user",
+            "certificate_hash": "5ec42e7497d4747d79bb34be170461a76752bd23"
+          }
+        },
+        {
+          "client_id": "185569988747-39nov9mgv1aq4u75f9bu0febl41gg1tl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDA2THdnROYJyQZ7kH4YjHU9GM6omQpKQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "185569988747-39nov9mgv1aq4u75f9bu0febl41gg1tl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:185569988747:android:805605434b5b383f21848e",
+        "android_client_info": {
+          "package_name": "com.localvyapari.vendor"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "185569988747-1pjq76auhf6s0scam8bp2lef7mlfnem8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.localvyapari.vendor",
+            "certificate_hash": "5ec42e7497d4747d79bb34be170461a76752bd23"
           }
         },
         {

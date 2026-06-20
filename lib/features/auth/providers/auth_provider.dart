@@ -4,10 +4,14 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
 import 'package:local_vyapari_user/services/role_service.dart';
 import 'package:local_vyapari_user/services/notifications/notification_service.dart';
+
+const _phoneEmailStorage = FlutterSecureStorage();
+const _phoneEmailCachePrefix = 'lv_phone_email_';
 
 // Providers for Firebase dependencies to facilitate testing overrides
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -28,31 +32,46 @@ final roleServiceProvider = Provider<RoleService>((ref) {
 
 final sessionValidationProvider = Provider<Future<bool> Function(User, String)>((ref) {
   return (user, targetRole) async {
-    try {
-      // 1. Read user roles directly from the Realtime Database
-      final snapshot = await ref.read(firebaseDatabaseProvider)
-          .ref('users/${user.uid}/roles')
-          .get();
+    bool roleConfirmed = false;
 
-      if (snapshot.exists && snapshot.value is Map) {
-        final roles = snapshot.value as Map;
-        if (roles[targetRole] == true) {
-          // 2. Register/update the device record directly in RTDB
-          final deviceRef = ref.read(firebaseDatabaseProvider)
-              .ref('users_devices/${user.uid}/devices/client_device');
-          await deviceRef.update({
-            'id': 'client_device',
-            'userAgent': 'Flutter Customer Client',
-            'lastSeen': ServerValue.timestamp,
-            'revoked': false,
-          });
-          return true;
-        }
+    // Fast path: check JWT custom claims (no network if token < 1 hour old)
+    try {
+      final tokenResult = await user.getIdTokenResult(false);
+      final rolesClaim = tokenResult.claims?['roles'];
+      if (rolesClaim is Map && rolesClaim.isNotEmpty) {
+        roleConfirmed = rolesClaim[targetRole] == true;
+        // Claims present — trust them, skip RTDB read
+        if (!roleConfirmed) return false;
       }
-      return false;
-    } catch (e) {
-      return false;
+    } catch (_) {}
+
+    // Slow path: fall back to RTDB (first login or claims not set)
+    if (!roleConfirmed) {
+      try {
+        final snapshot = await ref.read(firebaseDatabaseProvider)
+            .ref('users/${user.uid}/roles')
+            .get();
+        if (snapshot.exists && snapshot.value is Map) {
+          final roles = snapshot.value as Map;
+          roleConfirmed = roles[targetRole] == true;
+        }
+      } catch (_) {
+        return false;
+      }
     }
+
+    if (roleConfirmed) {
+      // Fire-and-forget device registration — does not need to block sign-in
+      ref.read(firebaseDatabaseProvider)
+          .ref('users_devices/${user.uid}/devices/client_device')
+          .update({
+        'id': 'client_device',
+        'userAgent': 'Flutter Customer Client',
+        'lastSeen': ServerValue.timestamp,
+        'revoked': false,
+      });
+    }
+    return roleConfirmed;
   };
 });
 
@@ -325,7 +344,16 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthLoading();
     try {
       final formattedPhone = phone.trim();
-      final realEmail = await resolveLoginEmailForPhone(formattedPhone);
+
+      // Use cached email to skip the Cloud Function round-trip on repeat logins
+      String? realEmail = await _phoneEmailStorage.read(
+          key: '$_phoneEmailCachePrefix$formattedPhone');
+      if (realEmail == null || realEmail.isEmpty) {
+        realEmail = await resolveLoginEmailForPhone(formattedPhone);
+        _phoneEmailStorage.write(
+            key: '$_phoneEmailCachePrefix$formattedPhone', value: realEmail);
+      }
+
       final credential = await _auth.signInWithEmailAndPassword(
         email: realEmail,
         password: password.trim(),
@@ -336,6 +364,8 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthFailure(mapFirebaseError(e));
       return false;
     } on FirebaseFunctionsException catch (e) {
+      // Invalidate cache on function error in case the cached email is stale
+      _phoneEmailStorage.delete(key: '$_phoneEmailCachePrefix${phone.trim()}');
       state = AuthFailure(mapFunctionsError(e));
       return false;
     } catch (e) {

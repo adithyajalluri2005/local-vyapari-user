@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,9 +46,9 @@ final userChatsStreamProvider = StreamProvider.autoDispose<List<ChatSession>>((r
   if (userId == null) return Stream.value([]);
 
   final dbRef = FirebaseDatabase.instance.ref('chats/$userId');
-  return dbRef.onValue.map((event) {
+  return dbRef.onValue.asyncMap((event) async {
     final snapshot = event.snapshot;
-    if (!snapshot.exists || snapshot.value is! Map) return [];
+    if (!snapshot.exists || snapshot.value is! Map) return <ChatSession>[];
 
     final List<ChatSession> sessions = [];
     final map = snapshot.value as Map<dynamic, dynamic>;
@@ -56,16 +57,37 @@ final userChatsStreamProvider = StreamProvider.autoDispose<List<ChatSession>>((r
         final session = ChatSession.fromRTDB(key.toString(), value);
         // Only show chat session if the logged-in user is the customer
         final customerId = value['customerId']?.toString() ?? value['lastMessage']?['customerId']?.toString();
-        if (customerId != null && customerId != userId) {
-          return;
-        }
+        if (customerId != null && customerId != userId) return;
         sessions.add(session);
       }
     });
 
-    // Sort by last message timestamp (newest first)
     sessions.sort((a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp));
-    return sessions;
+
+    // Fetch fresh shop logos from Firestore so vendor photo changes are reflected
+    final shopIds = sessions.map((s) => s.shopId).toList();
+    if (shopIds.isEmpty) return sessions;
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final logoMap = <String, String>{};
+      for (var i = 0; i < shopIds.length; i += 30) {
+        final chunk = shopIds.sublist(i, (i + 30).clamp(0, shopIds.length));
+        final snap = await firestore
+            .collection('searchable_shops')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        for (final doc in snap.docs) {
+          final logo = doc.data()['shopLogo']?.toString() ?? '';
+          if (logo.isNotEmpty) logoMap[doc.id] = logo;
+        }
+      }
+      return sessions
+          .map((s) => logoMap.containsKey(s.shopId) ? s.copyWith(shopLogo: logoMap[s.shopId]) : s)
+          .toList();
+    } catch (_) {
+      return sessions;
+    }
   });
 });
 

@@ -46,19 +46,18 @@ void main() {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // App Check: attests that requests come from a genuine, untampered build.
-    // Debug provider in debug builds; Play Integrity / DeviceCheck in release.
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: kReleaseMode
-          ? const AndroidPlayIntegrityProvider()
-          : const AndroidDebugProvider(),
-      providerApple: kReleaseMode
-          ? const AppleDeviceCheckProvider()
-          : const AppleDebugProvider(),
-    );
-
-    // Crashlytics: collect only in release builds.
-    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+    // App Check and Crashlytics are independent — run them in parallel.
+    await Future.wait<void>([
+      FirebaseAppCheck.instance.activate(
+        providerAndroid: kReleaseMode
+            ? const AndroidPlayIntegrityProvider()
+            : const AndroidDebugProvider(),
+        providerApple: kReleaseMode
+            ? const AppleDeviceCheckProvider()
+            : const AppleDebugProvider(),
+      ),
+      FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode),
+    ]);
 
     // Catch Flutter framework errors (layout overflow, assertion failures, etc.)
     // and forward them to Crashlytics in release builds.
@@ -169,10 +168,10 @@ class LocalVyapariApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Initialize Notification Service
-    
-    
-    // NOTE: Client-side syncing of all shops to Firestore is deprecated to preserve 
-    // write security and network query limits. Production index syncing should reside 
+
+
+    // NOTE: Client-side syncing of all shops to Firestore is deprecated to preserve
+    // write security and network query limits. Production index syncing should reside
     // inside a Firebase Cloud Function.
     // ref.watch(searchIndexerServiceProvider).syncShopsToFirestore();
 

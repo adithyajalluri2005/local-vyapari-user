@@ -15,6 +15,15 @@ class ChatSession {
     required this.unread,
   });
 
+  ChatSession copyWith({String? shopLogo}) => ChatSession(
+        shopId: shopId,
+        shopName: shopName,
+        shopLogo: shopLogo ?? this.shopLogo,
+        lastMessageText: lastMessageText,
+        lastMessageTimestamp: lastMessageTimestamp,
+        unread: unread,
+      );
+
   factory ChatSession.fromRTDB(String shopId, Map<dynamic, dynamic> map) {
     final lastMsg = map['lastMessage'] as Map? ?? {};
     return ChatSession(
