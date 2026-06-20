@@ -6,7 +6,6 @@ import 'package:local_vyapari_user/core/theme/app_spacing.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
-import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -20,7 +19,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), _navigate);
+    Future.delayed(const Duration(milliseconds: 800), _navigate);
   }
 
   void _navigate() {
@@ -38,12 +37,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     } else if (authState is NeedsDisplayName) {
       context.go('/display_name');
     } else if (authState is Authenticated) {
-      ref
-          .read(activeBrowsingLocationProvider.notifier)
-          .preloadFromCache()
-          .then((_) {
-        if (mounted) context.go('/');
-      });
+      context.go('/');
     }
   }
 
