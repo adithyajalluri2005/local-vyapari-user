@@ -6,6 +6,7 @@ import 'package:local_vyapari_user/core/theme/app_spacing.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/services/location/location_service.dart';
 import 'package:local_vyapari_user/shared/widgets/app_animations.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+
+    // Start decrypting the location cache now so it's ready before we navigate.
+    // Timeout at 600ms — well under the 800ms visual delay — so it can never
+    // block navigation. Any error or timeout is silently swallowed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(activeBrowsingLocationProvider.notifier)
+          .preloadFromCache()
+          .timeout(const Duration(milliseconds: 600))
+          .catchError((_) {});
+    });
+
     Future.delayed(const Duration(milliseconds: 800), _navigate);
   }
 
