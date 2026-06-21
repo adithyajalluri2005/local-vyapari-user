@@ -39,19 +39,26 @@ class ShopReviewsSection extends ConsumerWidget {
               'Ratings & Reviews',
               style: AppTextStyles.titleMedium(context, fontWeight: FontWeight.bold),
             ),
-            ElevatedButton.icon(
-              onPressed: () => _handleRateShop(context, ref),
-              icon: const Icon(Icons.rate_review_outlined, size: 18),
-              label: const Text('Rate Shop'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                foregroundColor: Theme.of(context).colorScheme.primary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+            Builder(builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return ElevatedButton.icon(
+                onPressed: () => _handleRateShop(context, ref),
+                icon: const Icon(Icons.rate_review_outlined, size: 18),
+                label: const Text('Rate Shop'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  foregroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.87)
+                      : Theme.of(context).colorScheme.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
           ],
         ),
         AppSpacing.verticalMd,

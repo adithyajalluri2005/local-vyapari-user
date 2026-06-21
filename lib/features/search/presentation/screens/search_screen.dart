@@ -197,10 +197,6 @@ class _SearchBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkElevated : AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: isDark ? Colors.white12 : AppColors.border,
-          width: 0.7,
-        ),
       ),
       child: Row(
         children: [

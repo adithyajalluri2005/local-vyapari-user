@@ -22,6 +22,7 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -29,6 +30,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _passCtrl.dispose();
@@ -39,6 +41,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final name = _nameCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     final phone = '+91${_phoneCtrl.text.trim()}';
     final password = _passCtrl.text;
@@ -142,6 +145,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               final ok = await notifier.registerWithPhoneOtp(
                                 verificationId: verificationId,
                                 code: codeCtrl.text.trim(),
+                                name: name,
                                 email: email,
                                 password: password,
                                 phone: phone,
@@ -215,6 +219,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     final formContent = _FormBody(
       formKey: _formKey,
+      nameCtrl: _nameCtrl,
       emailCtrl: _emailCtrl,
       phoneCtrl: _phoneCtrl,
       passCtrl: _passCtrl,
@@ -234,6 +239,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
 class _FormBody extends StatefulWidget {
   final GlobalKey<FormState> formKey;
+  final TextEditingController nameCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController phoneCtrl;
   final TextEditingController passCtrl;
@@ -243,6 +249,7 @@ class _FormBody extends StatefulWidget {
 
   const _FormBody({
     required this.formKey,
+    required this.nameCtrl,
     required this.emailCtrl,
     required this.phoneCtrl,
     required this.passCtrl,
@@ -306,6 +313,22 @@ class _FormBodyState extends State<_FormBody> {
                 FadeInSlide(
                   delay: const Duration(milliseconds: 150),
                   child: TextFormField(
+                    controller: widget.nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Name is required' : null,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                FadeInSlide(
+                  delay: const Duration(milliseconds: 220),
+                  child: TextFormField(
                     controller: widget.emailCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Email address',
@@ -320,7 +343,7 @@ class _FormBodyState extends State<_FormBody> {
                 const SizedBox(height: 14),
 
                 FadeInSlide(
-                  delay: const Duration(milliseconds: 230),
+                  delay: const Duration(milliseconds: 300),
                   child: TextFormField(
                     controller: widget.phoneCtrl,
                     decoration: const InputDecoration(
@@ -341,7 +364,7 @@ class _FormBodyState extends State<_FormBody> {
                 const SizedBox(height: 14),
 
                 FadeInSlide(
-                  delay: const Duration(milliseconds: 310),
+                  delay: const Duration(milliseconds: 380),
                   child: TextFormField(
                     controller: widget.passCtrl,
                     obscureText: _obscurePass,
@@ -363,7 +386,7 @@ class _FormBodyState extends State<_FormBody> {
                 const SizedBox(height: 14),
 
                 FadeInSlide(
-                  delay: const Duration(milliseconds: 390),
+                  delay: const Duration(milliseconds: 460),
                   child: TextFormField(
                     controller: widget.confirmCtrl,
                     obscureText: _obscureConfirm,
@@ -387,7 +410,7 @@ class _FormBodyState extends State<_FormBody> {
                 const SizedBox(height: 24),
 
                 FadeInSlide(
-                  delay: const Duration(milliseconds: 470),
+                  delay: const Duration(milliseconds: 540),
                   child: ScaleOnTap(
                     child: PrimaryButton(label: 'Create Account', onPressed: widget.onSubmit),
                   ),
@@ -395,7 +418,7 @@ class _FormBodyState extends State<_FormBody> {
                 const SizedBox(height: 20),
 
                 FadeInSlide(
-                  delay: const Duration(milliseconds: 550),
+                  delay: const Duration(milliseconds: 620),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

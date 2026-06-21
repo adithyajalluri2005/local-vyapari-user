@@ -580,6 +580,9 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
   }
 
   Widget _buildActionButtons(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final outlinedFg = isDark ? Colors.white.withValues(alpha: 0.87) : null;
+    final outlinedBorder = isDark ? Colors.white.withValues(alpha: 0.25) : null;
     return Column(
       children: [
         Row(
@@ -590,6 +593,8 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                 icon: const Icon(Icons.phone_outlined, size: 18),
                 label: const Text('Call'),
                 style: OutlinedButton.styleFrom(
+                  foregroundColor: outlinedFg,
+                  side: outlinedBorder != null ? BorderSide(color: outlinedBorder) : null,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),
@@ -601,6 +606,8 @@ class _ShopDetailsScreenState extends ConsumerState<ShopDetailsScreen> {
                 icon: const Icon(Icons.directions_outlined, size: 18),
                 label: const Text('Directions'),
                 style: OutlinedButton.styleFrom(
+                  foregroundColor: outlinedFg,
+                  side: outlinedBorder != null ? BorderSide(color: outlinedBorder) : null,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),

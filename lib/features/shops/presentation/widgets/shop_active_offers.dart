@@ -643,7 +643,11 @@ class _OfferDetailsBottomSheet extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Actions row
-                Row(
+                Builder(builder: (context) {
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
+                  final outlinedFg = isDark ? Colors.white.withValues(alpha: 0.87) : null;
+                  final outlinedSide = isDark ? BorderSide(color: Colors.white.withValues(alpha: 0.25)) : null;
+                  return Row(
                   children: [
                     if (shop!.phone.isNotEmpty) ...[
                       Expanded(
@@ -652,6 +656,8 @@ class _OfferDetailsBottomSheet extends StatelessWidget {
                           icon: const Icon(Icons.phone_outlined, size: 16),
                           label: const Text('Call'),
                           style: OutlinedButton.styleFrom(
+                            foregroundColor: outlinedFg,
+                            side: outlinedSide,
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
@@ -671,6 +677,8 @@ class _OfferDetailsBottomSheet extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         style: OutlinedButton.styleFrom(
+                          foregroundColor: outlinedFg,
+                          side: outlinedSide,
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -701,7 +709,7 @@ class _OfferDetailsBottomSheet extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
+                ); }),
               ],
               const SizedBox(height: 12),
             ],

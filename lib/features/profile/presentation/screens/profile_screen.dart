@@ -22,10 +22,14 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final user = authState is Authenticated ? authState.user : null;
+    final profileData = ref.watch(userProfileProvider).value;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final initial = user?.email?.substring(0, 1).toUpperCase() ?? 'U';
+    final name = profileData?['displayName']?.toString().trim() ?? user?.displayName?.trim() ?? '';
+    final initial = name.isNotEmpty
+        ? name.substring(0, 1).toUpperCase()
+        : (user?.email?.substring(0, 1).toUpperCase() ?? 'U');
     final email = user?.email ?? '';
     final phone = user?.phoneNumber ?? '';
 
@@ -53,6 +57,7 @@ class ProfileScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: _ProfileHero(
                 initial: initial,
+                name: name,
                 email: email,
                 phone: phone,
                 isDark: isDark,
@@ -74,6 +79,12 @@ class ProfileScreen extends ConsumerWidget {
                           child: _MenuSection(
                             title: 'Activity',
                             items: [
+                              _MenuItem(
+                                icon: Icons.edit_outlined,
+                                iconColor: AppColors.primary,
+                                label: 'Edit Profile',
+                                onTap: () => context.push('/edit_profile'),
+                              ),
                               _MenuItem(
                                 icon: Icons.chat_bubble_outline_rounded,
                                 iconColor: const Color(0xFF7C3AED),
@@ -352,12 +363,14 @@ class ProfileScreen extends ConsumerWidget {
 
 class _ProfileHero extends StatelessWidget {
   final String initial;
+  final String name;
   final String email;
   final String phone;
   final bool isDark;
 
   const _ProfileHero({
     required this.initial,
+    required this.name,
     required this.email,
     required this.phone,
     required this.isDark,
@@ -423,7 +436,7 @@ class _ProfileHero extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          email.isNotEmpty ? email : 'User',
+                          name.isNotEmpty ? name : (email.isNotEmpty ? email : 'User'),
                           style: GoogleFonts.poppins(
                             fontSize: isTablet ? 17.0 : (isSmall ? 13.5 : 15.0),
                             fontWeight: FontWeight.w700,
@@ -432,14 +445,33 @@ class _ProfileHero extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          phone.isNotEmpty ? phone : 'No phone added',
-                          style: GoogleFonts.poppins(
-                            fontSize: isTablet ? 14.0 : (isSmall ? 11.5 : 12.5),
-                            color: Colors.white.withValues(alpha: 0.65),
+                        const SizedBox(height: 2),
+                        if (name.isNotEmpty && email.isNotEmpty)
+                          Text(
+                            email,
+                            style: GoogleFonts.poppins(
+                              fontSize: isTablet ? 13.0 : (isSmall ? 11.0 : 12.0),
+                              color: Colors.white.withValues(alpha: 0.65),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
+                        if (phone.isNotEmpty)
+                          Text(
+                            phone,
+                            style: GoogleFonts.poppins(
+                              fontSize: isTablet ? 13.0 : (isSmall ? 11.0 : 12.0),
+                              color: Colors.white.withValues(alpha: 0.55),
+                            ),
+                          ),
+                        if (name.isEmpty && phone.isEmpty && email.isEmpty)
+                          Text(
+                            'No phone added',
+                            style: GoogleFonts.poppins(
+                              fontSize: isTablet ? 13.0 : (isSmall ? 11.0 : 12.0),
+                              color: Colors.white.withValues(alpha: 0.55),
+                            ),
+                          ),
                       ],
                     ),
                   ),

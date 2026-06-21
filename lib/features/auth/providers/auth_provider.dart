@@ -653,6 +653,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> registerWithPhoneOtp({
     required String verificationId,
     required String code,
+    required String name,
     required String email,
     required String password,
     required String phone,
@@ -665,15 +666,20 @@ class AuthNotifier extends Notifier<AuthState> {
       if (user == null) {
         throw Exception("Failed to authenticate user via phone OTP");
       }
-      
+
       final emailCred = EmailAuthProvider.credential(
         email: email.trim(),
         password: password.trim(),
       );
       await user.linkWithCredential(emailCred);
-      
+
       final uid = user.uid;
+      final trimmedName = name.trim();
+      if (trimmedName.isNotEmpty) {
+        await user.updateDisplayName(trimmedName);
+      }
       final updates = {
+        'displayName': trimmedName,
         'email': email.trim(),
         'phone': phone.trim(),
         'verified': true,

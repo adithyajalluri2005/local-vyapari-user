@@ -465,7 +465,9 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               icon: const Icon(Icons.rate_review_outlined, size: 15),
               label: Text(isAuthenticated ? 'Rate' : 'Login to Rate', style: const TextStyle(fontSize: 13)),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+                foregroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.87)
+                    : AppColors.primary,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -577,6 +579,12 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   icon: const Icon(Icons.directions_outlined),
                   label: const Text('Directions'),
                   style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.87)
+                        : null,
+                    side: Theme.of(context).brightness == Brightness.dark
+                        ? BorderSide(color: Colors.white.withValues(alpha: 0.25))
+                        : null,
                     padding: EdgeInsets.symmetric(
                       vertical: context.responsive<double>(mobile: 14, tablet: 16),
                     ),

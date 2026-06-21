@@ -187,7 +187,11 @@ class HomeFilterChip extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: active ? Colors.white : AppColors.textSecondary,
+                color: active
+                    ? Colors.white
+                    : isDark
+                        ? Colors.white.withValues(alpha: 0.75)
+                        : AppColors.textSecondary,
               ),
             ),
           ],

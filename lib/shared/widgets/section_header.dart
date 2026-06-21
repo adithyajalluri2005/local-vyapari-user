@@ -37,6 +37,7 @@ class SeeAllChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isTablet = Responsive.isTablet(context);
     return GestureDetector(
       onTap: onTap,
@@ -44,7 +45,9 @@ class SeeAllChip extends StatelessWidget {
         padding: EdgeInsets.symmetric(
             horizontal: isTablet ? 14.0 : 12.0, vertical: 5),
         decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : AppColors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(32),
         ),
         child: Text(
@@ -52,7 +55,7 @@ class SeeAllChip extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: isTablet ? 13.0 : 12.0,
             fontWeight: FontWeight.w600,
-            color: AppColors.primary,
+            color: isDark ? Colors.white.withValues(alpha: 0.87) : AppColors.primary,
           ),
         ),
       ),

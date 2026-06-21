@@ -131,10 +131,6 @@ class HomeSliverAppBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : AppColors.surfaceElevated,
                 borderRadius: BorderRadius.circular(AppRadius.full),
-                border: Border.all(
-                  color: isDark ? Colors.white12 : AppColors.border,
-                  width: 1,
-                ),
               ),
               child: Row(
                 children: [
