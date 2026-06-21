@@ -7,6 +7,7 @@ import 'package:local_vyapari_user/core/theme/app_radius.dart';
 import 'package:local_vyapari_user/core/theme/responsive.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/features/auth/providers/auth_provider.dart';
+import 'package:local_vyapari_user/features/reviews/providers/reviews_provider.dart';
 import 'package:local_vyapari_user/shared/widgets/custom_snack_bar.dart';
 import 'package:local_vyapari_user/shared/widgets/primary_button.dart';
 
@@ -43,8 +44,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
+    final name = _nameCtrl.text.trim();
     try {
-      await ref.read(authProvider.notifier).completeProfile(_nameCtrl.text.trim());
+      await ref.read(authProvider.notifier).completeProfile(name);
+      final authState = ref.read(authProvider);
+      final uid = authState is Authenticated ? authState.user.uid : null;
+      if (uid != null) {
+        await ref.read(reviewsServiceProvider).updateUserDisplayName(uid, name);
+      }
       if (mounted) {
         CustomSnackBar.showSuccess(
           context: context,

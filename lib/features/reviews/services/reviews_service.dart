@@ -124,4 +124,27 @@ class ReviewsService {
     }
     return null;
   }
+
+  // Updates userDisplayName in all existing reviews after a profile name change
+  Future<void> updateUserDisplayName(String userId, String newDisplayName) async {
+    final batch = _firestore.batch();
+
+    final shopSnap = await _firestore
+        .collection('shop_reviews')
+        .where('userId', isEqualTo: userId)
+        .get();
+    for (final doc in shopSnap.docs) {
+      batch.update(doc.reference, {'userDisplayName': newDisplayName});
+    }
+
+    final productSnap = await _firestore
+        .collection('product_reviews')
+        .where('userId', isEqualTo: userId)
+        .get();
+    for (final doc in productSnap.docs) {
+      batch.update(doc.reference, {'userDisplayName': newDisplayName});
+    }
+
+    await batch.commit();
+  }
 }
