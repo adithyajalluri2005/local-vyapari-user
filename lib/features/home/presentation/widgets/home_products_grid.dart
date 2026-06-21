@@ -47,7 +47,7 @@ class ProductsGrid extends ConsumerWidget {
                 crossAxisCount: cols,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: aspectRatio,
+                mainAxisExtent: AppSizes.productCardHeight(context),
               ),
               itemCount: visible.length,
               itemBuilder: (ctx, i) {
@@ -159,93 +159,77 @@ class ProductsGrid extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        p.name,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: Responsive.isTablet(context) ? 13.5 : (Responsive.isSmallPhone(context) ? 11.5 : 12.5),
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white
-                                              : AppColors.textPrimary,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  p.name,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: Responsive.isTablet(context) ? 13.5 : (Responsive.isSmallPhone(context) ? 11.5 : 12.5),
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white : AppColors.textPrimary,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (p.category.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    p.category,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: Responsive.isTablet(context) ? 11.0 : (Responsive.isSmallPhone(context) ? 9.5 : 10.0),
+                                      color: AppColors.textHint,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                DynamicProductRating(
+                                  productId: p.id,
+                                  initialRating: p.rating,
+                                  initialTotalReviews: p.totalReviews,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    color: AppColors.textHint,
+                                  ),
+                                  iconSize: 11,
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      '₹${p.offerPrice}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: Responsive.isTablet(context) ? 15.0 : (Responsive.isSmallPhone(context) ? 13.0 : 14.0),
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : AppColors.primary,
                                       ),
-                                      if (p.category.isNotEmpty) ...[
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          p.category,
+                                    ),
+                                    if (hasDiscount) ...[
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          '₹${p.actualPrice}',
                                           style: GoogleFonts.poppins(
-                                            fontSize: Responsive.isTablet(context) ? 11.0 : (Responsive.isSmallPhone(context) ? 9.5 : 10.0),
+                                            fontSize: Responsive.isTablet(context) ? 12.0 : (Responsive.isSmallPhone(context) ? 10.0 : 11.0),
                                             color: AppColors.textHint,
+                                            decoration: TextDecoration.lineThrough,
+                                            decorationColor: AppColors.textHint,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                      ],
-                                    ],
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      DynamicProductRating(
-                                        productId: p.id,
-                                        initialRating: p.rating,
-                                        initialTotalReviews: p.totalReviews,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 10.5,
-                                          color: AppColors.textHint,
-                                        ),
-                                        iconSize: 11,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.baseline,
-                                        textBaseline: TextBaseline.alphabetic,
-                                        children: [
-                                          Text(
-                                            '₹${p.offerPrice}',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: Responsive.isTablet(context) ? 15.0 : (Responsive.isSmallPhone(context) ? 13.0 : 14.0),
-                                              fontWeight: FontWeight.w700,
-                                              color: isDark ? Colors.white : AppColors.primary,
-                                            ),
-                                          ),
-                                          if (hasDiscount) ...[
-                                            const SizedBox(width: 6),
-                                            Flexible(
-                                              child: Text(
-                                                '₹${p.actualPrice}',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: Responsive.isTablet(context) ? 12.0 : (Responsive.isSmallPhone(context) ? 10.0 : 11.0),
-                                                  color: AppColors.textHint,
-                                                  decoration:
-                                                      TextDecoration.lineThrough,
-                                                  decorationColor:
-                                                      AppColors.textHint,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
                                       ),
                                     ],
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],

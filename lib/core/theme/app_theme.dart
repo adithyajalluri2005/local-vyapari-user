@@ -114,7 +114,7 @@ class AppTheme {
       outlinedButtonTheme: _outlinedButtonTheme(AppColors.primaryLight, const Color(0x1AFFFFFF)),
       textButtonTheme: _textButtonTheme(AppColors.primaryLight),
       navigationBarTheme: _navBarTheme(AppColors.darkSurface, AppColors.primaryLight, const Color(0x1AFFFFFF)),
-      inputDecorationTheme: _inputTheme(AppColors.darkElevated, const Color(0x1AFFFFFF), const Color(0xFF94A3B8), AppColors.primaryLight),
+      inputDecorationTheme: _inputTheme(AppColors.darkElevated, const Color(0x1AFFFFFF), const Color(0xFF94A3B8), const Color(0x4DFFFFFF)),
       cardTheme: _cardTheme(AppColors.darkSurface, const Color(0x1AFFFFFF)),
       chipTheme: _chipTheme(AppColors.darkElevated, Colors.white, const Color(0x1AFFFFFF)),
       dividerTheme: const DividerThemeData(

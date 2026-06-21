@@ -50,6 +50,13 @@ class AppSizes {
     return 0.68;
   }
 
+  // image (AspectRatio 1.2) + text content (~118px) per device column width
+  static double productCardHeight(BuildContext context) {
+    if (Responsive.isTablet(context)) return 330.0;
+    if (Responsive.isSmallPhone(context)) return 252.0;
+    return 268.0;
+  }
+
   // ── Offer banner horizontal carousel ─────────────────────────────────────
   static double offerBannerCardWidth(BuildContext context) {
     if (Responsive.isLargeTablet(context)) return 230.0;

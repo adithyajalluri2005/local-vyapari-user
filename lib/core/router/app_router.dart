@@ -21,6 +21,7 @@ import 'package:local_vyapari_user/features/chat/presentation/screens/chats_list
 import 'package:local_vyapari_user/features/security/presentation/screens/security_settings_screen.dart';
 import 'package:local_vyapari_user/features/products/presentation/screens/product_image_fullscreen_screen.dart';
 import 'package:local_vyapari_user/features/offers/presentation/screens/all_offers_screen.dart';
+import 'package:local_vyapari_user/features/profile/presentation/screens/edit_profile_screen.dart';
 
 CustomTransitionPage<T> buildFadeThroughPage<T>({
   required LocalKey key,
@@ -372,6 +373,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => buildSlideRightPage(
           key: state.pageKey,
           child: const SecuritySettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/edit_profile',
+        pageBuilder: (context, state) => buildSlideRightPage(
+          key: state.pageKey,
+          child: const EditProfileScreen(),
         ),
       ),
       GoRoute(

@@ -219,6 +219,8 @@ class _SearchBar extends StatelessWidget {
                   color: AppColors.textHint,
                 ),
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 isDense: true,
               ),

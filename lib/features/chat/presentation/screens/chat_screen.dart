@@ -456,6 +456,8 @@ class _InputBar extends StatelessWidget {
                         color: AppColors.textHint,
                       ),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12),
                       isDense: true,
                     ),
