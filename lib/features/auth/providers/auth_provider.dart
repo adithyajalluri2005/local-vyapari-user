@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_vyapari_user/features/auth/models/auth_state.dart';
 import 'package:local_vyapari_user/services/cache/data_cache_service.dart';
-import 'package:local_vyapari_user/services/role_service.dart';
 import 'package:local_vyapari_user/services/notifications/notification_service.dart';
 
 const _phoneEmailStorage = FlutterSecureStorage();
@@ -24,10 +23,6 @@ final firebaseDatabaseProvider = Provider<FirebaseDatabase>((ref) {
 
 final firebaseFunctionsProvider = Provider<FirebaseFunctions>((ref) {
   return FirebaseFunctions.instance;
-});
-
-final roleServiceProvider = Provider<RoleService>((ref) {
-  return RoleService.instance;
 });
 
 final sessionValidationProvider = Provider<Future<bool> Function(User, String)>((ref) {
